@@ -68,6 +68,10 @@ This extension reads the following setting:
 
 See [CHANGELOG.md](CHANGELOG.md).
 
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for milestones and the plan to reach parity with Git Graph 1.30 and with the wider field. A feature comparison with other Git graph extensions is in [docs/COMPETITORS.md](docs/COMPETITORS.md).
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Every contribution must follow the license rule described there.
