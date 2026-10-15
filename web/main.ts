@@ -873,7 +873,9 @@ function getCommitDate(dateVal: number) {
 
 /* Utils */
 function generateGitFileTree(gitFiles: GG.GitFileChange[]) {
-	let contents: GitFolderContents = {}, i, j, path, cur: GitFolder;
+	// Folder contents use null-prototype objects so that path segments such as "constructor" or
+	// "__proto__" are not confused with inherited Object.prototype members.
+	let contents: GitFolderContents = Object.create(null), i, j, path, cur: GitFolder;
 	const files: GitFolder = { type: 'folder', name: '', folderPath: '', contents: contents, open: true };
 	for (i = 0; i < gitFiles.length; i++) {
 		cur = files;
@@ -881,7 +883,7 @@ function generateGitFileTree(gitFiles: GG.GitFileChange[]) {
 		for (j = 0; j < path.length; j++) {
 			if (j < path.length - 1) {
 				if (typeof cur.contents[path[j]] === 'undefined') {
-					contents = {};
+					contents = Object.create(null);
 					cur.contents[path[j]] = { type: 'folder', name: path[j], folderPath: path.slice(0, j + 1).join('/'), contents: contents, open: true };
 				}
 				cur = <GitFolder>cur.contents[path[j]];
