@@ -67,17 +67,22 @@ jobs:
     permissions:
       contents: read
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+      # Installs vsce and ovsx from the committed lockfile, so versions and
+      # integrity hashes are fixed. Scripts are skipped; nothing is built here.
+      - run: npm ci --ignore-scripts
       - uses: actions/download-artifact@v4
         with:
           name: vsix
       - name: Publish to Visual Studio Marketplace
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        run: npx --yes @vscode/vsce@3 publish --packagePath git-graph-*.vsix
+        run: npx --no-install vsce publish --packagePath git-graph-*.vsix
       - name: Publish to Open VSX
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
-        run: npx --yes ovsx@0.10 publish git-graph-*.vsix
+        run: npx --no-install ovsx publish git-graph-*.vsix
