@@ -13,3 +13,4 @@ eslint.config.mjs
 package-lock.json
 *.vsix
 .remember/
+.env

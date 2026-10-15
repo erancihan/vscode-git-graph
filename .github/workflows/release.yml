@@ -82,7 +82,9 @@ jobs:
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: npx --no-install vsce publish --packagePath git-graph-*.vsix
+      # Open VSX publishing is skipped until the OVSX_PAT secret exists.
       - name: Publish to Open VSX
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        if: ${{ env.OVSX_PAT != '' }}
         run: npx --no-install ovsx publish git-graph-*.vsix
