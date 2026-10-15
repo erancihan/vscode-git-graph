@@ -60,8 +60,8 @@ This extension reads the following setting:
 
 ## Install
 
-* Visual Studio Marketplace: `erancihan.git-graph`
-* Open VSX: `erancihan.git-graph`
+* Visual Studio Marketplace: `erancihan.vscode-git-graph`
+* Open VSX: `erancihan.vscode-git-graph`
 * Manual: download the `.vsix` file from the [releases page](https://github.com/erancihan/vscode-git-graph/releases) and run `code --install-extension <file>.vsix`.
 
 ## Release Notes
