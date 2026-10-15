@@ -37,11 +37,11 @@ jobs:
             exit 1
           fi
       - name: Package
-        run: npx vsce package --out "git-graph-${GITHUB_REF_NAME}.vsix"
+        run: npx vsce package --out "vscode-git-graph-${GITHUB_REF_NAME}.vsix"
       - uses: actions/upload-artifact@v4
         with:
           name: vsix
-          path: git-graph-*.vsix
+          path: vscode-git-graph-*.vsix
           if-no-files-found: error
 
   github-release:
@@ -56,7 +56,7 @@ jobs:
       - name: Create GitHub release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
-          files: git-graph-*.vsix
+          files: vscode-git-graph-*.vsix
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, '-') }}
 
@@ -81,10 +81,10 @@ jobs:
       - name: Publish to Visual Studio Marketplace
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        run: npx --no-install vsce publish --packagePath git-graph-*.vsix
+        run: npx --no-install vsce publish --packagePath vscode-git-graph-*.vsix
       # Open VSX publishing is skipped until the OVSX_PAT secret exists.
       - name: Publish to Open VSX
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
         if: ${{ env.OVSX_PAT != '' }}
-        run: npx --no-install ovsx publish git-graph-*.vsix
+        run: npx --no-install ovsx publish vscode-git-graph-*.vsix

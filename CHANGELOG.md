@@ -1,11 +1,15 @@
 # Change Log
 
+## 2.0.1 - 2026-10-15
+
+* The package name is now `vscode-git-graph`, so the extension ID is `erancihan.vscode-git-graph`. The Visual Studio Marketplace requires package names to be unique across all publishers, and `git-graph` is taken by the original extension. Settings and commands keep the `git-graph.` prefix. This is the first version published to the Marketplace. Version 2.0.0 exists only as a GitHub release.
+
 ## 2.0.0 - 2026-10-15
 
 First release of the community-maintained MIT fork. It continues from Git Graph 1.4.6 by mhutchie, the last MIT-licensed version.
 
 Changes compared to 1.4.6:
-* New publisher `erancihan` and extension ID `erancihan.git-graph`. Settings and commands keep the `git-graph.` prefix.
+* New publisher `erancihan` and extension ID `erancihan.vscode-git-graph`. Settings and commands keep the `git-graph.` prefix.
 * Requires Visual Studio Code 1.74 or later. Activates after startup instead of on every activation event.
 * Toolchain update: TypeScript 5, `@types/vscode`, ESLint 10 with typescript-eslint, Node.js 20. TSLint and the old `vscode` test module are removed.
 * GitHub Actions: CI builds a `.vsix` on every push and pull request. Pushing a `v*` tag creates a GitHub release and publishes to the Visual Studio Marketplace and Open VSX.
