@@ -72,18 +72,18 @@ Features the field has adopted since 2021, in order of how many competitors ship
 
 | Feature | Competitors with it | Notes |
 |---|---|---|
-| Author filter | 7 | Filter the graph by author, with the branch filter |
-| Interactive rebase editor | 6 | Reorder, squash, fixup, reword, drop in a webview, with autosquash |
-| Amend or reword the last commit from the graph | 5 | On the uncommitted changes row |
-| Multi-language UI | 5 | `vscode.l10n` with community translations; upstream PR #580 (zh-cn) as a first contribution request |
-| Worktrees | 4 | List, create, open, remove; one uncommitted row per worktree |
-| File path filter | 4 | Show only commits that touch a path |
-| Conflict help | 3 | Predict conflicts before merge or rebase, link to the merge editor |
-| Sticky header | 3 | Keep the toolbar and column headers visible while scrolling; upstream PR #394 |
-| Drag-and-drop merge or rebase | 2 | Drag a branch label onto another |
-| Bisect from the graph | 1 | Only Git Graph Plus has it |
+| Author filter (#29) | 7 | Filter the graph by author, with the branch filter |
+| Interactive rebase editor (#30) | 6 | Reorder, squash, fixup, reword, drop in a webview, with autosquash |
+| Amend or reword the last commit from the graph (#31) | 5 | On the uncommitted changes row |
+| Multi-language UI (#32) | 5 | `vscode.l10n` with community translations; upstream PR #580 (zh-cn) as a first contribution request |
+| Worktrees (#33) | 4 | List, create, open, remove; one uncommitted row per worktree |
+| File path filter (#34) | 4 | Show only commits that touch a path |
+| Conflict help (#35) | 3 | Predict conflicts before merge or rebase, link to the merge editor |
+| Sticky header (#36) | 3 | Keep the toolbar and column headers visible while scrolling; upstream PR #394 |
+| Drag-and-drop merge or rebase (#37) | 2 | Drag a branch label onto another |
+| Bisect from the graph (#38) | 1 | Only Git Graph Plus has it |
 | Signature status column | 1 | Upstream PR #910 |
-| CI status column | 1 | Upstream PR #473, ask the author to resubmit under MIT |
+| CI status column (#39) | 1 | Upstream PR #473, ask the author to resubmit under MIT |
 
 Out of scope unless demand appears: staging and committing from the view (the built-in Source Control view does this), AI features, accounts.
 
