@@ -1,6 +1,6 @@
 # Change Log
 
-## 2.0.0 - Unreleased
+## 2.0.0 - 2026-10-15
 
 First release of the community-maintained MIT fork. It continues from Git Graph 1.4.6 by mhutchie, the last MIT-licensed version.
 
