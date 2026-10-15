@@ -4,7 +4,7 @@ View a Git Graph of your repository, and perform Git actions from the graph.
 
 This is a community-maintained fork of [Git Graph](https://github.com/mhutchie/vscode-git-graph) by Michael Hutchison. It continues from version 1.4.6 (upstream commit `4af8583`), the last version released under the MIT License, and stays MIT licensed.
 
-![Recording of Git Graph](https://github.com/erancihan/vscode-git-graph/raw/main/resources/demo.gif)
+![Recording of Git Graph](https://github.com/erancihan/vscode-git-graph/raw/master/resources/demo.gif)
 
 ## Why this fork exists
 
