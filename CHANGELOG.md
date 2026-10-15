@@ -1,5 +1,9 @@
 # Change Log
 
+## 2.0.2 - 2026-10-15
+
+* The display name is now "Git Graph Community". The Visual Studio Marketplace requires display names to be unique, and "Git Graph" belongs to the original extension. Nothing else changed.
+
 ## 2.0.1 - 2026-10-15
 
 * The package name is now `vscode-git-graph`, so the extension ID is `erancihan.vscode-git-graph`. The Visual Studio Marketplace requires package names to be unique across all publishers, and `git-graph` is taken by the original extension. Settings and commands keep the `git-graph.` prefix. This is the first version published to the Marketplace. Version 2.0.0 exists only as a GitHub release.

@@ -1,4 +1,4 @@
-# Git Graph (MIT fork) for Visual Studio Code
+# Git Graph Community for Visual Studio Code
 
 View a Git Graph of your repository, and perform Git actions from the graph.
 
