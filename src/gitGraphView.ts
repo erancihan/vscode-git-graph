@@ -329,9 +329,9 @@ export class GitGraphView {
 	}
 
 	private viewDiff(repo: string, commitHash: string, oldFilePath: string, newFilePath: string, type: GitFileChangeType) {
-		let abbrevHash = abbrevCommit(commitHash);
-		let pathComponents = newFilePath.split('/');
-		let title = pathComponents[pathComponents.length - 1] + ' (' + (type === 'A' ? 'Added in ' + abbrevHash : type === 'D' ? 'Deleted in ' + abbrevHash : abbrevCommit(commitHash) + '^ ↔ ' + abbrevCommit(commitHash)) + ')';
+		const abbrevHash = abbrevCommit(commitHash);
+		const pathComponents = newFilePath.split('/');
+		const title = pathComponents[pathComponents.length - 1] + ' (' + (type === 'A' ? 'Added in ' + abbrevHash : type === 'D' ? 'Deleted in ' + abbrevHash : abbrevCommit(commitHash) + '^ ↔ ' + abbrevCommit(commitHash)) + ')';
 		return new Promise<boolean>((resolve) => {
 			vscode.commands.executeCommand('vscode.diff', encodeDiffDocUri(repo, oldFilePath, commitHash + '^'), encodeDiffDocUri(repo, newFilePath, commitHash), title, { preview: true })
 				.then(() => resolve(true))

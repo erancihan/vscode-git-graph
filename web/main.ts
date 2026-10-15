@@ -123,7 +123,7 @@ class GitGraphView {
 		}
 		this.saveState();
 
-		let options = [{ name: 'Show All', value: '' }];
+		const options = [{ name: 'Show All', value: '' }];
 		for (let i = 0; i < this.gitBranches.length; i++) {
 			options.push({ name: this.gitBranches[i].indexOf('remotes/') === 0 ? this.gitBranches[i].substring(8) : this.gitBranches[i], value: this.gitBranches[i] });
 		}
@@ -189,7 +189,7 @@ class GitGraphView {
 	public loadAvatar(email: string, image: string) {
 		this.avatars[email] = image;
 		this.saveState();
-		let avatarsElems = <HTMLCollectionOf<HTMLElement>>document.getElementsByClassName('avatar'), escapedEmail = escapeHtml(email);
+		const avatarsElems = <HTMLCollectionOf<HTMLElement>>document.getElementsByClassName('avatar'), escapedEmail = escapeHtml(email);
 		for (let i = 0; i < avatarsElems.length; i++) {
 			if (avatarsElems[i].dataset.email === escapedEmail) {
 				avatarsElems[i].innerHTML = '<img class="avatarImg" src="' + image + '">';
@@ -241,7 +241,7 @@ class GitGraphView {
 		});
 	}
 	private fetchAvatars(avatars: { [email: string]: string[] }) {
-		let emails = Object.keys(avatars);
+		const emails = Object.keys(avatars);
 		for (let i = 0; i < emails.length; i++) {
 			sendMessage({ command: 'fetchAvatar', repo: this.currentRepo!, email: emails[i], commits: avatars[emails[i]] });
 		}
@@ -271,9 +271,9 @@ class GitGraphView {
 		this.renderGraph();
 	}
 	private renderGraph() {
-		let colHeadersElem = document.getElementById('tableColHeaders');
+		const colHeadersElem = document.getElementById('tableColHeaders');
 		if (colHeadersElem === null) return;
-		let headerHeight = colHeadersElem.clientHeight + 1, expandedCommitElem = this.expandedCommit !== null ? document.getElementById('commitDetails') : null;
+		const headerHeight = colHeadersElem.clientHeight + 1, expandedCommitElem = this.expandedCommit !== null ? document.getElementById('commitDetails') : null;
 		this.config.grid.expandY = expandedCommitElem !== null ? expandedCommitElem.getBoundingClientRect().height : this.config.grid.expandY;
 		this.config.grid.y = this.commits.length > 0 ? (this.tableElem.children[0].clientHeight - headerHeight - (this.expandedCommit !== null ? this.config.grid.expandY : 0)) / this.commits.length : this.config.grid.y;
 		this.config.grid.offsetY = headerHeight + this.config.grid.y / 2;
@@ -330,16 +330,16 @@ class GitGraphView {
 
 		addListenerToClass('commit', 'contextmenu', (e: Event) => {
 			e.stopPropagation();
-			let sourceElem = <HTMLElement>(<Element>e.target).closest('.commit')!;
-			let hash = sourceElem.dataset.hash!;
+			const sourceElem = <HTMLElement>(<Element>e.target).closest('.commit')!;
+			const hash = sourceElem.dataset.hash!;
 			showContextMenu(<MouseEvent>e, [
 				{
 					title: 'Add Tag' + ELLIPSIS,
 					onClick: () => {
 						showFormDialog('Add tag to commit <b><i>' + abbrevCommit(hash) + '</i></b>:', [
-							{ type: 'text-ref' as 'text-ref', name: 'Name: ', default: '' },
-							{ type: 'select' as 'select', name: 'Type: ', default: 'annotated', options: [{ name: 'Annotated', value: 'annotated' }, { name: 'Lightweight', value: 'lightweight' }] },
-							{ type: 'text' as 'text', name: 'Message: ', default: '', placeholder: 'Optional' }
+							{ type: 'text-ref' as const, name: 'Name: ', default: '' },
+							{ type: 'select' as const, name: 'Type: ', default: 'annotated', options: [{ name: 'Annotated', value: 'annotated' }, { name: 'Lightweight', value: 'lightweight' }] },
+							{ type: 'text' as const, name: 'Message: ', default: '', placeholder: 'Optional' }
 						], 'Add Tag', values => {
 							sendMessage({ command: 'addTag', repo: this.currentRepo!, tagName: values[0], commitHash: hash, lightweight: values[1] === 'lightweight', message: values[2] });
 						}, sourceElem);
@@ -370,7 +370,7 @@ class GitGraphView {
 								sendMessage({ command: 'cherrypickCommit', repo: this.currentRepo!, commitHash: hash, parentIndex: 0 });
 							}, sourceElem);
 						} else {
-							let options = this.commits[this.commitLookup[hash]].parentHashes.map((hash, index) => ({
+							const options = this.commits[this.commitLookup[hash]].parentHashes.map((hash, index) => ({
 								name: abbrevCommit(hash) + (typeof this.commitLookup[hash] === 'number' ? ': ' + this.commits[this.commitLookup[hash]].message : ''),
 								value: (index + 1).toString()
 							}));
@@ -388,7 +388,7 @@ class GitGraphView {
 								sendMessage({ command: 'revertCommit', repo: this.currentRepo!, commitHash: hash, parentIndex: 0 });
 							}, sourceElem);
 						} else {
-							let options = this.commits[this.commitLookup[hash]].parentHashes.map((hash, index) => ({
+							const options = this.commits[this.commitLookup[hash]].parentHashes.map((hash, index) => ({
 								name: abbrevCommit(hash) + (typeof this.commitLookup[hash] === 'number' ? ': ' + this.commits[this.commitLookup[hash]].message : ''),
 								value: (index + 1).toString()
 							}));
@@ -429,7 +429,7 @@ class GitGraphView {
 			], sourceElem);
 		});
 		addListenerToClass('commit', 'click', (e: Event) => {
-			let sourceElem = <HTMLElement>(<Element>e.target).closest('.commit')!;
+			const sourceElem = <HTMLElement>(<Element>e.target).closest('.commit')!;
 			if (this.expandedCommit !== null && this.expandedCommit.hash === sourceElem.dataset.hash!) {
 				this.hideCommitDetails();
 			} else {
@@ -438,7 +438,7 @@ class GitGraphView {
 		});
 		addListenerToClass('gitRef', 'contextmenu', (e: Event) => {
 			e.stopPropagation();
-			let sourceElem = <HTMLElement>(<Element>e.target).closest('.gitRef')!;
+			const sourceElem = <HTMLElement>(<Element>e.target).closest('.gitRef')!;
 			let refName = unescapeHtml(sourceElem.dataset.name!), menu: ContextMenuElement[], copyType: string;
 			if (sourceElem.classList.contains('tag')) {
 				menu = [{
@@ -514,12 +514,12 @@ class GitGraphView {
 		addListenerToClass('gitRef', 'dblclick', (e: Event) => {
 			e.stopPropagation();
 			hideDialogAndContextMenu();
-			let sourceElem = <HTMLElement>(<Element>e.target).closest('.gitRef')!;
+			const sourceElem = <HTMLElement>(<Element>e.target).closest('.gitRef')!;
 			this.checkoutBranchAction(sourceElem, unescapeHtml(sourceElem.dataset.name!));
 		});
 	}
 	private renderUncommitedChanges() {
-		let date = getCommitDate(this.commits[0].date);
+		const date = getCommitDate(this.commits[0].date);
 		document.getElementsByClassName('unsavedChanges')[0].innerHTML = '<td></td><td><b>' + escapeHtml(this.commits[0].message) + '</b></td><td title="' + date.title + '">' + date.value + '</td><td title="* <>">*</td><td title="*">*</td>';
 	}
 	private renderShowLoading() {
@@ -532,14 +532,14 @@ class GitGraphView {
 		if (sourceElem.classList.contains('head')) {
 			sendMessage({ command: 'checkoutBranch', repo: this.currentRepo!, branchName: refName, remoteBranch: null });
 		} else if (sourceElem.classList.contains('remote')) {
-			let refNameComps = refName.split('/');
+			const refNameComps = refName.split('/');
 			showRefInputDialog('Enter the name of the new branch you would like to create when checking out <b><i>' + escapeHtml(sourceElem.dataset.name!) + '</i></b>:', refNameComps[refNameComps.length - 1], 'Checkout Branch', (newBranch) => {
 				sendMessage({ command: 'checkoutBranch', repo: this.currentRepo!, branchName: newBranch, remoteBranch: refName });
 			}, null);
 		}
 	}
 	private makeTableResizable() {
-		let colHeadersElem = document.getElementById('tableColHeaders')!, cols = <HTMLCollectionOf<HTMLElement>>document.getElementsByClassName('tableColHeader');
+		const colHeadersElem = document.getElementById('tableColHeaders')!, cols = <HTMLCollectionOf<HTMLElement>>document.getElementsByClassName('tableColHeader');
 		let columnWidths = this.gitRepos[this.currentRepo].columnWidths, mouseX = -1, col = -1, that = this;
 
 		for (let i = 0; i < cols.length; i++) {
@@ -564,7 +564,7 @@ class GitGraphView {
 		});
 		colHeadersElem.addEventListener('mousemove', (e) => {
 			if (col > -1 && columnWidths !== null) {
-				let mouseEvent = <MouseEvent>e;
+				const mouseEvent = <MouseEvent>e;
 				let mouseDeltaX = mouseEvent.clientX - mouseX;
 				switch (col) {
 					case 0:
@@ -630,7 +630,7 @@ class GitGraphView {
 	private observeWebviewStyleChanges() {
 		let fontFamily = getVSCodeStyle('--vscode-editor-font-family');
 		(new MutationObserver(() => {
-			let ff = getVSCodeStyle('--vscode-editor-font-family');
+			const ff = getVSCodeStyle('--vscode-editor-font-family');
 			if (ff !== fontFamily) {
 				fontFamily = ff;
 				this.repoDropdown.refresh();
@@ -658,7 +658,7 @@ class GitGraphView {
 	}
 	public hideCommitDetails() {
 		if (this.expandedCommit !== null) {
-			let elem = document.getElementById('commitDetails');
+			const elem = document.getElementById('commitDetails');
 			if (typeof elem === 'object' && elem !== null) elem.remove();
 			if (typeof this.expandedCommit.srcElem === 'object' && this.expandedCommit.srcElem !== null) this.expandedCommit.srcElem.classList.remove('commitDetailsOpen');
 			this.expandedCommit = null;
@@ -668,7 +668,7 @@ class GitGraphView {
 	}
 	public showCommitDetails(commitDetails: GG.GitCommitDetails, fileTree: GitFolder) {
 		if (this.expandedCommit === null || this.expandedCommit.srcElem === null || this.expandedCommit.hash !== commitDetails.hash) return;
-		let elem = document.getElementById('commitDetails');
+		const elem = document.getElementById('commitDetails');
 		if (typeof elem === 'object' && elem !== null) elem.remove();
 
 		this.expandedCommit.commitDetails = commitDetails;
@@ -714,17 +714,17 @@ class GitGraphView {
 			this.hideCommitDetails();
 		});
 		addListenerToClass('gitFolder', 'click', (e) => {
-			let sourceElem = <HTMLElement>(<Element>e.target!).closest('.gitFolder');
-			let parent = sourceElem.parentElement!;
+			const sourceElem = <HTMLElement>(<Element>e.target!).closest('.gitFolder');
+			const parent = sourceElem.parentElement!;
 			parent.classList.toggle('closed');
-			let isOpen = !parent.classList.contains('closed');
+			const isOpen = !parent.classList.contains('closed');
 			parent.children[0].children[0].innerHTML = isOpen ? svgIcons.openFolder : svgIcons.closedFolder;
 			parent.children[1].classList.toggle('hidden');
 			alterGitFileTree(this.expandedCommit!.fileTree!, decodeURIComponent(sourceElem.dataset.folderpath!), isOpen);
 			this.saveState();
 		});
 		addListenerToClass('gitFile', 'click', (e) => {
-			let sourceElem = <HTMLElement>(<Element>e.target).closest('.gitFile')!;
+			const sourceElem = <HTMLElement>(<Element>e.target).closest('.gitFile')!;
 			if (this.expandedCommit === null || !sourceElem.classList.contains('gitDiffPossible')) return;
 			sendMessage({ command: 'viewDiff', repo: this.currentRepo!, commitHash: this.expandedCommit.hash, oldFilePath: decodeURIComponent(sourceElem.dataset.oldfilepath!), newFilePath: decodeURIComponent(sourceElem.dataset.newfilepath!), type: <GG.GitFileChangeType>sourceElem.dataset.type });
 		});
@@ -733,7 +733,7 @@ class GitGraphView {
 
 let contextMenu = document.getElementById('contextMenu')!, contextMenuSource: HTMLElement | null = null;
 let dialog = document.getElementById('dialog')!, dialogBacking = document.getElementById('dialogBacking')!, dialogMenuSource: HTMLElement | null = null;
-let gitGraph = new GitGraphView(viewState.repos, viewState.lastActiveRepo, {
+const gitGraph = new GitGraphView(viewState.repos, viewState.lastActiveRepo, {
 	autoCenterCommitDetailsView: viewState.autoCenterCommitDetailsView,
 	fetchAvatars: viewState.fetchAvatars,
 	graphColours: viewState.graphColours,
@@ -831,8 +831,8 @@ function refreshGraphOrDisplayError(status: GG.GitCommandStatus, errorMessage: s
 /* Dates */
 function getCommitDate(dateVal: number) {
 	let date = new Date(dateVal * 1000), value;
-	let dateStr = date.getDate() + ' ' + months[date.getMonth()] + ' ' + date.getFullYear();
-	let timeStr = pad2(date.getHours()) + ':' + pad2(date.getMinutes());
+	const dateStr = date.getDate() + ' ' + months[date.getMonth()] + ' ' + date.getFullYear();
+	const timeStr = pad2(date.getHours()) + ':' + pad2(date.getMinutes());
 
 	switch (viewState.dateFormat) {
 		case 'Date Only':
@@ -874,7 +874,7 @@ function getCommitDate(dateVal: number) {
 /* Utils */
 function generateGitFileTree(gitFiles: GG.GitFileChange[]) {
 	let contents: GitFolderContents = {}, i, j, path, cur: GitFolder;
-	let files: GitFolder = { type: 'folder', name: '', folderPath: '', contents: contents, open: true };
+	const files: GitFolder = { type: 'folder', name: '', folderPath: '', contents: contents, open: true };
 	for (i = 0; i < gitFiles.length; i++) {
 		cur = files;
 		path = gitFiles[i].newFilePath.split('/');
@@ -936,7 +936,7 @@ function showContextMenu(e: MouseEvent, items: ContextMenuElement[], sourceElem:
 	contextMenu.style.opacity = '0';
 	contextMenu.className = 'active';
 	contextMenu.innerHTML = html;
-	let bounds = contextMenu.getBoundingClientRect();
+	const bounds = contextMenu.getBoundingClientRect();
 	contextMenu.style.left = ((event.pageX - window.pageXOffset) + bounds.width < window.innerWidth ? event.pageX - 2 : event.pageX - bounds.width + 2) + 'px';
 	contextMenu.style.top = ((event.pageY - window.pageYOffset) + bounds.height < window.innerHeight ? event.pageY - 2 : event.pageY - bounds.height + 2) + 'px';
 	contextMenu.style.opacity = '1';
@@ -982,7 +982,7 @@ function showFormDialog(message: string, inputs: DialogInput[], actionName: stri
 	let textRefInput = -1, multiElementForm = inputs.length > 1;
 	let html = message + '<br><table class="dialogForm ' + (multiElementForm ? 'multi' : 'single') + '">';
 	for (let i = 0; i < inputs.length; i++) {
-		let input = inputs[i];
+		const input = inputs[i];
 		html += '<tr>' + (multiElementForm ? '<td>' + input.name + '</td>' : '') + '<td>';
 		if (input.type === 'select') {
 			html += '<select id="dialogInput' + i + '">';
@@ -1001,9 +1001,9 @@ function showFormDialog(message: string, inputs: DialogInput[], actionName: stri
 	html += '</table>';
 	showDialog(html, actionName, 'Cancel', () => {
 		if (dialog.className === 'active noInput' || dialog.className === 'active inputInvalid') return;
-		let values = [];
+		const values = [];
 		for (let i = 0; i < inputs.length; i++) {
-			let input = inputs[i], elem = document.getElementById('dialogInput' + i);
+			const input = inputs[i], elem = document.getElementById('dialogInput' + i);
 			if (input.type === 'select') {
 				values.push((<HTMLSelectElement>elem).value);
 			} else if (input.type === 'checkbox') {
@@ -1017,12 +1017,12 @@ function showFormDialog(message: string, inputs: DialogInput[], actionName: stri
 	}, sourceElem);
 
 	if (textRefInput > -1) {
-		let dialogInput = <HTMLInputElement>document.getElementById('dialogInput' + textRefInput), dialogAction = document.getElementById('dialogAction')!;
+		const dialogInput = <HTMLInputElement>document.getElementById('dialogInput' + textRefInput), dialogAction = document.getElementById('dialogAction')!;
 		if (dialogInput.value === '') dialog.className = 'active noInput';
 		dialogInput.focus();
 		dialogInput.addEventListener('keyup', () => {
-			let noInput = dialogInput.value === '', invalidInput = dialogInput.value.match(refInvalid) !== null;
-			let newClassName = 'active' + (noInput ? ' noInput' : invalidInput ? ' inputInvalid' : '');
+			const noInput = dialogInput.value === '', invalidInput = dialogInput.value.match(refInvalid) !== null;
+			const newClassName = 'active' + (noInput ? ' noInput' : invalidInput ? ' inputInvalid' : '');
 			if (dialog.className !== newClassName) {
 				dialog.className = newClassName;
 				dialogAction.title = invalidInput ? 'Unable to ' + actionName + ', one or more invalid characters entered.' : '';

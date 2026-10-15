@@ -19,8 +19,8 @@ export class RepoManager {
 
 	private createEventPaths: string[] = [];
 	private changeEventPaths: string[] = [];
-	private processCreateEventsTimeout: NodeJS.Timer | null = null;
-	private processChangeEventsTimeout: NodeJS.Timer | null = null;
+	private processCreateEventsTimeout: NodeJS.Timeout | null = null;
+	private processChangeEventsTimeout: NodeJS.Timeout | null = null;
 
 	constructor(dataSource: DataSource, extensionState: ExtensionState, statusBarItem: StatusBarItem) {
 		this.dataSource = dataSource;
@@ -57,7 +57,7 @@ export class RepoManager {
 			this.folderChangeHandler.dispose();
 			this.folderChangeHandler = null;
 		}
-		let folders = Object.keys(this.folderWatchers);
+		const folders = Object.keys(this.folderWatchers);
 		for (let i = 0; i < folders.length; i++) {
 			this.stopWatchingFolder(folders[i]);
 		}
@@ -72,7 +72,7 @@ export class RepoManager {
 	}
 
 	public maxDepthOfRepoSearchChanged() {
-		let newDepth = getConfig().maxDepthOfRepoSearch();
+		const newDepth = getConfig().maxDepthOfRepoSearch();
 		if (newDepth > this.maxDepthOfRepoSearch) {
 			this.maxDepthOfRepoSearch = newDepth;
 			this.searchWorkspaceForRepos();
@@ -104,7 +104,7 @@ export class RepoManager {
 
 	/* Repo Management */
 	public getRepos() {
-		let repoPaths = Object.keys(this.repos).sort(), repos: GitRepoSet = {};
+		const repoPaths = Object.keys(this.repos).sort(), repos: GitRepoSet = {};
 		for (let i = 0; i < repoPaths.length; i++) {
 			repos[repoPaths[i]] = this.repos[repoPaths[i]];
 		}
@@ -129,15 +129,15 @@ export class RepoManager {
 		return changes;
 	}
 	private isDirectoryWithinRepos(path: string) {
-		let repoPaths = Object.keys(this.repos);
+		const repoPaths = Object.keys(this.repos);
 		for (let i = 0; i < repoPaths.length; i++) {
 			if (path === repoPaths[i] || path.startsWith(repoPaths[i] + '/')) return true;
 		}
 		return false;
 	}
 	private sendRepos() {
-		let repos = this.getRepos();
-		let numRepos = Object.keys(repos).length;
+		const repos = this.getRepos();
+		const numRepos = Object.keys(repos).length;
 		this.statusBarItem.setNumRepos(numRepos);
 		if (this.viewCallback !== null) this.viewCallback(repos, numRepos);
 	}
@@ -187,7 +187,7 @@ export class RepoManager {
 						if (err) {
 							resolve(false);
 						} else {
-							let dirs = [];
+							const dirs = [];
 							for (let i = 0; i < dirContents.length; i++) {
 								if (dirContents[i] !== '.git' && await isDirectory(directory + '/' + dirContents[i])) {
 									dirs.push(directory + '/' + dirContents[i]);
@@ -205,7 +205,7 @@ export class RepoManager {
 
 	/* Workspace Folder Watching */
 	private startWatchingFolders() {
-		let rootFolders = vscode.workspace.workspaceFolders;
+		const rootFolders = vscode.workspace.workspaceFolders;
 		if (typeof rootFolders !== 'undefined') {
 			for (let i = 0; i < rootFolders.length; i++) {
 				this.startWatchingFolder(getPathFromUri(rootFolders[i].uri));
@@ -213,7 +213,7 @@ export class RepoManager {
 		}
 	}
 	private startWatchingFolder(path: string) {
-		let watcher = vscode.workspace.createFileSystemWatcher(path + '/**');
+		const watcher = vscode.workspace.createFileSystemWatcher(path + '/**');
 		watcher.onDidCreate(uri => this.onWatcherCreate(uri));
 		watcher.onDidChange(uri => this.onWatcherChange(uri));
 		watcher.onDidDelete(uri => this.onWatcherDelete(uri));

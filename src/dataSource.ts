@@ -24,7 +24,7 @@ export class DataSource {
 	}
 
 	public generateGitCommandFormats() {
-		let dateType = getConfig().dateType() === 'Author Date' ? '%at' : '%ct';
+		const dateType = getConfig().dateType() === 'Author Date' ? '%at' : '%ct';
 		this.gitLogFormat = ['%H', '%P', '%an', '%ae', dateType, '%s'].join(gitLogSeparator);
 		this.gitCommitDetailsFormat = ['%H', '%P', '%an', '%ae', dateType, '%cn'].join(gitLogSeparator) + '%n%B';
 	}
@@ -32,7 +32,7 @@ export class DataSource {
 	public getBranches(repo: string, showRemoteBranches: boolean) {
 		return new Promise<{ branches: string[], head: string | null, error: boolean }>((resolve) => {
 			this.execGit('branch' + (showRemoteBranches ? ' -a' : ''), repo, (err, stdout) => {
-				let branchData = {
+				const branchData = {
 					branches: <string[]>[],
 					head: <string | null>null,
 					error: false
@@ -41,9 +41,9 @@ export class DataSource {
 				if (err) {
 					branchData.error = true;
 				} else {
-					let lines = stdout.split(eolRegex);
+					const lines = stdout.split(eolRegex);
 					for (let i = 0; i < lines.length - 1; i++) {
-						let name = lines[i].substring(2).split(' -> ')[0];
+						const name = lines[i].substring(2).split(' -> ')[0];
 						if (name.match(headRegex) !== null) continue;
 
 						if (lines[i][0] === '*') {
@@ -66,7 +66,7 @@ export class DataSource {
 				this.getRefs(repo, showRemoteBranches)
 			]).then(async results => {
 				let commits = results[0], refData = results[1], i, unsavedChanges = null;
-				let moreCommitsAvailable = commits.length === maxCommits + 1;
+				const moreCommitsAvailable = commits.length === maxCommits + 1;
 				if (moreCommitsAvailable) commits.pop();
 
 				if (refData.head !== null) {
@@ -81,8 +81,8 @@ export class DataSource {
 					}
 				}
 
-				let commitNodes: GitCommitNode[] = [];
-				let commitLookup: { [hash: string]: number } = {};
+				const commitNodes: GitCommitNode[] = [];
+				const commitLookup: { [hash: string]: number } = {};
 
 				for (i = 0; i < commits.length; i++) {
 					commitLookup[commits[i].hash] = i;
@@ -106,10 +106,10 @@ export class DataSource {
 					if (err) {
 						reject();
 					} else {
-						let lines = stdout.split(eolRegex);
+						const lines = stdout.split(eolRegex);
 						let lastLine = lines.length - 1;
 						while (lines.length > 0 && lines[lastLine] === '') lastLine--;
-						let commitInfo = lines[0].split(gitLogSeparator);
+						const commitInfo = lines[0].split(gitLogSeparator);
 						resolve({
 							hash: commitInfo[0],
 							parents: commitInfo[1].split(' '),
@@ -129,20 +129,20 @@ export class DataSource {
 					if (err) reject(); else resolve(stdout.split(eolRegex));
 				}))
 			]).then(results => {
-				let details = results[0], fileLookup: { [file: string]: number } = {};
+				const details = results[0], fileLookup: { [file: string]: number } = {};
 
 				for (let i = 1; i < results[1].length - 1; i++) {
-					let line = results[1][i].split('\t');
+					const line = results[1][i].split('\t');
 					if (line.length < 2) break;
-					let oldFilePath = getPathFromStr(line[1]), newFilePath = getPathFromStr(line[line.length - 1]);
+					const oldFilePath = getPathFromStr(line[1]), newFilePath = getPathFromStr(line[line.length - 1]);
 					fileLookup[newFilePath] = details.fileChanges.length;
 					details.fileChanges.push({ oldFilePath: oldFilePath, newFilePath: newFilePath, type: <GitFileChangeType>line[0][0], additions: null, deletions: null });
 				}
 
 				for (let i = 1; i < results[2].length - 1; i++) {
-					let line = results[2][i].split('\t');
+					const line = results[2][i].split('\t');
 					if (line.length !== 3) break;
-					let fileName = line[2].replace(/(.*){.* => (.*)}/, '$1$2').replace(/.* => (.*)/, '$1');
+					const fileName = line[2].replace(/(.*){.* => (.*)}/, '$1$2').replace(/.* => (.*)/, '$1');
 					if (typeof fileLookup[fileName] === 'number') {
 						details.fileChanges[fileLookup[fileName]].additions = parseInt(line[0]);
 						details.fileChanges[fileLookup[fileName]].deletions = parseInt(line[1]);
@@ -174,7 +174,7 @@ export class DataSource {
 	}
 
 	public addTag(repo: string, tagName: string, commitHash: string, lightweight: boolean, message: string) {
-		let args = ['tag'];
+		const args = ['tag'];
 		if (lightweight) {
 			args.push(tagName);
 		} else {
@@ -235,15 +235,15 @@ export class DataSource {
 	private getRefs(repo: string, showRemoteBranches: boolean) {
 		return new Promise<GitRefData>((resolve) => {
 			this.execGit('show-ref ' + (showRemoteBranches ? '' : '--heads --tags') + ' -d --head', repo, (err, stdout) => {
-				let refData: GitRefData = { head: null, refs: [] };
+				const refData: GitRefData = { head: null, refs: [] };
 				if (!err) {
-					let lines = stdout.split(eolRegex);
+					const lines = stdout.split(eolRegex);
 					for (let i = 0; i < lines.length - 1; i++) {
-						let line = lines[i].split(' ');
+						const line = lines[i].split(' ');
 						if (line.length < 2) continue;
 
-						let hash = line.shift()!;
-						let ref = line.join(' ');
+						const hash = line.shift()!;
+						const ref = line.join(' ');
 
 						if (ref.startsWith('refs/heads/')) {
 							refData.refs.push({ hash: hash, name: ref.substring(11), type: 'head' });
@@ -262,7 +262,7 @@ export class DataSource {
 	}
 
 	private getGitLog(repo: string, branch: string, num: number, showRemoteBranches: boolean) {
-		let args = ['log', '--max-count=' + num, '--format=' + this.gitLogFormat, '--date-order'];
+		const args = ['log', '--max-count=' + num, '--format=' + this.gitLogFormat, '--date-order'];
 		if (branch !== '') {
 			args.push(escapeRefName(branch));
 		} else {
@@ -271,10 +271,10 @@ export class DataSource {
 		}
 
 		return this.spawnGit(args, repo, (stdout) => {
-			let lines = stdout.split(eolRegex);
-			let gitCommits: GitCommit[] = [];
+			const lines = stdout.split(eolRegex);
+			const gitCommits: GitCommit[] = [];
 			for (let i = 0; i < lines.length - 1; i++) {
-				let line = lines[i].split(gitLogSeparator);
+				const line = lines[i].split(gitLogSeparator);
 				if (line.length !== 6) break;
 				gitCommits.push({ hash: line[0], parentHashes: line[1].split(' '), author: line[2], email: line[3], date: parseInt(line[4]), message: line[5] });
 			}
@@ -286,7 +286,7 @@ export class DataSource {
 		return new Promise<GitUnsavedChanges | null>((resolve) => {
 			this.execGit('status -s --branch --untracked-files --porcelain', repo, (err, stdout) => {
 				if (!err) {
-					let lines = stdout.split(eolRegex);
+					const lines = stdout.split(eolRegex);
 					resolve(lines.length > 2 ? { branch: lines[0].substring(3).split('...')[0], changes: lines.length - 2 } : null);
 				} else {
 					resolve(null);
@@ -329,7 +329,7 @@ export class DataSource {
 				if (code === 0) {
 					resolve(null);
 				} else {
-					let lines = (stdout !== '' ? stdout : stderr !== '' ? stderr : '').split(eolRegex);
+					const lines = (stdout !== '' ? stdout : stderr !== '' ? stderr : '').split(eolRegex);
 					resolve(lines.slice(0, lines.length - 1).join('\n'));
 				}
 			});

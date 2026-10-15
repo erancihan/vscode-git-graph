@@ -30,7 +30,7 @@ export function evalPromises<X, Y>(data: X[], maxParallel: number, createPromise
 		} else {
 			let results: Y[] = new Array(data.length), nextPromise = 0, rejected = false, completed = 0;
 			function startNext() {
-				let cur = nextPromise;
+				const cur = nextPromise;
 				nextPromise++;
 				createPromise(data[cur]).then(result => {
 					if (!rejected) {

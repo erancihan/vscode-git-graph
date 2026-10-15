@@ -1,38 +1,56 @@
 {
 	"name": "git-graph",
 	"displayName": "Git Graph",
-	"version": "1.4.6",
-	"publisher": "mhutchie",
+	"version": "2.0.0",
+	"publisher": "erancihan",
 	"author": {
-		"name": "Michael Hutchison",
-		"email": "mhutchie@16right.com"
+		"name": "Cihan Eran"
 	},
-	"description": "View a Git Graph of your repository, and perform Git actions from the graph.",
+	"contributors": [
+		{
+			"name": "Michael Hutchison",
+			"url": "https://github.com/mhutchie"
+		}
+	],
+	"description": "View a Git Graph of your repository, and perform Git actions from the graph. Community-maintained MIT fork of Git Graph.",
 	"keywords": [
 		"git",
 		"graph",
 		"visualise",
+		"visualize",
 		"diff",
-		"action"
+		"action",
+		"history",
+		"log"
 	],
 	"categories": [
+		"SCM Providers",
 		"Other"
 	],
-	"homepage": "https://github.com/mhutchie/vscode-git-graph",
+	"homepage": "https://github.com/erancihan/vscode-git-graph",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/mhutchie/vscode-git-graph.git"
+		"url": "https://github.com/erancihan/vscode-git-graph.git"
 	},
 	"bugs": {
-		"url": "https://github.com/mhutchie/vscode-git-graph/issues"
+		"url": "https://github.com/erancihan/vscode-git-graph/issues"
 	},
 	"license": "MIT",
 	"icon": "resources/icon.png",
 	"engines": {
-		"vscode": "^1.31.0"
+		"vscode": "^1.74.0"
+	},
+	"extensionKind": [
+		"workspace"
+	],
+	"capabilities": {
+		"virtualWorkspaces": false,
+		"untrustedWorkspaces": {
+			"supported": false
+		}
 	},
 	"activationEvents": [
-		"*"
+		"onStartupFinished"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -179,15 +197,20 @@
 		"compile-src": "tsc -p ./src",
 		"compile-web": "tsc -p ./web && node ./.vscode/package-web.js",
 		"compile-web-debug": "tsc -p ./web && node ./.vscode/package-web.js debug",
+		"lint": "eslint src web",
 		"package": "npm run clean && vsce package",
 		"package-and-install": "npm run clean && vsce package && node ./.vscode/install-package.js",
-		"postinstall": "node ./node_modules/vscode/bin/install"
+		"publish:vsce": "vsce publish",
+		"publish:ovsx": "ovsx publish"
 	},
 	"devDependencies": {
-		"@types/node": "^8.10.25",
-		"tslint": "^5.12.1",
-		"typescript": "^3.3.1",
-		"uglify-js": "^3.4.9",
-		"vscode": "^1.1.28"
+		"@types/node": "^20.19.43",
+		"@types/vscode": "^1.74.0",
+		"@vscode/vsce": "^3.6.0",
+		"eslint": "^10.0.0",
+		"ovsx": "^0.10.6",
+		"typescript": "^5.9.0",
+		"typescript-eslint": "^8.46.0",
+		"uglify-js": "^3.19.3"
 	}
 }

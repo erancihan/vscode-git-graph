@@ -59,12 +59,12 @@ export class ExtensionState {
 		return this.globalState.get<AvatarCache>(AVATAR_CACHE, {});
 	}
 	public saveAvatar(email: string, avatar: Avatar) {
-		let avatars = this.getAvatarCache();
+		const avatars = this.getAvatarCache();
 		avatars[email] = avatar;
 		this.globalState.update(AVATAR_CACHE, avatars);
 	}
 	public removeAvatarFromCache(email: string) {
-		let avatars = this.getAvatarCache();
+		const avatars = this.getAvatarCache();
 		delete avatars[email];
 		this.globalState.update(AVATAR_CACHE, avatars);
 	}

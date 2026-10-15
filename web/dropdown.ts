@@ -17,7 +17,7 @@ class Dropdown {
 		this.changeCallback = changeCallback;
 		this.elem = document.getElementById(id)!;
 
-		let filter = document.createElement('div');
+		const filter = document.createElement('div');
 		filter.className = 'dropdownFilter';
 		this.filterInput = document.createElement('input');
 		this.filterInput.className = 'dropdownFilterInput';
@@ -52,9 +52,9 @@ class Dropdown {
 				if ((<HTMLElement>e.target).closest('.dropdown') !== this.elem) {
 					this.close();
 				} else {
-					let option = <HTMLElement | null>(<HTMLElement>e.target).closest('.dropdownOption');
+					const option = <HTMLElement | null>(<HTMLElement>e.target).closest('.dropdownOption');
 					if (option !== null && option.parentNode === this.optionsElem && typeof option.dataset.id !== 'undefined') {
-						let selectedOption = parseInt(option.dataset.id!);
+						const selectedOption = parseInt(option.dataset.id!);
 						this.close();
 						if (this.selectedOption !== selectedOption) {
 							this.selectedOption = selectedOption;

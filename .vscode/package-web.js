@@ -26,10 +26,10 @@ if (DEBUG) console.log('Debug Mode = ON');
 // Combine the files into an IIFE, with a single "use strict" directive
 let fileContents = '';
 for (let i = 0; i < packageFiles.length; i++) {
-	fileContents += fs.readFileSync(packageFiles[i]).toString().replace('"use strict";\r\n', '') + '\r\n';
+	fileContents += fs.readFileSync(packageFiles[i]).toString().replace(/^"use strict";\r?\n/, '') + '\n';
 	fs.unlinkSync(packageFiles[i])
 }
-fs.writeFileSync(MEDIA_DIRECTORY + OUTPUT_TMP_FILE, '"use strict";\r\n(function(){\r\n' + fileContents + '})();\r\n');
+fs.writeFileSync(MEDIA_DIRECTORY + OUTPUT_TMP_FILE, '"use strict";\n(function(){\n' + fileContents + '})();\n');
 
 
 // Run uglifyjs with the required arguments

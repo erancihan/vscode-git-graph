@@ -1,10 +1,15 @@
 .github/
 .vscode/
+docs/
 out/*.d.ts
 out/*.js.map
 resources/demo.gif
 src/
 web/
+.editorconfig
+.gitattributes
 .gitignore
-azure-pipelines.yml
-tslint.json
+eslint.config.mjs
+package-lock.json
+*.vsix
+.remember/

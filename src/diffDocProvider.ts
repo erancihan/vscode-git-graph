@@ -20,17 +20,17 @@ export class DiffDocProvider implements vscode.TextDocumentContentProvider {
 		this.onDidChangeEventEmitter.dispose();
 	}
 
-	get onDidChange() {
+	public get onDidChange() {
 		return this.onDidChangeEventEmitter.event;
 	}
 
 	public provideTextDocumentContent(uri: vscode.Uri): string | Thenable<string> {
-		let document = this.docs.get(uri.toString());
+		const document = this.docs.get(uri.toString());
 		if (document) return document.value;
 
-		let request = decodeDiffDocUri(uri);
+		const request = decodeDiffDocUri(uri);
 		return this.dataSource.getCommitFile(request.repo, request.commit, request.filePath).then((data) => {
-			let document = new DiffDocument(data);
+			const document = new DiffDocument(data);
 			this.docs.set(uri.toString(), document);
 			return document.value;
 		});
@@ -44,7 +44,7 @@ class DiffDocument {
 		this.body = body;
 	}
 
-	get value() {
+	public get value() {
 		return this.body;
 	}
 }
@@ -54,14 +54,14 @@ export function encodeDiffDocUri(repo: string, path: string, commit: string): vs
 }
 
 export function decodeDiffDocUri(uri: vscode.Uri) {
-	let queryArgs = decodeUriQueryArgs(uri.query);
+	const queryArgs = decodeUriQueryArgs(uri.query);
 	return { filePath: uri.path, commit: queryArgs.commit, repo: queryArgs.repo };
 }
 
 function decodeUriQueryArgs(query: string) {
 	let queryComps = query.split('&'), queryArgs: { [key: string]: string } = {}, i;
 	for (i = 0; i < queryComps.length; i++) {
-		let pair = queryComps[i].split('=');
+		const pair = queryComps[i].split('=');
 		queryArgs[pair[0]] = decodeURIComponent(pair[1]);
 	}
 	return queryArgs;

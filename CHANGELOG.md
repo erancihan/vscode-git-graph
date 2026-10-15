@@ -1,5 +1,20 @@
 # Change Log
 
+## 2.0.0 - Unreleased
+
+First release of the community-maintained MIT fork. It continues from Git Graph 1.4.6 by mhutchie, the last MIT-licensed version.
+
+Changes compared to 1.4.6:
+* New publisher `erancihan` and extension ID `erancihan.git-graph`. Settings and commands keep the `git-graph.` prefix.
+* Requires Visual Studio Code 1.74 or later. Activates after startup instead of on every activation event.
+* Toolchain update: TypeScript 5, `@types/vscode`, ESLint 10 with typescript-eslint, Node.js 20. TSLint and the old `vscode` test module are removed.
+* GitHub Actions: CI builds a `.vsix` on every push and pull request. Pushing a `v*` tag creates a GitHub release and publishes to the Visual Studio Marketplace and Open VSX.
+* Fixed: avatar cache entries were always overwritten because of a wrong type check in the avatar manager.
+* Line endings normalized to LF.
+
+See `docs/UPSTREAM_GAP.md` for features that exist in later upstream versions and the plan to re-implement them.
+
+
 ## 1.4.6 - 2019-04-30
 * #33 Support for git repositories in subfolders. New setting `git-graph.maxDepthOfRepoSearch` specifies the maximum depth of subfolders to search (default: 0).
 * #50 Branch and repo dropdowns now have a filter to make it faster to find the desired item.
