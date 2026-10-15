@@ -4,16 +4,22 @@ name: Release
 # Required repository secrets:
 #   VSCE_PAT  - Azure DevOps personal access token with the "Marketplace (Manage)" scope.
 #   OVSX_PAT  - Open VSX access token for the publisher namespace.
+#
+# Job layout: the build job produces the .vsix. The GitHub release job is the
+# only one that uses a third-party action, and it has no access to the
+# publishing tokens. The publish job uses the tokens and runs no third-party
+# actions.
 on:
   push:
     tags: ['v*']
 
-permissions:
-  contents: write
+permissions: {}
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,19 +38,46 @@ jobs:
           fi
       - name: Package
         run: npx vsce package --out "git-graph-${GITHUB_REF_NAME}.vsix"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vsix
+          path: git-graph-*.vsix
+          if-no-files-found: error
+
+  github-release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: vsix
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           files: git-graph-*.vsix
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, '-') }}
+
+  publish:
+    needs: build
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/download-artifact@v4
+        with:
+          name: vsix
       - name: Publish to Visual Studio Marketplace
-        if: ${{ !contains(github.ref_name, '-') }}
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        run: npx vsce publish --packagePath git-graph-*.vsix
+        run: npx --yes @vscode/vsce@3 publish --packagePath git-graph-*.vsix
       - name: Publish to Open VSX
-        if: ${{ !contains(github.ref_name, '-') }}
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
-        run: npx ovsx publish git-graph-*.vsix
+        run: npx --yes ovsx@0.10 publish git-graph-*.vsix
