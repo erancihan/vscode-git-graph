@@ -43,7 +43,7 @@ Testing:
 
 ## Pull requests
 
-Open a pull request against `main`. Fill in the template, including the license checklist. CI runs lint, compile, and packaging on every pull request.
+Open a pull request against `master`. Fill in the template, including the license checklist. CI runs lint, compile, and packaging on every pull request.
 
 ## Style
 
