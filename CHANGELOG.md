@@ -10,6 +10,7 @@ Changes compared to 1.4.6:
 * Toolchain update: TypeScript 5, `@types/vscode`, ESLint 10 with typescript-eslint, Node.js 20. TSLint and the old `vscode` test module are removed.
 * GitHub Actions: CI builds a `.vsix` on every push and pull request. Pushing a `v*` tag creates a GitHub release and publishes to the Visual Studio Marketplace and Open VSX.
 * Fixed: avatar cache entries were always overwritten because of a wrong type check in the avatar manager.
+* Fixed: the commit details file tree failed when a folder was named like an inherited object member, for example `constructor` (reported upstream as #637).
 * Line endings normalized to LF.
 
 See `docs/UPSTREAM_GAP.md` for features that exist in later upstream versions and the plan to re-implement them.
