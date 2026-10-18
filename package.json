@@ -70,12 +70,12 @@
 			"type": "object",
 			"title": "Git Graph",
 			"properties": {
-				"git-graph.autoCenterCommitDetailsView": {
+				"git-graph.commitDetailsView.autoCenter": {
 					"type": "boolean",
 					"default": true,
 					"description": "Automatically center the commit details view when it is opened."
 				},
-				"git-graph.dateFormat": {
+				"git-graph.date.format": {
 					"type": "string",
 					"enum": [
 						"Date & Time",
@@ -90,7 +90,7 @@
 					"default": "Date & Time",
 					"description": "Specifies the date format to be used in the date column of Git Graph."
 				},
-				"git-graph.dateType": {
+				"git-graph.date.type": {
 					"type": "string",
 					"enum": [
 						"Author Date",
@@ -103,12 +103,7 @@
 					"default": "Author Date",
 					"description": "Specifies the date type to be displayed throughout Git Graph."
 				},
-				"git-graph.fetchAvatars": {
-					"type": "boolean",
-					"default": false,
-					"description": "Fetch avatars of commit authors and committers. By enabling this setting, you consent to commit author and committer email addresses being sent GitHub, GitLab or Gravatar, depending on the repositories remote origin."
-				},
-				"git-graph.graphColours": {
+				"git-graph.graph.colours": {
 					"type": "array",
 					"items": {
 						"type": "string",
@@ -131,7 +126,7 @@
 					],
 					"description": "Specifies the colours used on the graph."
 				},
-				"git-graph.graphStyle": {
+				"git-graph.graph.style": {
 					"type": "string",
 					"enum": [
 						"rounded",
@@ -144,35 +139,40 @@
 					"default": "rounded",
 					"description": "Specifies the style of the graph."
 				},
-				"git-graph.initialLoadCommits": {
-					"type": "number",
-					"default": 300,
-					"description": "Specifies the number of commits to initially load."
-				},
-				"git-graph.loadMoreCommits": {
-					"type": "number",
-					"default": 100,
-					"description": "Specifies the number of commits to load when the \"Load More Commits\" button is pressed (only shown when more commits are available)."
-				},
 				"git-graph.maxDepthOfRepoSearch": {
 					"type": "number",
 					"default": 0,
 					"description": "Specifies the maximum depth of subfolders to search when discovering repositories in the workspace."
 				},
-				"git-graph.showCurrentBranchByDefault": {
+				"git-graph.repository.commits.fetchAvatars": {
+					"type": "boolean",
+					"default": false,
+					"description": "Fetch avatars of commit authors and committers. By enabling this setting, you consent to commit author and committer email addresses being sent GitHub, GitLab or Gravatar, depending on the repositories remote origin."
+				},
+				"git-graph.repository.commits.initialLoad": {
+					"type": "number",
+					"default": 300,
+					"description": "Specifies the number of commits to initially load."
+				},
+				"git-graph.repository.commits.loadMore": {
+					"type": "number",
+					"default": 100,
+					"description": "Specifies the number of commits to load when the \"Load More Commits\" button is pressed (only shown when more commits are available)."
+				},
+				"git-graph.repository.onLoad.showCheckedOutBranch": {
 					"type": "boolean",
 					"default": false,
 					"description": "Show the current branch by default when Git Graph is opened. Default: false (show all branches)"
+				},
+				"git-graph.repository.showUncommittedChanges": {
+					"type": "boolean",
+					"default": true,
+					"description": "Show uncommitted changes (set to false to decrease load time on large repositories)."
 				},
 				"git-graph.showStatusBarItem": {
 					"type": "boolean",
 					"default": true,
 					"description": "Show a Status Bar item which opens Git Graph when clicked."
-				},
-				"git-graph.showUncommittedChanges": {
-					"type": "boolean",
-					"default": true,
-					"description": "Show uncommitted changes (set to false to decrease load time on large repositories)."
 				},
 				"git-graph.tabIconColourTheme": {
 					"type": "string",
@@ -186,6 +186,110 @@
 					],
 					"default": "colour",
 					"description": "Specifies the colour theme of the icon displayed on the Git Graph tab."
+				},
+				"git-graph.autoCenterCommitDetailsView": {
+					"type": "boolean",
+					"default": true,
+					"description": "Automatically center the commit details view when it is opened.",
+					"deprecationMessage": "Deprecated: use \"git-graph.commitDetailsView.autoCenter\" instead. This setting is still read when the new one is not set."
+				},
+				"git-graph.dateFormat": {
+					"type": "string",
+					"enum": [
+						"Date & Time",
+						"Date Only",
+						"Relative"
+					],
+					"enumDescriptions": [
+						"Show the date and time, for example \"19 Mar 2019 21:34\"",
+						"Show the date only, for example \"19 Mar 2019\"",
+						"Show relative times, for example \"5 minutes ago\""
+					],
+					"default": "Date & Time",
+					"description": "Specifies the date format to be used in the date column of Git Graph.",
+					"deprecationMessage": "Deprecated: use \"git-graph.date.format\" instead. This setting is still read when the new one is not set."
+				},
+				"git-graph.dateType": {
+					"type": "string",
+					"enum": [
+						"Author Date",
+						"Commit Date"
+					],
+					"enumDescriptions": [
+						"Use the author date of a commit",
+						"Use the committer date of a commit"
+					],
+					"default": "Author Date",
+					"description": "Specifies the date type to be displayed throughout Git Graph.",
+					"deprecationMessage": "Deprecated: use \"git-graph.date.type\" instead. This setting is still read when the new one is not set."
+				},
+				"git-graph.fetchAvatars": {
+					"type": "boolean",
+					"default": false,
+					"description": "Fetch avatars of commit authors and committers. By enabling this setting, you consent to commit author and committer email addresses being sent GitHub, GitLab or Gravatar, depending on the repositories remote origin.",
+					"deprecationMessage": "Deprecated: use \"git-graph.repository.commits.fetchAvatars\" instead. This setting is still read when the new one is not set."
+				},
+				"git-graph.graphColours": {
+					"type": "array",
+					"items": {
+						"type": "string",
+						"description": "Colour (HEX or RGB)",
+						"pattern": "^\\s*(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|rgb[a]?\\s*\\(\\d{1,3},\\s*\\d{1,3},\\s*\\d{1,3}\\))\\s*$"
+					},
+					"default": [
+						"#0085d9",
+						"#d9008f",
+						"#00d90a",
+						"#d98500",
+						"#a300d9",
+						"#ff0000",
+						"#00d9cc",
+						"#e138e8",
+						"#85d900",
+						"#dc5b23",
+						"#6f24d6",
+						"#ffcc00"
+					],
+					"description": "Specifies the colours used on the graph.",
+					"deprecationMessage": "Deprecated: use \"git-graph.graph.colours\" instead. This setting is still read when the new one is not set."
+				},
+				"git-graph.graphStyle": {
+					"type": "string",
+					"enum": [
+						"rounded",
+						"angular"
+					],
+					"enumDescriptions": [
+						"Use smooth curves when transitioning between branches on the graph",
+						"Use angular lines when transitioning between branches on the graph"
+					],
+					"default": "rounded",
+					"description": "Specifies the style of the graph.",
+					"deprecationMessage": "Deprecated: use \"git-graph.graph.style\" instead. This setting is still read when the new one is not set."
+				},
+				"git-graph.initialLoadCommits": {
+					"type": "number",
+					"default": 300,
+					"description": "Specifies the number of commits to initially load.",
+					"deprecationMessage": "Deprecated: use \"git-graph.repository.commits.initialLoad\" instead. This setting is still read when the new one is not set."
+				},
+				"git-graph.loadMoreCommits": {
+					"type": "number",
+					"default": 100,
+					"description": "Specifies the number of commits to load when the \"Load More Commits\" button is pressed (only shown when more commits are available).",
+					"deprecationMessage": "Deprecated: use \"git-graph.repository.commits.loadMore\" instead. This setting is still read when the new one is not set."
+				},
+				"git-graph.showCurrentBranchByDefault": {
+					"type": "boolean",
+					"default": false,
+					"description": "Show the current branch by default when Git Graph is opened. Default: false (show all branches)",
+					"deprecationMessage": "Deprecated: use \"git-graph.repository.onLoad.showCheckedOutBranch\" instead. This setting is still read when the new one is not set."
+				},
+				"git-graph.showUncommittedChanges": {
+					"type": "boolean",
+					"default": true,
+					"description": "Show uncommitted changes (set to false to decrease load time on large repositories).",
+					"deprecationMessage": "Deprecated: use \"git-graph.repository.showUncommittedChanges\" instead. This setting is still read when the new one is not set."
 				}
 			}
 		}

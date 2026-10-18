@@ -18,6 +18,11 @@ export const workspace = {
 				const values = configurationValues[section];
 				if (values && Object.prototype.hasOwnProperty.call(values, key)) return values[key] as T;
 				return defaultValue;
+			},
+			inspect<T>(key: string): { key: string, globalValue?: T } | undefined {
+				const values = configurationValues[section];
+				if (values && Object.prototype.hasOwnProperty.call(values, key)) return { key, globalValue: values[key] as T };
+				return { key };
 			}
 		};
 	}

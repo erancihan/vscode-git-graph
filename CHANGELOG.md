@@ -8,6 +8,9 @@
 * Every git command runs with `color.ui=false` and `log.showSignature=false`, so a user configuration with coloured output or signature display no longer breaks parsing.
 * The `git.path` setting of the built-in Git extension can be an array of candidate paths. The first candidate that exists is used.
 * A git executable that cannot be started is reported in the Output Channel instead of failing silently.
+* Reference names that start with `-` and commit hashes that are not hexadecimal are refused before they reach git, so a hostile repository cannot turn a branch name into a git option.
+* Settings use grouped names, for example `git-graph.date.format` and `git-graph.repository.commits.initialLoad`. The flat names from version 1.x are marked deprecated in the Settings editor but are still read when the grouped name is not set. Boolean and number settings accept string values from hand-edited `settings.json` files.
+* The webview loads its script and stylesheets through `asWebviewUri` and restricts scripts to the page nonce. The deprecated `vscode-resource:` scheme is gone, which keeps the view working in Remote Development and in current Visual Studio Code versions.
 
 ## 2.0.2 - 2026-10-15
 

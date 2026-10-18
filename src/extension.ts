@@ -29,11 +29,14 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.workspace.onDidChangeConfiguration(e => {
 			if (e.affectsConfiguration('git-graph.showStatusBarItem')) {
 				statusBarItem.refresh();
-			} else if (e.affectsConfiguration('git-graph.dateType')) {
+			}
+			if (e.affectsConfiguration('git-graph.date.type') || e.affectsConfiguration('git-graph.dateType')) {
 				dataSource.generateGitCommandFormats();
-			} else if (e.affectsConfiguration('git-graph.maxDepthOfRepoSearch')) {
+			}
+			if (e.affectsConfiguration('git-graph.maxDepthOfRepoSearch')) {
 				repoManager.maxDepthOfRepoSearchChanged();
-			} else if (e.affectsConfiguration('git.path')) {
+			}
+			if (e.affectsConfiguration('git.path')) {
 				dataSource.registerGitPath();
 			}
 		}),
