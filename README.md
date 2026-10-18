@@ -36,6 +36,7 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
 This extension contributes the following settings:
 
 * `git-graph.commitDetailsView.autoCenter`: Automatically center the commit details view when it is opened.
+* `git-graph.contextMenuActionsVisibility`: Hide individual context menu actions, for example `{"commit": {"reset": false}}`. Menus: `branch`, `commit`, `remoteBranch`, `tag`.
 * `git-graph.date.format`: Specifies the date format used in the date column of the graph.
 * `git-graph.date.type`: Specifies whether the author date or the commit date is displayed.
 * `git-graph.dialog.addTag.type`: Default tag type in the "Add Tag" dialog: `Annotated` or `Lightweight`.

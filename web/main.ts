@@ -340,10 +340,11 @@ class GitGraphView {
 			if ((<Element>e.target).closest('.gitRef') !== null) return; // Handled by the reference listener
 			e.stopPropagation();
 			const sourceElem = <HTMLElement>(<Element>e.target).closest('.commit')!;
-			const hash = sourceElem.dataset.hash!;
+			const hash = sourceElem.dataset.hash!, visibility = this.config.contextMenuActionsVisibility.commit;
 			showContextMenu(<MouseEvent>e, [
 				{
 					title: 'Add Tag' + ELLIPSIS,
+					visible: visibility.addTag,
 					onClick: () => {
 						showFormDialog('Add tag to commit <b><i>' + abbrevCommit(hash) + '</i></b>:', [
 							{ type: 'text-ref' as const, name: 'Name: ', default: '' },
@@ -356,6 +357,7 @@ class GitGraphView {
 				},
 				{
 					title: 'Create Branch' + ELLIPSIS,
+					visible: visibility.createBranch,
 					onClick: () => {
 						showRefInputDialog('Enter the name of the branch you would like to create from commit <b><i>' + abbrevCommit(hash) + '</i></b>:', '', 'Create Branch', (name) => {
 							sendMessage({ command: 'createBranch', repo: this.currentRepo!, branchName: name, commitHash: hash });
@@ -365,6 +367,7 @@ class GitGraphView {
 				null,
 				{
 					title: 'Checkout' + ELLIPSIS,
+					visible: visibility.checkout,
 					onClick: () => {
 						showConfirmationDialog('Are you sure you want to checkout commit <b><i>' + abbrevCommit(hash) + '</i></b>? This will result in a \'detached HEAD\' state.', () => {
 							sendMessage({ command: 'checkoutCommit', repo: this.currentRepo!, commitHash: hash });
@@ -373,6 +376,7 @@ class GitGraphView {
 				},
 				{
 					title: 'Cherry Pick' + ELLIPSIS,
+					visible: visibility.cherrypick,
 					onClick: () => {
 						if (this.commits[this.commitLookup[hash]].parentHashes.length === 1) {
 							showConfirmationDialog('Are you sure you want to cherry pick commit <b><i>' + abbrevCommit(hash) + '</i></b>?', () => {
@@ -391,6 +395,7 @@ class GitGraphView {
 				},
 				{
 					title: 'Revert' + ELLIPSIS,
+					visible: visibility.revert,
 					onClick: () => {
 						if (this.commits[this.commitLookup[hash]].parentHashes.length === 1) {
 							showConfirmationDialog('Are you sure you want to revert commit <b><i>' + abbrevCommit(hash) + '</i></b>?', () => {
@@ -410,6 +415,7 @@ class GitGraphView {
 				null,
 				{
 					title: 'Merge into current branch' + ELLIPSIS,
+					visible: visibility.merge,
 					onClick: () => {
 						showCheckboxDialog('Are you sure you want to merge commit <b><i>' + abbrevCommit(hash) + '</i></b> into the current branch?', 'Create a new commit even if fast-forward is possible', this.config.dialogDefaults.merge.noFastForward, 'Yes, merge', (createNewCommit) => {
 							sendMessage({ command: 'mergeCommit', repo: this.currentRepo!, commitHash: hash, createNewCommit: createNewCommit });
@@ -418,6 +424,7 @@ class GitGraphView {
 				},
 				{
 					title: 'Reset current branch to this Commit' + ELLIPSIS,
+					visible: visibility.reset,
 					onClick: () => {
 						showSelectDialog('Are you sure you want to reset the <b>current branch</b> to commit <b><i>' + abbrevCommit(hash) + '</i></b>?', this.config.dialogDefaults.resetCurrentBranchToCommit.mode, [
 							{ name: 'Soft - Keep all changes, but reset head', value: 'soft' },
@@ -431,6 +438,7 @@ class GitGraphView {
 				null,
 				{
 					title: 'Copy Commit Hash to Clipboard',
+					visible: visibility.copyHash,
 					onClick: () => {
 						sendMessage({ command: 'copyToClipboard', type: 'Commit Hash', data: hash });
 					}
@@ -453,6 +461,7 @@ class GitGraphView {
 			if (sourceElem.classList.contains('tag')) {
 				menu = [{
 					title: 'Delete Tag' + ELLIPSIS,
+					visible: this.config.contextMenuActionsVisibility.tag.delete,
 					onClick: () => {
 						showConfirmationDialog('Are you sure you want to delete the tag <b><i>' + escapeHtml(refName) + '</i></b>?', () => {
 							sendMessage({ command: 'deleteTag', repo: this.currentRepo!, tagName: refName });
@@ -460,6 +469,7 @@ class GitGraphView {
 					}
 				}, {
 					title: 'Push Tag' + ELLIPSIS,
+					visible: this.config.contextMenuActionsVisibility.tag.push,
 					onClick: () => {
 						showConfirmationDialog('Are you sure you want to push the tag <b><i>' + escapeHtml(refName) + '</i></b>?', () => {
 							sendMessage({ command: 'pushTag', repo: this.currentRepo!, tagName: refName });
@@ -474,11 +484,13 @@ class GitGraphView {
 					if (this.gitBranchHead !== refName) {
 						menu.push({
 							title: 'Checkout Branch',
+							visible: this.config.contextMenuActionsVisibility.branch.checkout,
 							onClick: () => this.checkoutBranchAction(sourceElem, refName)
 						});
 					}
 					menu.push({
 						title: 'Rename Branch' + ELLIPSIS,
+						visible: this.config.contextMenuActionsVisibility.branch.rename,
 						onClick: () => {
 							showRefInputDialog('Enter the new name for branch <b><i>' + escapeHtml(refName) + '</i></b>:', refName, 'Rename Branch', (newName) => {
 								sendMessage({ command: 'renameBranch', repo: this.currentRepo!, oldName: refName, newName: newName });
@@ -489,6 +501,7 @@ class GitGraphView {
 						menu.push(
 							{
 								title: 'Delete Branch' + ELLIPSIS,
+								visible: this.config.contextMenuActionsVisibility.branch.delete,
 								onClick: () => {
 									showCheckboxDialog('Are you sure you want to delete the branch <b><i>' + escapeHtml(refName) + '</i></b>?', 'Force Delete', this.config.dialogDefaults.deleteBranch.forceDelete, 'Delete Branch', (forceDelete) => {
 										sendMessage({ command: 'deleteBranch', repo: this.currentRepo!, branchName: refName, forceDelete: forceDelete });
@@ -496,6 +509,7 @@ class GitGraphView {
 								}
 							}, {
 								title: 'Merge into current branch' + ELLIPSIS,
+								visible: this.config.contextMenuActionsVisibility.branch.merge,
 								onClick: () => {
 									showCheckboxDialog('Are you sure you want to merge branch <b><i>' + escapeHtml(refName) + '</i></b> into the current branch?', 'Create a new commit even if fast-forward is possible', this.config.dialogDefaults.merge.noFastForward, 'Yes, merge', (createNewCommit) => {
 										sendMessage({ command: 'mergeBranch', repo: this.currentRepo!, branchName: refName, createNewCommit: createNewCommit });
@@ -507,6 +521,7 @@ class GitGraphView {
 				} else {
 					menu = [{
 						title: 'Checkout Branch' + ELLIPSIS,
+						visible: this.config.contextMenuActionsVisibility.remoteBranch.checkout,
 						onClick: () => this.checkoutBranchAction(sourceElem, refName)
 					}];
 				}
@@ -514,6 +529,7 @@ class GitGraphView {
 			}
 			menu.push(null, {
 				title: 'Copy ' + copyType + ' to Clipboard',
+				visible: sourceElem.classList.contains('tag') ? this.config.contextMenuActionsVisibility.tag.copyName : sourceElem.classList.contains('head') ? this.config.contextMenuActionsVisibility.branch.copyName : this.config.contextMenuActionsVisibility.remoteBranch.copyName,
 				onClick: () => {
 					sendMessage({ command: 'copyToClipboard', type: copyType, data: refName });
 				}
@@ -764,6 +780,7 @@ let contextMenu = document.getElementById('contextMenu')!, contextMenuSource: HT
 let dialog = document.getElementById('dialog')!, dialogBacking = document.getElementById('dialogBacking')!, dialogMenuSource: HTMLElement | null = null;
 const gitGraph = new GitGraphView(viewState.repos, viewState.lastActiveRepo, {
 	autoCenterCommitDetailsView: viewState.autoCenterCommitDetailsView,
+	contextMenuActionsVisibility: viewState.contextMenuActionsVisibility,
 	dialogDefaults: viewState.dialogDefaults,
 	fetchAvatars: viewState.fetchAvatars,
 	graphColours: viewState.graphColours,
@@ -960,7 +977,9 @@ function abbrevCommit(commitHash: string) {
 
 
 /* Context Menu */
-function showContextMenu(e: MouseEvent, items: ContextMenuElement[], sourceElem: HTMLElement) {
+function showContextMenu(e: MouseEvent, allItems: ContextMenuElement[], sourceElem: HTMLElement) {
+	const items = removeHiddenContextMenuItems(allItems);
+	if (items.length === 0) return;
 	let html = '', i: number, event = <MouseEvent>e;
 	for (i = 0; i < items.length; i++) {
 		html += items[i] !== null ? '<li class="contextMenuItem" data-index="' + i + '">' + items[i]!.title + '</li>' : '<li class="contextMenuDivider"></li>';
@@ -983,6 +1002,23 @@ function showContextMenu(e: MouseEvent, items: ContextMenuElement[], sourceElem:
 
 	contextMenuSource = sourceElem;
 	contextMenuSource.classList.add('contextMenuActive');
+}
+/**
+ * Drop items whose `visible` flag is false, then drop dividers that would be at the start, at the
+ * end, or next to another divider.
+ */
+function removeHiddenContextMenuItems(items: ContextMenuElement[]) {
+	const result: ContextMenuElement[] = [];
+	for (let i = 0; i < items.length; i++) {
+		const item = items[i];
+		if (item === null) {
+			if (result.length > 0 && result[result.length - 1] !== null) result.push(null);
+		} else if (item.visible !== false) {
+			result.push(item);
+		}
+	}
+	if (result.length > 0 && result[result.length - 1] === null) result.pop();
+	return result;
 }
 function hideContextMenu() {
 	contextMenu.className = '';

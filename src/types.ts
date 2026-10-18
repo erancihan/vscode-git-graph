@@ -51,6 +51,13 @@ export interface GitUnsavedChanges {
 	changes: number;
 }
 
+export interface ContextMenuActionsVisibility {
+	branch: { checkout: boolean, rename: boolean, delete: boolean, merge: boolean, copyName: boolean };
+	commit: { addTag: boolean, createBranch: boolean, checkout: boolean, cherrypick: boolean, revert: boolean, merge: boolean, reset: boolean, copyHash: boolean };
+	remoteBranch: { checkout: boolean, copyName: boolean };
+	tag: { delete: boolean, push: boolean, copyName: boolean };
+}
+
 export interface DialogDefaults {
 	addTag: { type: 'annotated' | 'lightweight' };
 	deleteBranch: { forceDelete: boolean };
@@ -61,6 +68,7 @@ export interface DialogDefaults {
 
 export interface GitGraphViewState {
 	autoCenterCommitDetailsView: boolean;
+	contextMenuActionsVisibility: ContextMenuActionsVisibility;
 	dateFormat: DateFormat;
 	dialogDefaults: DialogDefaults;
 	fetchAvatars: boolean;

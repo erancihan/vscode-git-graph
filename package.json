@@ -75,6 +75,132 @@
 					"default": true,
 					"description": "Automatically center the commit details view when it is opened."
 				},
+				"git-graph.contextMenuActionsVisibility": {
+					"type": "object",
+					"default": {},
+					"description": "Hide individual actions from the context menus. Every action is visible unless it is set to false here, for example {\"commit\": {\"reset\": false}}.",
+					"properties": {
+						"branch": {
+							"type": "object",
+							"description": "Actions in the context menu of a local branch label.",
+							"properties": {
+								"checkout": {
+									"type": "boolean",
+									"default": true,
+									"description": "Checkout Branch"
+								},
+								"rename": {
+									"type": "boolean",
+									"default": true,
+									"description": "Rename Branch"
+								},
+								"delete": {
+									"type": "boolean",
+									"default": true,
+									"description": "Delete Branch"
+								},
+								"merge": {
+									"type": "boolean",
+									"default": true,
+									"description": "Merge into current branch"
+								},
+								"copyName": {
+									"type": "boolean",
+									"default": true,
+									"description": "Copy Branch Name to Clipboard"
+								}
+							},
+							"additionalProperties": false
+						},
+						"commit": {
+							"type": "object",
+							"description": "Actions in the context menu of a commit.",
+							"properties": {
+								"addTag": {
+									"type": "boolean",
+									"default": true,
+									"description": "Add Tag"
+								},
+								"createBranch": {
+									"type": "boolean",
+									"default": true,
+									"description": "Create Branch"
+								},
+								"checkout": {
+									"type": "boolean",
+									"default": true,
+									"description": "Checkout"
+								},
+								"cherrypick": {
+									"type": "boolean",
+									"default": true,
+									"description": "Cherry Pick"
+								},
+								"revert": {
+									"type": "boolean",
+									"default": true,
+									"description": "Revert"
+								},
+								"merge": {
+									"type": "boolean",
+									"default": true,
+									"description": "Merge into current branch"
+								},
+								"reset": {
+									"type": "boolean",
+									"default": true,
+									"description": "Reset current branch to this Commit"
+								},
+								"copyHash": {
+									"type": "boolean",
+									"default": true,
+									"description": "Copy Commit Hash to Clipboard"
+								}
+							},
+							"additionalProperties": false
+						},
+						"remoteBranch": {
+							"type": "object",
+							"description": "Actions in the context menu of a remote branch label.",
+							"properties": {
+								"checkout": {
+									"type": "boolean",
+									"default": true,
+									"description": "Checkout Branch"
+								},
+								"copyName": {
+									"type": "boolean",
+									"default": true,
+									"description": "Copy Branch Name to Clipboard"
+								}
+							},
+							"additionalProperties": false
+						},
+						"tag": {
+							"type": "object",
+							"description": "Actions in the context menu of a tag label.",
+							"properties": {
+								"delete": {
+									"type": "boolean",
+									"default": true,
+									"description": "Delete Tag"
+								},
+								"push": {
+									"type": "boolean",
+									"default": true,
+									"description": "Push Tag"
+								},
+								"copyName": {
+									"type": "boolean",
+									"default": true,
+									"description": "Copy Tag Name to Clipboard"
+								}
+							},
+							"additionalProperties": false
+						}
+					},
+					"additionalProperties": false
+				},
 				"git-graph.date.format": {
 					"type": "string",
 					"enum": [

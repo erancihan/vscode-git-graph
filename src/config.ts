@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { CommitOrdering, DateFormat, DateType, DialogDefaults, GitResetMode, GraphStyle, TabIconColourTheme } from './types';
+import { CommitOrdering, ContextMenuActionsVisibility, DateFormat, DateType, DialogDefaults, GitResetMode, GraphStyle, TabIconColourTheme } from './types';
 
 const DEFAULT_GRAPH_COLOURS = ['#0085d9', '#d9008f', '#00d90a', '#d98500', '#a300d9', '#ff0000', '#00d9cc', '#e138e8', '#85d900', '#dc5b23', '#6f24d6', '#ffcc00'];
 const GRAPH_COLOUR_REGEX = /^\s*(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|rgb[a]?\s*\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\))\s*$/;
@@ -34,6 +34,31 @@ class Config {
 
 	public dateType(): DateType {
 		return this.getEnum<DateType>('date.type', 'dateType', ['Author Date', 'Commit Date'], 'Author Date');
+	}
+
+	/* Context Menus */
+
+	/**
+	 * Which context menu actions are shown. Every action defaults to visible; the setting only needs
+	 * the entries that are set to false.
+	 */
+	public contextMenuActionsVisibility(): ContextMenuActionsVisibility {
+		const value = this.get<unknown>('contextMenuActionsVisibility', null, {});
+		const setting = typeof value === 'object' && value !== null ? <{ [menu: string]: unknown }>value : {};
+		const read = <T extends { [action: string]: boolean }>(menu: string, defaults: T): T => {
+			const actions = typeof setting[menu] === 'object' && setting[menu] !== null ? <{ [action: string]: unknown }>setting[menu] : {};
+			const result = <{ [action: string]: boolean }>{};
+			for (const action of Object.keys(defaults)) {
+				result[action] = coerceBoolean(actions[action], defaults[action]);
+			}
+			return <T>result;
+		};
+		return {
+			branch: read('branch', { checkout: true, rename: true, delete: true, merge: true, copyName: true }),
+			commit: read('commit', { addTag: true, createBranch: true, checkout: true, cherrypick: true, revert: true, merge: true, reset: true, copyHash: true }),
+			remoteBranch: read('remoteBranch', { checkout: true, copyName: true }),
+			tag: read('tag', { delete: true, push: true, copyName: true })
+		};
 	}
 
 	/* Dialogs */

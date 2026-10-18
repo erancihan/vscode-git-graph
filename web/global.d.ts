@@ -11,6 +11,7 @@ declare global {
 
 	interface Config {
 		autoCenterCommitDetailsView: boolean;
+		contextMenuActionsVisibility: GG.ContextMenuActionsVisibility;
 		dialogDefaults: GG.DialogDefaults;
 		fetchAvatars: boolean;
 		graphColours: string[];
@@ -26,6 +27,8 @@ declare global {
 	interface ContextMenuItem {
 		title: string;
 		onClick: () => void;
+		/** Set to false to leave the item out of the menu (from the contextMenuActionsVisibility setting). */
+		visible?: boolean;
 	}
 
 	type ContextMenuElement = ContextMenuItem | null;
