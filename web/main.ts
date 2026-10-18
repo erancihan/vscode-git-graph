@@ -32,6 +32,7 @@ class GitGraphView {
 		this.maxCommits = config.initialLoadCommits;
 		this.graph = new Graph('commitGraph', this.config);
 		this.tableElem = document.getElementById('commitTable')!;
+		this.registerTableListeners();
 		this.footerElem = document.getElementById('footer')!;
 		this.repoDropdown = new Dropdown('repoSelect', true, 'Repos', value => {
 			this.currentRepo = value;
@@ -328,7 +329,15 @@ class GitGraphView {
 			}
 		}
 
-		addListenerToClass('commit', 'contextmenu', (e: Event) => {
+	}
+	/**
+	 * Register the listeners for commit rows and reference labels once, on the table container. The
+	 * table is re-rendered on every refresh, so per-row listeners would have to be re-attached each
+	 * time, which is slow for thousands of rows.
+	 */
+	private registerTableListeners() {
+		addDelegatedListener(this.tableElem, 'commit', 'contextmenu', (e: Event) => {
+			if ((<Element>e.target).closest('.gitRef') !== null) return; // Handled by the reference listener
 			e.stopPropagation();
 			const sourceElem = <HTMLElement>(<Element>e.target).closest('.commit')!;
 			const hash = sourceElem.dataset.hash!;
@@ -428,7 +437,8 @@ class GitGraphView {
 				}
 			], sourceElem);
 		});
-		addListenerToClass('commit', 'click', (e: Event) => {
+		addDelegatedListener(this.tableElem, 'commit', 'click', (e: Event) => {
+			if ((<Element>e.target).closest('.gitRef') !== null) return; // Handled by the reference listener
 			const sourceElem = <HTMLElement>(<Element>e.target).closest('.commit')!;
 			if (this.expandedCommit !== null && this.expandedCommit.hash === sourceElem.dataset.hash!) {
 				this.hideCommitDetails();
@@ -436,7 +446,7 @@ class GitGraphView {
 				this.loadCommitDetails(sourceElem);
 			}
 		});
-		addListenerToClass('gitRef', 'contextmenu', (e: Event) => {
+		addDelegatedListener(this.tableElem, 'gitRef', 'contextmenu', (e: Event) => {
 			e.stopPropagation();
 			const sourceElem = <HTMLElement>(<Element>e.target).closest('.gitRef')!;
 			let refName = unescapeHtml(sourceElem.dataset.name!), menu: ContextMenuElement[], copyType: string;
@@ -510,8 +520,8 @@ class GitGraphView {
 			});
 			showContextMenu(<MouseEvent>e, menu, sourceElem);
 		});
-		addListenerToClass('gitRef', 'click', (e: Event) => e.stopPropagation());
-		addListenerToClass('gitRef', 'dblclick', (e: Event) => {
+		addDelegatedListener(this.tableElem, 'gitRef', 'click', (e: Event) => e.stopPropagation());
+		addDelegatedListener(this.tableElem, 'gitRef', 'dblclick', (e: Event) => {
 			e.stopPropagation();
 			hideDialogAndContextMenu();
 			const sourceElem = <HTMLElement>(<Element>e.target).closest('.gitRef')!;

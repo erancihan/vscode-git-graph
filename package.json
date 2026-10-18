@@ -202,7 +202,8 @@
 		"package-and-install": "npm run clean && vsce package && node ./.vscode/install-package.js",
 		"publish:vsce": "vsce publish",
 		"publish:ovsx": "ovsx publish",
-		"test": "jest"
+		"test": "jest",
+		"bench:graph": "tsc -p ./web && node ./scripts/bench-graph.js ./media/graph.js 20000 200"
 	},
 	"devDependencies": {
 		"@types/jest": "^29.5.14",
