@@ -171,3 +171,10 @@ function t(key: string, ...args: (string | number)[]): string {
 	}
 	return args.length === 0 ? text : text.replace(/\{(\d+)\}/g, (match, index) => typeof args[parseInt(index)] !== 'undefined' ? String(args[parseInt(index)]) : match);
 }
+
+/** Tooltip text for a commit's CI status: the summary and one line per check. */
+function describeCiStatus(status: GG.CommitCiStatus): string {
+	const names: { [state: string]: string } = { success: t('CI: passed'), failure: t('CI: failed'), pending: t('CI: pending'), none: t('CI: no checks') };
+	const lines = status.checks.slice(0, 20).map((check) => check.name + ': ' + check.state);
+	return names[status.state] + (lines.length > 0 ? '\n' + lines.join('\n') : '') + (status.checks.length > 20 ? '\n' + t('and {0} more', status.checks.length - 20) : '') + (status.checks.some((check) => check.url !== null) ? '\n' + t('Click to open the run') : '');
+}

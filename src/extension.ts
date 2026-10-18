@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { AskpassManager } from './askpassManager';
 import { AvatarManager } from './avatarManager';
+import { CiStatusManager } from './ciStatus';
 import { getConfig } from './config';
 import { DataSource } from './dataSource';
 import { DiffDocProvider, decodeDiffDocUri } from './diffDocProvider';
@@ -27,6 +28,7 @@ export function activate(context: vscode.ExtensionContext) {
 	dataSource.setExtensionPath(context.extensionPath);
 	if (getConfig().integratedAskpass()) askpass.start();
 	const avatarManager = new AvatarManager(dataSource, extensionState, logger);
+	const ciStatusManager = new CiStatusManager(dataSource, context.secrets, logger);
 	const statusBarItem = new StatusBarItem(context);
 	const repoManager = new RepoManager(dataSource, extensionState, statusBarItem);
 
@@ -36,7 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
 			if (getConfig().openToTheRepoOfTheActiveTextEditorDocument() && vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.uri.scheme === 'file') {
 				loadRepo = repoManager.getRepoContainingFile(getPathFromUri(vscode.window.activeTextEditor.document.uri));
 			}
-			GitGraphView.createOrShow(context.extensionPath, dataSource, extensionState, avatarManager, repoManager, logger, loadRepo);
+			GitGraphView.createOrShow(context.extensionPath, dataSource, extensionState, avatarManager, ciStatusManager, repoManager, logger, loadRepo);
 		}),
 		vscode.commands.registerCommand('git-graph.addGitRepository', async () => {
 			const uris = await vscode.window.showOpenDialog({ canSelectFiles: false, canSelectFolders: true, canSelectMany: false, openLabel: vscode.l10n.t('Add Repository'), title: vscode.l10n.t('Select a Git repository to add to Git Graph') });

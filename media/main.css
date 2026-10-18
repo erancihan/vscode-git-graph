@@ -1135,6 +1135,28 @@ tr.rebaseAction-squash .rebaseSubjectText, tr.rebaseAction-fixup .rebaseSubjectT
 	line-height:24px;
 	opacity:0.8;
 }
+.ciStatus{
+	display:inline-block;
+	width:8px;
+	height:8px;
+	margin-right:5px;
+	border-radius:50%;
+	vertical-align:middle;
+	visibility:hidden;
+}
+.ciStatus.ciStatus-success, .ciStatus.ciStatus-failure, .ciStatus.ciStatus-pending{
+	visibility:visible;
+	cursor:pointer;
+}
+.ciStatus.ciStatus-success{
+	background-color:var(--vscode-testing-iconPassed, #388a34);
+}
+.ciStatus.ciStatus-failure{
+	background-color:var(--vscode-testing-iconFailed, #e51400);
+}
+.ciStatus.ciStatus-pending{
+	background-color:var(--vscode-testing-iconQueued, #cc9900);
+}
 .roundedBtn.disabled{
 	opacity:0.4;
 	cursor:default;

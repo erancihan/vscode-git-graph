@@ -20,6 +20,7 @@ declare global {
 		fetchAndPrune: boolean;
 		fetchAndPruneTags: boolean;
 		fetchAvatars: boolean;
+		ciStatus: GG.CiStatusConfig;
 		graphColours: string[];
 		graphStyle: 'rounded' | 'angular';
 		grid: { x: number, y: number, offsetX: number, offsetY: number, expandY: number };
@@ -142,6 +143,7 @@ declare global {
 		commits: GG.GitCommitNode[];
 		commitHead: string | null;
 		avatars: AvatarImageCollection;
+		ciStatuses: { [hash: string]: GG.CommitCiStatus };
 		currentBranches: string[] | null;
 		filters?: GG.GraphFilters; // missing in state written before 2.4.0
 		currentBranch?: string | null; // State written by versions before 2.2.0

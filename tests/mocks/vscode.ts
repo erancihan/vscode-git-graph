@@ -28,7 +28,24 @@ export const workspace = {
 	}
 };
 
+/** Messages shown with window.show*Message, for assertions. */
+export const shownMessages: string[] = [];
+
+export const authentication = {
+	getSession: async (): Promise<undefined> => undefined
+};
+
+export const l10n = {
+	t(key: string, ...args: (string | number)[]) {
+		return key.replace(/\{(\d+)\}/g, (match, index) => typeof args[parseInt(index)] !== 'undefined' ? String(args[parseInt(index)]) : match);
+	}
+};
+
 export const window = {
+	showInputBox: async (): Promise<string | undefined> => undefined,
+	showWarningMessage(message: string) { shownMessages.push(message); return Promise.resolve(undefined); },
+	showInformationMessage(message: string) { shownMessages.push(message); return Promise.resolve(undefined); },
+	showErrorMessage(message: string) { shownMessages.push(message); return Promise.resolve(undefined); },
 	createOutputChannel(name: string) {
 		outputChannelLines[name] = outputChannelLines[name] || [];
 		return {

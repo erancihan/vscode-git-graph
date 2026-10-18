@@ -924,6 +924,30 @@
 					"default": true,
 					"description": "%config.retainContextWhenHidden.description%"
 				},
+				"git-graph.ciStatus.enabled": {
+					"type": "boolean",
+					"default": false,
+					"description": "%config.ciStatus.enabled.description%"
+				},
+				"git-graph.ciStatus.maxCommits": {
+					"type": "number",
+					"default": 30,
+					"minimum": 1,
+					"maximum": 100,
+					"description": "%config.ciStatus.maxCommits.description%"
+				},
+				"git-graph.ciStatus.hosts": {
+					"type": "object",
+					"default": {},
+					"additionalProperties": {
+						"type": "string",
+						"enum": [
+							"GitHub",
+							"GitLab"
+						]
+					},
+					"markdownDescription": "%config.ciStatus.hosts.markdownDescription%"
+				},
 				"git-graph.stickyHeader": {
 					"type": "boolean",
 					"default": true,

@@ -45,6 +45,7 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
     * Conflict help: a bar shows the merge, rebase, cherry pick or revert in progress with the conflicted files and Continue / Skip / Abort buttons
     * Worktrees: list, add (from a branch or commit), open, remove and prune from the Repository Settings widget
     * Translated user interface: follows the VS Code display language; translations live in `l10n/` and `package.nls.*.json` and are community contributions (see `CONTRIBUTING.md`). Turkish ships as the first sample
+    * CI status: a dot before the commit hash shows the GitHub check runs and commit statuses or the GitLab pipeline statuses of the newest commits (`git-graph.ciStatus.enabled`, off by default); the tooltip lists the checks and a click opens the run
     * Interactive rebase editor: "Interactive Rebase from this Commit..." lists the commits after it, oldest first, with pick / reword / edit / squash / fixup / drop per commit, messages for reword and squash, reordering, and autosquash (`rebase.autoSquash`); "Fixup into Parent..." folds one commit into its parent. Nothing opens an editor; when git stops the conflict help bar takes over
     * Bisect from the graph (mark commits good, bad or skip; progress bar; stop) and drag a branch, tag or commit onto the checked-out commit to merge, rebase or cherry pick
     * Filter the graph by author (from a commit's context menu or the filter button) and by file or folder (from the file context menu); filters show as chips and combine with the branch selection
@@ -59,6 +60,9 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
 This extension contributes the following settings:
 
 * `git-graph.commitDetailsView.autoCenter`: Automatically center the commit details view when it is opened.
+* `git-graph.ciStatus.enabled`: Show the CI status of commits as a dot before the commit hash. GitHub uses the built-in GitHub sign-in; GitLab asks once for a personal access token (scope `read_api`) stored in the secret storage. Default: false.
+* `git-graph.ciStatus.maxCommits`: How many of the newest loaded commits get their CI status fetched (1 to 100). Default: 30.
+* `git-graph.ciStatus.hosts`: Self-hosted instances, host name to `GitHub` or `GitLab`, for example `{"git.example.com": "GitLab"}`. Default: `{}`.
 * `git-graph.commitDetailsView.fileView.fileTree.compactFolders`: Show a folder that only contains one folder on one line. Default: true.
 * `git-graph.commitDetailsView.location`: Where the commit details open: `Inline` (below the commit) or `Docked to Bottom`. Default: `Inline`.
 * `git-graph.commitDetailsView.fileView.showChangeTypeLetters`: Show A / M / D / R letters before file names in the Commit Details View. Default: false.
