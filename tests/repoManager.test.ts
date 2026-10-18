@@ -38,5 +38,8 @@ describe('normaliseRepoState', () => {
 		expect(state.showStashes).toBeNull();
 		expect(state.onlyFollowFirstParent).toBe(true);
 		expect(normaliseRepoState({ name: '   ' }).name).toBeNull();
+		expect(normaliseRepoState({ issueLinkingConfig: { issue: '#(\\d+)', url: 'https://example.com/issues/$1' } }).issueLinkingConfig).toEqual({ issue: '#(\\d+)', url: 'https://example.com/issues/$1' });
+		expect(normaliseRepoState({ issueLinkingConfig: { issue: '#(\\d+)', url: 'javascript:alert(1)' } }).issueLinkingConfig).toBeNull();
+		expect(normaliseRepoState({ issueLinkingConfig: { issue: '', url: 'https://example.com' } }).issueLinkingConfig).toBeNull();
 	});
 });

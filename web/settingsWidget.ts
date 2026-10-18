@@ -119,6 +119,13 @@ class SettingsWidget {
 		html += '<div class="settingsRow"><span id="settingsAddRemote" class="roundedBtn">Add Remote' + ELLIPSIS + '</span></div>';
 
 		// User details
+		// Issue linking
+		const linking = state.issueLinkingConfig;
+		html += '<h3>Issue Linking</h3><table class="settingsTable">'
+			+ '<tr><td>Issue pattern</td><td><input id="settingsIssuePattern" type="text" value="' + escapeHtml(linking !== null ? linking.issue : '') + '" placeholder="#(\\d+)"><span class="settingsHint">Regular expression that matches an issue reference in a commit message. Capture groups are available to the URL.</span></td></tr>'
+			+ '<tr><td>Issue URL</td><td><input id="settingsIssueUrl" type="text" value="' + escapeHtml(linking !== null ? linking.url : '') + '" placeholder="https://github.com/owner/repo/issues/$1"><span class="settingsHint">$1, $2 ... are replaced by the capture groups. Must start with http:// or https://.</span></td></tr></table>'
+			+ '<div class="settingsRow"><span id="settingsSaveIssueLinking" class="roundedBtn">Save Issue Linking</span><span id="settingsClearIssueLinking" class="roundedBtn">Remove</span></div>';
+
 		html += '<h3>User Details</h3>';
 		if (this.settings === null) {
 			html += '<p class="settingsLoading">Loading ' + ELLIPSIS + '</p>';
@@ -201,6 +208,35 @@ class SettingsWidget {
 				showActionRunningDialog('Adding Remote');
 				sendMessage({ command: 'addRemote', repo: repo, name: values[0], url: values[1], pushUrl: values[2].trim() !== '' ? values[2] : null, fetch: values[3] === 'checked' });
 			}, null);
+		});
+		document.getElementById('settingsSaveIssueLinking')!.addEventListener('click', () => {
+			const issue = (<HTMLInputElement>document.getElementById('settingsIssuePattern')).value.trim(), url = (<HTMLInputElement>document.getElementById('settingsIssueUrl')).value.trim();
+			if (issue === '' || url === '') {
+				showErrorDialog('Unable to save the issue linking', 'Both the issue pattern and the issue URL are required.', null);
+				return;
+			}
+			if (!/^https?:\/\//i.test(url)) {
+				showErrorDialog('Unable to save the issue linking', 'The issue URL must start with http:// or https://.', null);
+				return;
+			}
+			try {
+				new RegExp(issue, 'g');
+			} catch (e) {
+				showErrorDialog('Unable to save the issue linking', 'The issue pattern is not a valid regular expression: ' + (e instanceof Error ? e.message : String(e)), null);
+				return;
+			}
+			const state = this.view.getRepoState(repo);
+			state.issueLinkingConfig = { issue: issue, url: url };
+			this.view.saveRepoState(repo, state);
+			this.view.refresh();
+			this.render();
+		});
+		document.getElementById('settingsClearIssueLinking')!.addEventListener('click', () => {
+			const state = this.view.getRepoState(repo);
+			state.issueLinkingConfig = null;
+			this.view.saveRepoState(repo, state);
+			this.view.refresh();
+			this.render();
 		});
 		const saveUser = (useGlobally: boolean) => {
 			const name = (<HTMLInputElement>document.getElementById('settingsUserName')).value, email = (<HTMLInputElement>document.getElementById('settingsUserEmail')).value;

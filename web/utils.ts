@@ -88,6 +88,56 @@ function signatureIconHtml(signature: GG.GitSignature | null | undefined) {
 	return '<span class="signatureStatus ' + signature.status + '" title="' + escapeHtml(describeSignature(signature)) + '">' + svgIcons.shield + '</span>';
 }
 
+/** Compiled issue linking pattern of the current repository, or null. Invalid patterns are ignored. */
+function compileIssueLinking(config: GG.IssueLinkingConfig | null): { regex: RegExp, url: string } | null {
+	if (config === null || config.issue === '' || !/^https?:\/\//i.test(config.url)) return null;
+	try {
+		return { regex: new RegExp(config.issue, 'g'), url: config.url };
+	} catch (e) {
+		return null;
+	}
+}
+
+const URL_IN_TEXT = /https?:\/\/[^\s<>"'`]+[^\s<>"'`.,;:!?)]/g;
+
+/**
+ * Escapes a commit message for HTML and turns issue references (per the repository configuration) and
+ * http(s) URLs into clickable links. Links carry the target in data-url; a delegated click handler
+ * asks the extension to open it.
+ */
+function linkifyMessage(message: string, issueLinking: { regex: RegExp, url: string } | null, linkUrls: boolean) {
+	type Link = { start: number, end: number, url: string };
+	const links: Link[] = [];
+	if (issueLinking !== null) {
+		issueLinking.regex.lastIndex = 0;
+		let match: RegExpExecArray | null;
+		while ((match = issueLinking.regex.exec(message)) !== null) {
+			if (match[0] === '') { issueLinking.regex.lastIndex++; continue; }
+			const groups = match;
+			const url = issueLinking.url.replace(/\$(\d+)/g, (_, index) => encodeURIComponent(groups[parseInt(index)] || ''));
+			links.push({ start: match.index, end: match.index + match[0].length, url: url });
+		}
+	}
+	if (linkUrls) {
+		URL_IN_TEXT.lastIndex = 0;
+		let match: RegExpExecArray | null;
+		while ((match = URL_IN_TEXT.exec(message)) !== null) {
+			const start = match.index, end = start + match[0].length;
+			if (!links.some((link) => start < link.end && end > link.start)) links.push({ start: start, end: end, url: match[0] });
+		}
+	}
+	if (links.length === 0) return escapeHtml(message);
+	links.sort((a, b) => a.start - b.start);
+	let html = '', position = 0;
+	for (const link of links) {
+		if (link.start < position) continue; // overlapping issue matches: keep the first
+		html += escapeHtml(message.substring(position, link.start));
+		html += '<span class="externalLink" data-url="' + escapeHtml(link.url) + '" title="' + escapeHtml(link.url) + '">' + escapeHtml(message.substring(link.start, link.end)) + '</span>';
+		position = link.end;
+	}
+	return html + escapeHtml(message.substring(position));
+}
+
 function insertAfter(newNode: HTMLElement, referenceNode: HTMLElement) {
 	referenceNode.parentNode!.insertBefore(newNode, referenceNode.nextSibling);
 }
