@@ -31,3 +31,7 @@ When `git-graph.integratedAskpass` is enabled, git may call `resources/askpass.s
 ## CI status tokens
 
 The CI status feature (`git-graph.ciStatus.enabled`, off by default) reads check results from the provider API. The github.com sign-in token from the built-in GitHub authentication is sent to `api.github.com` only. Every other host (GitHub Enterprise, GitLab, self-hosted instances mapped in `git-graph.ciStatus.hosts`) gets its own personal access token, asked for once and stored in the VS Code secret storage under a key that contains the host name, so a token is never sent to a different host. Both settings have application scope: workspace settings cannot switch the feature on or add hosts. Only `http(s)` links from the provider are kept for the click-through.
+
+## Shared repository settings file
+
+`.vscode/git-graph.json` can carry Git Graph settings for a team. Because it is part of a repository, the extension treats it as untrusted input: it is read and written only when `.vscode` and the file itself are not symbolic links and resolve inside the repository, it is parsed field by field with the same validation as the stored state (unknown fields are ignored), the issue linking pattern must be short, compile and contain no nested quantifiers, and nothing is applied before the user confirms a prompt that lists the incoming values. The display name and column layout are never exported.

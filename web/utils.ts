@@ -178,3 +178,11 @@ function describeCiStatus(status: GG.CommitCiStatus): string {
 	const lines = status.checks.slice(0, 20).map((check) => check.name + ': ' + check.state);
 	return names[status.state] + (lines.length > 0 ? '\n' + lines.join('\n') : '') + (status.checks.length > 20 ? '\n' + t('and {0} more', status.checks.length - 20) : '') + (status.checks.some((check) => check.url !== null) ? '\n' + t('Click to open the run') : '');
 }
+
+/**
+ * Same rule as the extension: an issue pattern must be short and must not nest quantifiers (for
+ * example `(a+)+`), because it runs on every commit message. Compilation is checked separately.
+ */
+function isSafeIssuePattern(pattern: string) {
+	return pattern.trim() !== '' && pattern.length <= 200 && !/\((?:[^()\\]|\\.)*[+*}](?:[^()\\]|\\.)*\)\s*[+*{]/.test(pattern);
+}

@@ -1,4 +1,6 @@
 import * as crypto from 'crypto';
+import * as fs from 'fs';
+import * as path from 'path';
 import { normaliseRepoState } from './repoManager';
 import { GitRepoState } from './types';
 
@@ -68,4 +70,72 @@ export function repoSettingsMatch(state: GitRepoState, imported: ExportedRepoSet
 /** Identifies a version of the file, so an unchanged file is never offered twice. */
 export function hashRepoSettings(text: string) {
 	return crypto.createHash('sha256').update(text).digest('hex');
+}
+
+/**
+ * The absolute path of the settings file when it is safe to read or write: the repository root
+ * must be a real directory, `.vscode` (when it exists) a real directory and the file (when it
+ * exists) a regular file, none of them symbolic links, so a repository cannot point the export at a
+ * file outside itself. Returns null otherwise.
+ */
+export function repoSettingsFilePath(repo: string): string | null {
+	const isLink = (candidate: string) => {
+		try {
+			return fs.lstatSync(candidate).isSymbolicLink();
+		} catch (e) {
+			return false; // does not exist yet
+		}
+	};
+	let realRepo: string;
+	try {
+		realRepo = fs.realpathSync(repo);
+	} catch (e) {
+		return null;
+	}
+	const folder = path.join(realRepo, path.dirname(REPO_SETTINGS_FILE)), file = path.join(realRepo, REPO_SETTINGS_FILE);
+	if (isLink(folder) || isLink(file)) return null;
+	try {
+		if (fs.existsSync(folder) && !fs.statSync(folder).isDirectory()) return null;
+		if (fs.existsSync(file) && !fs.statSync(file).isFile()) return null;
+	} catch (e) {
+		return null;
+	}
+	return file;
+}
+
+/** Write the settings file atomically: a new temporary file next to it, then a rename. */
+export function writeRepoSettingsFile(file: string, text: string) {
+	fs.mkdirSync(path.dirname(file), { recursive: true });
+	const temp = file + '.' + crypto.randomBytes(6).toString('hex') + '.tmp';
+	fs.writeFileSync(temp, text, { flag: 'wx' });
+	try {
+		fs.renameSync(temp, file);
+	} catch (e) {
+		try { fs.unlinkSync(temp); } catch (e2) { /* nothing to clean */ }
+		throw e;
+	}
+}
+
+/** A short, readable list of what a settings file would change, for the confirmation prompt. */
+export function describeRepoSettings(imported: ExportedRepoSettings): string {
+	const parts: string[] = [];
+	const flag = (key: ExportedKey, label: string) => {
+		if (!Object.prototype.hasOwnProperty.call(imported, key)) return;
+		const value = imported[key];
+		parts.push(label + ': ' + (value === null ? 'default' : Array.isArray(value) ? (value.length > 0 ? value.join(', ') : 'none') : typeof value === 'object' ? JSON.stringify(value) : String(value)));
+	};
+	flag('showTags', 'show tags');
+	flag('showStashes', 'show stashes');
+	flag('includeCommitsMentionedByReflogs', 'reflog commits');
+	flag('onlyFollowFirstParent', 'first parent only');
+	flag('hideRemotes', 'hidden remotes');
+	if (Object.prototype.hasOwnProperty.call(imported, 'onLoad')) {
+		const onLoad = imported.onLoad;
+		parts.push('branches on load: ' + (onLoad === null || onLoad === undefined ? 'default' : (onLoad.showCheckedOutBranch ? 'checked-out branch' : '') + (onLoad.showSpecificBranches.length > 0 ? (onLoad.showCheckedOutBranch ? ' + ' : '') + onLoad.showSpecificBranches.join(', ') : '')));
+	}
+	if (Object.prototype.hasOwnProperty.call(imported, 'issueLinkingConfig')) {
+		const linking = imported.issueLinkingConfig;
+		parts.push('issue linking: ' + (linking === null || linking === undefined ? 'none' : linking.issue + ' -> ' + linking.url));
+	}
+	return parts.join('; ');
 }

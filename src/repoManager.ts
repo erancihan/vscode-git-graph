@@ -398,7 +398,7 @@ export function normaliseRepoState(state: Partial<GitRepoState> | null | undefin
 		if (typeof state[key] === 'boolean') result[key] = <boolean>state[key];
 	}
 	const linking = state.issueLinkingConfig;
-	if (linking && typeof linking === 'object' && typeof linking.issue === 'string' && typeof linking.url === 'string' && linking.issue !== '' && /^https?:\/\//i.test(linking.url)) {
+	if (linking && typeof linking === 'object' && typeof linking.issue === 'string' && typeof linking.url === 'string' && isSafeIssuePattern(linking.issue) && /^https?:\/\//i.test(linking.url) && linking.url.length <= 2048) {
 		result.issueLinkingConfig = { issue: linking.issue, url: linking.url };
 	}
 	if (typeof state.settingsFileHash === 'string' && /^[0-9a-f]{64}$/.test(state.settingsFileHash)) result.settingsFileHash = state.settingsFileHash;
@@ -408,6 +408,24 @@ export function normaliseRepoState(state: Partial<GitRepoState> | null | undefin
 		if (onLoad.showCheckedOutBranch || branches.length > 0) result.onLoad = { showCheckedOutBranch: onLoad.showCheckedOutBranch, showSpecificBranches: branches };
 	}
 	return result;
+}
+
+const NESTED_QUANTIFIER = /\((?:[^()\\]|\\.)*[+*}](?:[^()\\]|\\.)*\)\s*[+*{]/;
+
+/**
+ * An issue pattern is used as a regular expression on every commit message, so it must compile, stay
+ * short, and avoid quantified groups that contain quantifiers (the classic catastrophic backtracking
+ * shape such as `(a+)+`). Patterns can arrive from a shared file in a repository, not only from the user.
+ */
+export function isSafeIssuePattern(pattern: string) {
+	if (typeof pattern !== 'string' || pattern.trim() === '' || pattern.length > 200) return false;
+	if (NESTED_QUANTIFIER.test(pattern)) return false;
+	try {
+		new RegExp(pattern, 'g');
+		return true;
+	} catch (e) {
+		return false;
+	}
 }
 
 /** A branch or glob pattern name for the on-load selection: not empty, no control characters, no leading dash. */
