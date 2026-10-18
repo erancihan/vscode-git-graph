@@ -228,3 +228,16 @@ describe('Config.integratedTerminalShell', () => {
 		expect(getConfig().integratedTerminalShell()).toBe('');
 	});
 });
+
+describe('Config.referenceLabels', () => {
+	it('returns defaults when nothing is set', () => {
+		expect(getConfig().referenceLabels()).toEqual({ alignment: 'Normal', combineLocalAndRemoteBranchLabels: true });
+	});
+
+	it('reads the configured values and falls back for unknown alignments', () => {
+		setConfig({ 'referenceLabels.alignment': 'Branches (on the left) & Tags (on the right)', 'referenceLabels.combineLocalAndRemoteBranchLabels': false });
+		expect(getConfig().referenceLabels()).toEqual({ alignment: 'Branches (on the left) & Tags (on the right)', combineLocalAndRemoteBranchLabels: false });
+		setConfig({ 'referenceLabels.alignment': 'Sideways' });
+		expect(getConfig().referenceLabels().alignment).toBe('Normal');
+	});
+});

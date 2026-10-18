@@ -406,6 +406,7 @@ export class GitGraphView {
 			loadMoreCommitsAutomatically: config.loadMoreCommitsAutomatically(),
 			muteCommitsThatAreNotAncestorsOfHead: config.muteCommitsThatAreNotAncestorsOfHead(),
 			muteMergeCommits: config.muteMergeCommits(),
+			referenceLabels: config.referenceLabels(),
 			repos: this.repoManager.getRepos(),
 			scrollToHeadOnLoad: config.scrollToHeadOnLoad(),
 			showCurrentBranchByDefault: config.showCurrentBranchByDefault(),

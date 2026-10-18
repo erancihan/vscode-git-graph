@@ -645,6 +645,26 @@
 					"default": false,
 					"description": "Show merge commits with a muted text colour."
 				},
+				"git-graph.referenceLabels.alignment": {
+					"type": "string",
+					"enum": [
+						"Normal",
+						"Branches (on the left) & Tags (on the right)",
+						"Branches (aligned to the graph) & Tags (on the right)"
+					],
+					"enumDescriptions": [
+						"Show all reference labels before the commit message.",
+						"Show branch labels before the commit message, and tag labels at the right end of the Description column.",
+						"Show branch labels in the Graph column, next to the graph, and tag labels at the right end of the Description column. The commit messages stay aligned."
+					],
+					"default": "Normal",
+					"description": "Alignment of the branch and tag labels on each row of the graph."
+				},
+				"git-graph.referenceLabels.combineLocalAndRemoteBranchLabels": {
+					"type": "boolean",
+					"default": true,
+					"description": "Combine a local branch label with the labels of its remote branches when they point to the same commit (for example \"main\" and \"origin/main\" become one label). Right-click the remote part of the label for the remote branch actions."
+				},
 				"git-graph.repository.commits.order": {
 					"type": "string",
 					"enum": [

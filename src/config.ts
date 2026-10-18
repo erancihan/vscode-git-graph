@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ColumnVisibility, CommitDetailsViewConfig, CommitOrdering, ContextMenuActionsVisibility, CustomBranchGlobPattern, DateFormat, DateType, DialogDefaults, GitResetMode, GraphStyle, KeyboardShortcuts, RepoDropdownOrder, SquashMessageFormat, TabIconColourTheme } from './types';
+import { ColumnVisibility, CommitDetailsViewConfig, CommitOrdering, ContextMenuActionsVisibility, CustomBranchGlobPattern, DateFormat, DateType, DialogDefaults, GitResetMode, GraphStyle, KeyboardShortcuts, ReferenceLabelAlignment, ReferenceLabelsConfig, RepoDropdownOrder, SquashMessageFormat, TabIconColourTheme } from './types';
 
 const DEFAULT_GRAPH_COLOURS = ['#0085d9', '#d9008f', '#00d90a', '#d98500', '#a300d9', '#ff0000', '#00d9cc', '#e138e8', '#85d900', '#dc5b23', '#6f24d6', '#ffcc00'];
 const GRAPH_COLOUR_REGEX = /^\s*(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|rgb[a]?\s*\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\))\s*$/;
@@ -228,6 +228,14 @@ class Config {
 
 	public muteMergeCommits() {
 		return this.getBoolean('repository.commits.mute.mergeCommits', 'muteMergeCommits', false);
+	}
+
+	/** How reference labels are laid out on each row, and whether local and remote branch labels merge. */
+	public referenceLabels(): ReferenceLabelsConfig {
+		return {
+			alignment: this.getEnum<ReferenceLabelAlignment>('referenceLabels.alignment', null, ['Normal', 'Branches (on the left) & Tags (on the right)', 'Branches (aligned to the graph) & Tags (on the right)'], 'Normal'),
+			combineLocalAndRemoteBranchLabels: this.getBoolean('referenceLabels.combineLocalAndRemoteBranchLabels', null, true)
+		};
 	}
 
 	public onlyFollowFirstParent() {

@@ -91,6 +91,8 @@ This extension contributes the following settings:
 * `git-graph.repository.commits.loadMoreAutomatically`: Load more commits automatically when the view is scrolled to the bottom. Default: false.
 * `git-graph.repository.commits.mute.commitsThatAreNotAncestorsOfHead`: Mute commits that are not ancestors of the checked-out commit. Default: false.
 * `git-graph.repository.commits.mute.mergeCommits`: Mute merge commits. Default: false.
+* `git-graph.referenceLabels.alignment`: Layout of reference labels: `Normal`, `Branches (on the left) & Tags (on the right)` or `Branches (aligned to the graph) & Tags (on the right)`. Default: `Normal`.
+* `git-graph.referenceLabels.combineLocalAndRemoteBranchLabels`: Show a local branch and its remote branches as one label when they point to the same commit. Default: true.
 * `git-graph.repository.commits.order`: Order of commits on the graph: `date`, `author-date` or `topo`. Default: `date`.
 * `git-graph.repository.includeCommitsMentionedByReflogs`: Include commits only mentioned by reflogs when "Show All" is selected. Default: false.
 * `git-graph.repository.onLoad.scrollToHead`: Scroll to the checked-out commit when a repository is loaded. Default: false.

@@ -133,6 +133,7 @@ export interface GitGraphViewState {
 	loadMoreCommitsAutomatically: boolean;
 	muteCommitsThatAreNotAncestorsOfHead: boolean;
 	muteMergeCommits: boolean;
+	referenceLabels: ReferenceLabelsConfig;
 	repos: GitRepoSet;
 	scrollToHeadOnLoad: boolean;
 	showCurrentBranchByDefault: boolean;
@@ -164,6 +165,11 @@ export type CommitOrdering = 'date' | 'author-date' | 'topo';
 export type GitPushBranchMode = 'normal' | 'force' | 'force-with-lease';
 export type GitRebaseType = 'Branch' | 'Commit';
 export type RepoDropdownOrder = 'Full Path' | 'Name' | 'Workspace Full Path';
+export type ReferenceLabelAlignment = 'Normal' | 'Branches (on the left) & Tags (on the right)' | 'Branches (aligned to the graph) & Tags (on the right)';
+export interface ReferenceLabelsConfig {
+	alignment: ReferenceLabelAlignment;
+	combineLocalAndRemoteBranchLabels: boolean;
+}
 export type SquashMessageFormat = 'Default' | 'Git SQUASH_MSG';
 export interface MergeOptions { createNewCommit: boolean; squash: boolean; noCommit: boolean; }
 export interface CherryPickOptions { parentIndex: number; recordOrigin: boolean; noCommit: boolean; }

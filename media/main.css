@@ -353,6 +353,39 @@ svg.openFolderIcon, svg.closedFolderIcon, svg.fileIcon{
 .gitRef.active{
 	border-color:var(--git-graph-color);
 }
+.gitRef .gitRefRemote{
+	display:inline-block;
+	margin-left:5px;
+	padding-left:5px;
+	border-left:1px solid rgba(128,128,128,0.75);
+	opacity:0.85;
+}
+.gitRef .gitRefRemote:hover{
+	opacity:1;
+}
+.descriptionCell{
+	display:flex;
+	align-items:flex-start;
+}
+.descriptionMain{
+	flex:1 1 auto;
+	min-width:0;
+	overflow:hidden;
+	text-overflow:ellipsis;
+	white-space:nowrap;
+}
+.gitRefsRight{
+	flex:0 0 auto;
+	margin-left:8px;
+}
+.gitRefsRight .gitRef:last-child{
+	margin-right:0;
+}
+.gitRefsGraph{
+	display:inline-block;
+	padding-left:var(--git-graph-width, 0px);
+	white-space:nowrap;
+}
 .gitRef > svg{
 	background-color:var(--git-graph-color);
 	fill:var(--vscode-editor-background);
