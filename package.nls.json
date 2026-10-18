@@ -207,5 +207,9 @@
 	"config.dialog.pullBranch.squashMessageFormat.enumDescriptions.1": "The message git prepares in .git/SQUASH_MSG, which lists the squashed commits.",
 	"config.repository.onLoad.showSpecificBranches.markdownDescription": "Branch names (or names of `git-graph.customBranchGlobPatterns` entries) selected in the Branch dropdown when a repository opens without a remembered selection and without its own \"Branches shown on load\" setting. Combined with `git-graph.repository.onLoad.showCheckedOutBranch`.",
 	"config.fileEncoding.markdownDescription": "Character encoding used to decode files read from git history (diffs and \"View File at this Revision\"): any label the Web `TextDecoder` accepts, for example `utf8`, `latin1`, `windows-1252`, `shift_jis`, `gbk`. Unknown labels fall back to UTF-8. Can be set per folder.",
-	"config.openNewTabEditorGroup.description": "Editor group where Git Graph opens diffs and files: the active group, beside it, or a numbered group."
+	"config.openNewTabEditorGroup.description": "Editor group where Git Graph opens diffs and files: the active group, beside it, or a numbered group.",
+	"config.graph.uncommittedChanges.description": "Where the open circle of the graph sits when there are uncommitted changes.",
+	"config.graph.uncommittedChanges.enumDescriptions.0": "The uncommitted changes row has the open circle; the checked-out commit a filled one.",
+	"config.graph.uncommittedChanges.enumDescriptions.1": "The checked-out commit keeps the open circle; the uncommitted changes row is drawn in grey.",
+	"config.markdown.description": "Render inline Markdown in commit messages: **bold**, *italic*, `code` and ~~strikethrough~~."
 }

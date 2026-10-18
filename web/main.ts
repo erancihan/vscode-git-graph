@@ -527,7 +527,7 @@ class GitGraphView {
 		this.updateGraphWidthVariable();
 		this.updateControlsHeightVariable();
 		for (i = 0; i < this.commits.length; i++) {
-			const message = linkifyMessage(this.commits[i].message, issueLinking, false), date = getCommitDate(this.commits[i].date), labels = this.renderRefLabels(this.commits[i]);
+			const message = linkifyMessage(this.commits[i].message, issueLinking, false, this.config.markdown), date = getCommitDate(this.commits[i].date), labels = this.renderRefLabels(this.commits[i]);
 			const graphCell = branchesInGraph && labels.branches !== '' ? '<td><span class="gitRefsGraph">' + labels.branches + '</span></td>' : '<td></td>';
 			const refs = (branchesInGraph ? '' : labels.branches) + (tagsOnRight ? '' : labels.tags);
 			const bisectMark = this.commits[i].bisect || null;
@@ -1978,7 +1978,7 @@ class GitGraphView {
 		html += '</span>';
 		if (typeof this.avatars[commitDetails.email] === 'string') html += '<span class="commitDetailsSummaryAvatar"><img src="' + this.avatars[commitDetails.email] + '"></span>';
 		html += '</span></span><br><br>';
-		html += linkifyMessage(commitDetails.body, compileIssueLinking(this.getIssueLinkingConfig()), true).replace(/\n/g, '<br>') + '</div>';
+		html += linkifyMessage(commitDetails.body, compileIssueLinking(this.getIssueLinkingConfig()), true, this.config.markdown).replace(/\n/g, '<br>') + '</div>';
 		html += this.generateDetailsFilesHtml(fileTree, commitDetails.fileChanges, review);
 		html += '<div id="commitDetailsClose">' + svgIcons.close + '</div>';
 		this.renderDetailsElem(html, this.expandedCommit.srcElem);
@@ -2222,6 +2222,8 @@ const gitGraph = new GitGraphView(viewState.repos, viewState.lastActiveRepo, {
 	referenceLabels: viewState.referenceLabels,
 	scrollToHeadOnLoad: viewState.scrollToHeadOnLoad,
 	showCurrentBranchByDefault: viewState.showCurrentBranchByDefault,
+	graphUncommittedChanges: viewState.graphUncommittedChanges,
+	markdown: viewState.markdown,
 	onLoadBranches: viewState.onLoadBranches,
 	showRemoteBranches: viewState.showRemoteBranches,
 	stickyHeader: viewState.stickyHeader

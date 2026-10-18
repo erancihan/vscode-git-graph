@@ -266,6 +266,8 @@ export interface GitGraphViewState {
 	repos: GitRepoSet;
 	scrollToHeadOnLoad: boolean;
 	showCurrentBranchByDefault: boolean;
+	graphUncommittedChanges: 'uncommitted' | 'head';
+	markdown: boolean;
 	/** `git-graph.repository.onLoad.showSpecificBranches`: selected when a repository opens without its own on-load setting. */
 	onLoadBranches: string[];
 	showRemoteBranches: boolean;

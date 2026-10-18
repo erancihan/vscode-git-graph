@@ -105,7 +105,8 @@ const URL_IN_TEXT = /https?:\/\/[^\s<>"'`]+[^\s<>"'`.,;:!?)]/g;
  * http(s) URLs into clickable links. Links carry the target in data-url; a delegated click handler
  * asks the extension to open it.
  */
-function linkifyMessage(message: string, issueLinking: { regex: RegExp, url: string } | null, linkUrls: boolean) {
+function linkifyMessage(message: string, issueLinking: { regex: RegExp, url: string } | null, linkUrls: boolean, markdown: boolean = false) {
+	const text = (part: string) => markdown ? formatInlineMarkdown(escapeHtml(part)) : escapeHtml(part);
 	type Link = { start: number, end: number, url: string };
 	const links: Link[] = [];
 	if (issueLinking !== null) {
@@ -126,16 +127,38 @@ function linkifyMessage(message: string, issueLinking: { regex: RegExp, url: str
 			if (!links.some((link) => start < link.end && end > link.start)) links.push({ start: start, end: end, url: match[0] });
 		}
 	}
-	if (links.length === 0) return escapeHtml(message);
+	if (links.length === 0) return text(message);
 	links.sort((a, b) => a.start - b.start);
 	let html = '', position = 0;
 	for (const link of links) {
 		if (link.start < position) continue; // overlapping issue matches: keep the first
-		html += escapeHtml(message.substring(position, link.start));
+		html += text(message.substring(position, link.start));
 		html += '<span class="externalLink" data-url="' + escapeHtml(link.url) + '" title="' + escapeHtml(link.url) + '">' + escapeHtml(message.substring(link.start, link.end)) + '</span>';
 		position = link.end;
 	}
-	return html + escapeHtml(message.substring(position));
+	return html + text(message.substring(position));
+}
+
+/**
+ * Inline Markdown on already escaped text: `code`, **bold**, __bold__, *italic*, _italic_ and
+ * ~~strikethrough~~. Code spans are formatted first and left alone afterwards. Emphasis needs a
+ * word boundary on the outside so identifiers such as snake_case_names and 2*3*4 stay as they are.
+ */
+function formatInlineMarkdown(escaped: string) {
+	const pieces = escaped.split(/(`[^`\n]+`)/);
+	for (let i = 0; i < pieces.length; i++) {
+		if (i % 2 === 1) {
+			pieces[i] = '<code>' + pieces[i].substring(1, pieces[i].length - 1) + '</code>';
+			continue;
+		}
+		pieces[i] = pieces[i]
+			.replace(/\*\*(?=\S)([^*\n]+?\S)\*\*/g, '<b>$1</b>')
+			.replace(/(^|[^\w])__(?=\S)([^_\n]+?\S)__(?![\w])/g, '$1<b>$2</b>')
+			.replace(/~~(?=\S)([^~\n]+?\S)~~/g, '<s>$1</s>')
+			.replace(/(^|[\s(\[])\*(?=[^\s*])([^*\n]+?[^\s*])\*(?=$|[\s).,;:!?\]])/g, '$1<i>$2</i>')
+			.replace(/(^|[\s(\[])_(?=[^\s_])([^_\n]+?[^\s_])_(?=$|[\s).,;:!?\]])/g, '$1<i>$2</i>');
+	}
+	return pieces.join('');
 }
 
 /** Identifier of a code review: the commit hash, or "<from>-<to>" for a comparison (mirrors src/codeReview.ts). */

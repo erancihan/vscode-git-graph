@@ -706,6 +706,8 @@ export class GitGraphView {
 			repos: this.repoManager.getRepos(),
 			scrollToHeadOnLoad: config.scrollToHeadOnLoad(),
 			showCurrentBranchByDefault: config.showCurrentBranchByDefault(),
+			graphUncommittedChanges: config.graphUncommittedChanges(),
+			markdown: config.markdown(),
 			onLoadBranches: config.onLoadShowSpecificBranches(),
 			showRemoteBranches: config.showRemoteBranches(),
 			stickyHeader: config.stickyHeader()

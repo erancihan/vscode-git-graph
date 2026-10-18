@@ -68,6 +68,8 @@ This extension contributes the following settings:
 * `git-graph.dialog.fetchRemote.prune` / `pruneTags`: Defaults of the prune checkboxes when fetching one remote from the Repository Settings widget. Default: false.
 * `git-graph.dialog.pullBranch.squashMessageFormat`: Message of the commit created by a squash pull: `Default` or `Git SQUASH_MSG`. Default: `Default`.
 * `git-graph.repository.onLoad.showSpecificBranches`: Branches selected when a repository opens without a remembered selection and without its own on-load setting. Default: `[]`.
+* `git-graph.graph.uncommittedChanges`: Where the open circle sits when there are uncommitted changes: `Open Circle at the Uncommitted Changes` or `Open Circle at the Checked Out Commit`. Default: the uncommitted changes.
+* `git-graph.markdown`: Render inline Markdown (bold, italic, code, strikethrough) in commit messages. Default: true.
 * `git-graph.fileEncoding`: Encoding used to decode files read from git history, any `TextDecoder` label (`utf8`, `latin1`, `windows-1252`, `shift_jis`, ...). Unknown labels fall back to UTF-8. Can be set per folder. Default: `utf8`.
 * `git-graph.openNewTabEditorGroup`: Editor group where diffs and files open: `Active`, `Beside`, or `One` to `Nine`. Default: `Active`.
 * `git-graph.commitDetailsView.fileView.fileTree.compactFolders`: Show a folder that only contains one folder on one line. Default: true.
