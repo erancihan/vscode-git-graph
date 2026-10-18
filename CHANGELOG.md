@@ -3,6 +3,7 @@
 ## Unreleased
 
 * The rebase dialogs have a "Launch Interactive Rebase in new Terminal" option. It opens an integrated terminal in the repository and runs `git rebase --interactive` there, so the todo list can be edited. New settings `git-graph.dialog.rebase.launchInteractiveRebase` and `git-graph.integratedTerminalShell`.
+* Security: the command typed into the terminal accepts only letters, digits and `_ . / @ + -` in the rebase target. Other reference names are refused with a message instead of being passed to the shell.
 
 ## 2.2.0 - 2026-10-18
 
