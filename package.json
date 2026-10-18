@@ -724,6 +724,19 @@
 					],
 					"description": "%config.graph.colours.description%"
 				},
+				"git-graph.graph.uncommittedChanges": {
+					"type": "string",
+					"enum": [
+						"Open Circle at the Uncommitted Changes",
+						"Open Circle at the Checked Out Commit"
+					],
+					"enumDescriptions": [
+						"%config.graph.uncommittedChanges.enumDescriptions.0%",
+						"%config.graph.uncommittedChanges.enumDescriptions.1%"
+					],
+					"default": "Open Circle at the Uncommitted Changes",
+					"description": "%config.graph.uncommittedChanges.description%"
+				},
 				"git-graph.graph.style": {
 					"type": "string",
 					"enum": [
@@ -771,6 +784,11 @@
 					"default": "utf8",
 					"scope": "resource",
 					"markdownDescription": "%config.fileEncoding.markdownDescription%"
+				},
+				"git-graph.markdown": {
+					"type": "boolean",
+					"default": true,
+					"description": "%config.markdown.description%"
 				},
 				"git-graph.openNewTabEditorGroup": {
 					"type": "string",

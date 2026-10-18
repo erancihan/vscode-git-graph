@@ -1151,6 +1151,13 @@ tr.worktreeChanges td{
 	color:var(--vscode-editorWarning-foreground, #cc9900);
 	opacity:1;
 }
+#commitTable code, #commitDetails code{
+	font-family:var(--vscode-editor-font-family, monospace);
+	font-size:0.95em;
+	background-color:rgba(128,128,128,0.18);
+	border-radius:3px;
+	padding:0 3px;
+}
 .ciStatus{
 	display:inline-block;
 	width:8px;

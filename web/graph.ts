@@ -278,8 +278,12 @@ class Graph {
 
 		if (commits.length > 0) {
 			if (commits[0].hash === '*') {
-				this.vertices[0].setCurrent();
 				this.vertices[0].setNotCommited();
+				if (this.config.graphUncommittedChanges === 'head' && commitHead !== null && typeof commitLookup[commitHead] === 'number') {
+					this.vertices[commitLookup[commitHead]].setCurrent();
+				} else {
+					this.vertices[0].setCurrent();
+				}
 			} else if (commitHead !== null && typeof commitLookup[commitHead] === 'number') {
 				this.vertices[commitLookup[commitHead]].setCurrent();
 			}

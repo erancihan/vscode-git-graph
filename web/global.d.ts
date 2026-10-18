@@ -23,6 +23,8 @@ declare global {
 		ciStatus: GG.CiStatusConfig;
 		graphColours: string[];
 		graphStyle: 'rounded' | 'angular';
+		graphUncommittedChanges: 'uncommitted' | 'head';
+		markdown: boolean;
 		grid: { x: number, y: number, offsetX: number, offsetY: number, expandY: number };
 		initialLoadCommits: number;
 		keyboardShortcuts: GG.KeyboardShortcuts;

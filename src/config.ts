@@ -211,6 +211,16 @@ class Config {
 		return valid.length > 0 ? valid : DEFAULT_GRAPH_COLOURS;
 	}
 
+	/** Where the open circle sits when there are uncommitted changes: on their row, or on the checked-out commit. */
+	public graphUncommittedChanges(): 'uncommitted' | 'head' {
+		return this.getEnum('graph.uncommittedChanges', null, ['Open Circle at the Uncommitted Changes', 'Open Circle at the Checked Out Commit'], 'Open Circle at the Uncommitted Changes') === 'Open Circle at the Checked Out Commit' ? 'head' : 'uncommitted';
+	}
+
+	/** Render inline Markdown (bold, italic, code, strikethrough) in commit messages. */
+	public markdown() {
+		return this.getBoolean('markdown', null, true);
+	}
+
 	public graphStyle(): GraphStyle {
 		return this.getEnum<GraphStyle>('graph.style', 'graphStyle', ['rounded', 'angular'], 'rounded');
 	}
