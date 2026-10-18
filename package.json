@@ -91,6 +91,11 @@
 			},
 			{
 				"category": "Git Graph",
+				"command": "git-graph.endAllWorkspaceCodeReviews",
+				"title": "End All Code Reviews in Workspace"
+			},
+			{
+				"category": "Git Graph",
 				"command": "git-graph.openFile",
 				"title": "Open File",
 				"icon": "$(go-to-file)"
@@ -241,6 +246,11 @@
 									"type": "boolean",
 									"default": true,
 									"description": "Archive"
+								},
+								"codeReview": {
+									"type": "boolean",
+									"default": true,
+									"description": "Start Code Review / End Code Review"
 								},
 								"rebase": {
 									"type": "boolean",

@@ -209,6 +209,60 @@ body.resizingDetails{
 #commitDetailsSummary .signatureStatus{
 	margin-top:1px;
 }
+#codeReviewBanner{
+	position:absolute;
+	left:0;
+	right:0;
+	top:0;
+	height:26px;
+	line-height:26px;
+	padding:0 10px;
+	background-color:rgba(128,128,128,0.2);
+	border-bottom:1px solid rgba(128,128,128,0.3);
+	z-index:2;
+	white-space:nowrap;
+	overflow:hidden;
+}
+#codeReviewBanner .codeReviewTitle{
+	font-weight:700;
+	margin-right:10px;
+}
+#codeReviewBanner .codeReviewProgress{
+	opacity:0.85;
+}
+#codeReviewBanner #codeReviewEnd{
+	display:inline-block;
+	float:right;
+	margin-top:3px;
+	height:20px;
+	line-height:20px;
+	padding:0 10px;
+	border-radius:10px;
+	font-size:12px;
+}
+#commitDetails td > #codeReviewBanner ~ #commitDetailsSummary, #commitDetails td > #codeReviewBanner ~ #commitDetailsFiles, #commitDetails.docked > #codeReviewBanner ~ #commitDetailsSummary, #commitDetails.docked > #codeReviewBanner ~ #commitDetailsFiles{
+	top:26px;
+}
+#commitDetails.docked > #codeReviewBanner{
+	top:6px;
+}
+#commitDetails.docked > #codeReviewBanner ~ #commitDetailsSummary, #commitDetails.docked > #codeReviewBanner ~ #commitDetailsFiles{
+	top:32px;
+}
+#commitDetails td > #codeReviewBanner ~ #commitDetailsClose, #commitDetails.docked > #codeReviewBanner ~ #commitDetailsClose{
+	display:none;
+}
+.codeReviewActive .gitFile.reviewed{
+	opacity:0.55;
+}
+.codeReviewActive .gitFile.reviewed::after{
+	content:'\2713';
+	margin-left:6px;
+	opacity:0.9;
+}
+.codeReviewActive .gitFile.lastViewed{
+	text-decoration:underline dotted;
+}
 .externalLink{
 	cursor:pointer;
 	text-decoration:underline;

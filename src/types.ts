@@ -90,6 +90,15 @@ export interface IssueLinkingConfig {
 	url: string;
 }
 
+/** A code review of a commit or a comparison: which files still have to be looked at. */
+export interface CodeReview {
+	id: string; // commit hash, or "<from>-<to>" for a comparison
+	lastActive: number;
+	lastViewedFile: string | null;
+	remainingFiles: string[];
+}
+export type CodeReviewSet = { [repo: string]: { [id: string]: CodeReview } };
+
 export interface GitRemoteDetails {
 	name: string;
 	url: string | null;
@@ -122,7 +131,7 @@ export interface GitUnsavedChanges {
 
 export interface ContextMenuActionsVisibility {
 	branch: { checkout: boolean, rename: boolean, delete: boolean, merge: boolean, rebase: boolean, push: boolean, createPullRequest: boolean, archive: boolean, copyName: boolean };
-	commit: { addTag: boolean, createBranch: boolean, checkout: boolean, cherrypick: boolean, revert: boolean, drop: boolean, merge: boolean, rebase: boolean, reset: boolean, archive: boolean, copyHash: boolean };
+	commit: { addTag: boolean, createBranch: boolean, checkout: boolean, cherrypick: boolean, revert: boolean, drop: boolean, merge: boolean, rebase: boolean, reset: boolean, archive: boolean, codeReview: boolean, copyHash: boolean };
 	remoteBranch: { checkout: boolean, delete: boolean, fetch: boolean, pull: boolean, copyName: boolean };
 	stash: { apply: boolean, createBranch: boolean, pop: boolean, drop: boolean, copyName: boolean, copyHash: boolean };
 	tag: { delete: boolean, push: boolean, archive: boolean, copyName: boolean };
@@ -177,6 +186,7 @@ export interface CustomBranchGlobPattern {
 
 export interface GitGraphViewState {
 	autoCenterCommitDetailsView: boolean;
+	codeReviews: CodeReviewSet;
 	commitDetailsView: CommitDetailsViewConfig;
 	customBranchGlobPatterns: CustomBranchGlobPattern[];
 	customPullRequestProviders: CustomPullRequestProvider[];
@@ -753,6 +763,29 @@ export interface ResponseCreatePullRequest {
 	error: string | null;
 }
 
+export interface RequestStartCodeReview {
+	command: 'startCodeReview';
+	repo: string;
+	id: string;
+	files: string[];
+	lastViewedFile: string | null;
+}
+export interface RequestEndCodeReview {
+	command: 'endCodeReview';
+	repo: string;
+	id: string;
+}
+export interface RequestUpdateCodeReview {
+	command: 'updateCodeReview';
+	repo: string;
+	review: CodeReview;
+}
+export interface ResponseCodeReviewsChanged {
+	command: 'codeReviewsChanged';
+	repo: string;
+	reviews: { [id: string]: CodeReview };
+}
+
 export interface RequestOpenExternalUrl {
 	command: 'openExternalUrl';
 	url: string; // http(s) only
@@ -861,6 +894,9 @@ export type RequestMessage =
 	| RequestSetUserDetails
 	| RequestOpenExtensionSettings
 	| RequestOpenExternalUrl
+	| RequestStartCodeReview
+	| RequestEndCodeReview
+	| RequestUpdateCodeReview
 	| RequestCreatePullRequest
 	| RequestOpenExternalDiff
 	| RequestViewDiffWithWorkingFile
@@ -913,6 +949,7 @@ export type ResponseMessage =
 	| ResponsePruneRemote
 	| ResponseSetUserDetails
 	| ResponseOpenExternalUrl
+	| ResponseCodeReviewsChanged
 	| ResponseCreatePullRequest
 	| ResponseOpenExternalDiff
 	| ResponseViewDiffWithWorkingFile

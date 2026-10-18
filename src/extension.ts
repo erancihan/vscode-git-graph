@@ -17,6 +17,7 @@ export function activate(context: vscode.ExtensionContext) {
 	logger.log('Starting Git Graph ...');
 
 	const extensionState = new ExtensionState(context);
+	extensionState.pruneCodeReviews();
 	const dataSource = new DataSource(logger);
 	const avatarManager = new AvatarManager(dataSource, extensionState, logger);
 	const statusBarItem = new StatusBarItem(context);
@@ -57,6 +58,11 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.commands.registerCommand('git-graph.clearAvatarCache', () => {
 			const count = avatarManager.clearCache();
 			vscode.window.showInformationMessage('Git Graph: The avatar cache was cleared (' + count + ' avatar' + (count !== 1 ? 's' : '') + ' removed).');
+		}),
+		vscode.commands.registerCommand('git-graph.endAllWorkspaceCodeReviews', () => {
+			const count = extensionState.endAllCodeReviews();
+			GitGraphView.notifyCodeReviewsEnded();
+			vscode.window.showInformationMessage('Git Graph: Ended ' + count + ' code review' + (count !== 1 ? 's' : '') + ' in this workspace.');
 		}),
 		vscode.commands.registerCommand('git-graph.fetch', async () => {
 			const repo = await pickRepo(repoManager, 'Select the repository to fetch');
