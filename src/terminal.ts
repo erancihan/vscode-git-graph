@@ -3,11 +3,13 @@ import { getConfig } from './config';
 import { Logger } from './logger';
 
 /**
- * Characters that are safe to pass to any shell (sh, bash, zsh, cmd, PowerShell) without quoting.
- * Git reference names and commit hashes that the graph produces fall within this set. Anything
- * else is refused instead of quoted, because the quoting rules differ between shells.
+ * Characters that no shell (sh, bash, zsh, cmd, PowerShell) interprets, so the argument needs no
+ * quoting. Braces, commas, `%`, `~`, `^` and `$` are left out on purpose: they drive brace
+ * expansion, variable expansion, tilde expansion and escaping in one shell or another. Reference
+ * names outside this set are refused instead of quoted, because the quoting rules differ between
+ * shells.
  */
-const TERMINAL_SAFE_ARGUMENT = /^[A-Za-z0-9_.\/@{}+=:,%~^-]+$/;
+const TERMINAL_SAFE_ARGUMENT = /^[A-Za-z0-9_.\/@+-]+$/;
 
 export function isTerminalSafeArgument(arg: string) {
 	return TERMINAL_SAFE_ARGUMENT.test(arg) && !arg.startsWith('-');

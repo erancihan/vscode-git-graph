@@ -6,7 +6,17 @@ describe('isTerminalSafeArgument', () => {
 		expect(isTerminalSafeArgument('feature/my-branch_2.0')).toBe(true);
 		expect(isTerminalSafeArgument('origin/HEAD')).toBe(true);
 		expect(isTerminalSafeArgument('a1b2c3d4e5f60718293a4b5c6d7e8f9012345678')).toBe(true);
-		expect(isTerminalSafeArgument('stash@{0}')).toBe(true);
+		expect(isTerminalSafeArgument('v1.2.3+build')).toBe(true);
+	});
+
+	it('refuses characters that some shell expands', () => {
+		expect(isTerminalSafeArgument('stash@{0}')).toBe(false);
+		expect(isTerminalSafeArgument('a{b,c}')).toBe(false);
+		expect(isTerminalSafeArgument('%PATH%')).toBe(false);
+		expect(isTerminalSafeArgument('~root')).toBe(false);
+		expect(isTerminalSafeArgument('a^b')).toBe(false);
+		expect(isTerminalSafeArgument('a=b')).toBe(false);
+		expect(isTerminalSafeArgument('a:b')).toBe(false);
 	});
 
 	it('refuses shell metacharacters and options', () => {
