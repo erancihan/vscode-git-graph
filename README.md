@@ -41,12 +41,18 @@ This extension contributes the following settings:
 * `git-graph.date.type`: Specifies whether the author date or the commit date is displayed.
 * `git-graph.dialog.addTag.type`: Default tag type in the "Add Tag" dialog: `Annotated` or `Lightweight`.
 * `git-graph.dialog.deleteBranch.forceDelete`: Default state of "Force Delete" in the "Delete Branch" dialog. Default: false.
+* `git-graph.dialog.fetchIntoLocalBranch.forceFetch`: Default state of "Force Fetch" in the "Fetch into local branch" dialog. Default: false.
 * `git-graph.dialog.general.referenceInputSpaceSubstitution`: Replace spaces typed into branch and tag names with `Hyphen` or `Underscore`. Default: `None`.
 * `git-graph.dialog.merge.noFastForward`: Default state of "Create a new commit even if fast-forward is possible" in the merge dialogs. Default: true.
+* `git-graph.dialog.pullBranch.noFastForward`: Default state of "Create a new commit even if fast-forward is possible" in the "Pull into current branch" dialog. Default: false.
+* `git-graph.dialog.pullBranch.squashCommits`: Default state of "Squash Commits" in the "Pull into current branch" dialog. Default: false.
+* `git-graph.dialog.rebase.ignoreDate`: Default state of "Ignore Date" in the rebase dialogs. Default: true.
 * `git-graph.dialog.resetCurrentBranchToCommit.mode`: Default reset mode: `Soft`, `Mixed` or `Hard`. Default: `Mixed`.
 * `git-graph.graph.colours`: Specifies the colours used on the graph.
 * `git-graph.graph.style`: Specifies the style of the graph.
 * `git-graph.maxDepthOfRepoSearch`: Specifies the maximum depth of subfolders to search when discovering repositories in the workspace. Default: 0.
+* `git-graph.repository.fetchAndPrune`: Prune remote-tracking references when the Fetch button is pressed. Default: false.
+* `git-graph.repository.fetchAndPruneTags`: Also prune local tags when the Fetch button is pressed (git 2.17 or later). Default: false.
 * `git-graph.repository.commits.fetchAvatars`: Fetch avatars of commit authors and committers. Default: false.
 * `git-graph.repository.commits.initialLoad`: Specifies the number of commits to load initially.
 * `git-graph.repository.commits.loadMore`: Specifies the number of commits to load when the "Load More Commits" button is pressed.

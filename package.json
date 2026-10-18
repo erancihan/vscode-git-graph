@@ -108,6 +108,16 @@
 									"type": "boolean",
 									"default": true,
 									"description": "Copy Branch Name to Clipboard"
+								},
+								"rebase": {
+									"type": "boolean",
+									"default": true,
+									"description": "Rebase current branch on this branch"
+								},
+								"push": {
+									"type": "boolean",
+									"default": true,
+									"description": "Push Branch"
 								}
 							},
 							"additionalProperties": false
@@ -155,6 +165,11 @@
 									"type": "boolean",
 									"default": true,
 									"description": "Copy Commit Hash to Clipboard"
+								},
+								"rebase": {
+									"type": "boolean",
+									"default": true,
+									"description": "Rebase current branch on this Commit"
 								}
 							},
 							"additionalProperties": false
@@ -172,6 +187,21 @@
 									"type": "boolean",
 									"default": true,
 									"description": "Copy Branch Name to Clipboard"
+								},
+								"delete": {
+									"type": "boolean",
+									"default": true,
+									"description": "Delete Remote Branch"
+								},
+								"fetch": {
+									"type": "boolean",
+									"default": true,
+									"description": "Fetch into local branch"
+								},
+								"pull": {
+									"type": "boolean",
+									"default": true,
+									"description": "Pull into current branch"
 								}
 							},
 							"additionalProperties": false
@@ -243,6 +273,11 @@
 					"default": false,
 					"description": "Default state of the \"Force Delete\" checkbox in the \"Delete Branch\" dialog."
 				},
+				"git-graph.dialog.fetchIntoLocalBranch.forceFetch": {
+					"type": "boolean",
+					"default": false,
+					"description": "Default state of the \"Force Fetch\" checkbox in the \"Fetch into Local Branch\" dialog."
+				},
 				"git-graph.dialog.general.referenceInputSpaceSubstitution": {
 					"type": "string",
 					"enum": [
@@ -262,6 +297,21 @@
 					"type": "boolean",
 					"default": true,
 					"description": "Default state of the \"Create a new commit even if fast-forward is possible\" checkbox in the merge dialogs."
+				},
+				"git-graph.dialog.pullBranch.noFastForward": {
+					"type": "boolean",
+					"default": false,
+					"description": "Default state of the \"Create a new commit even if fast-forward is possible\" checkbox in the \"Pull Branch\" dialog."
+				},
+				"git-graph.dialog.pullBranch.squashCommits": {
+					"type": "boolean",
+					"default": false,
+					"description": "Default state of the \"Squash Commits\" checkbox in the \"Pull Branch\" dialog."
+				},
+				"git-graph.dialog.rebase.ignoreDate": {
+					"type": "boolean",
+					"default": true,
+					"description": "Default state of the \"Ignore Date\" checkbox in the \"Rebase\" dialogs (use the current time as the committer date of the rebased commits)."
 				},
 				"git-graph.dialog.resetCurrentBranchToCommit.mode": {
 					"type": "string",
@@ -353,6 +403,16 @@
 					],
 					"default": "date",
 					"description": "Specifies the order of commits on the graph. See the --date-order, --author-date-order and --topo-order options of \"git log\"."
+				},
+				"git-graph.repository.fetchAndPrune": {
+					"type": "boolean",
+					"default": false,
+					"description": "Before fetching from the remote(s) with the Fetch button, remove any remote-tracking references that no longer exist on the remote(s)."
+				},
+				"git-graph.repository.fetchAndPruneTags": {
+					"type": "boolean",
+					"default": false,
+					"description": "Before fetching from the remote(s) with the Fetch button, remove any local tags that no longer exist on the remote(s). Requires git 2.17 or later and \"git-graph.repository.fetchAndPrune\"."
 				},
 				"git-graph.repository.onLoad.showCheckedOutBranch": {
 					"type": "boolean",

@@ -71,7 +71,10 @@ describe('Config.dialogDefaults', () => {
 		expect(getConfig().dialogDefaults()).toEqual({
 			addTag: { type: 'annotated' },
 			deleteBranch: { forceDelete: false },
+			fetchIntoLocalBranch: { forceFetch: false },
 			merge: { noFastForward: true },
+			pullBranch: { noFastForward: false, squashCommits: false },
+			rebase: { ignoreDate: true },
 			resetCurrentBranchToCommit: { mode: 'mixed' },
 			general: { referenceInputSpaceSubstitution: null }
 		});
@@ -88,7 +91,10 @@ describe('Config.dialogDefaults', () => {
 		expect(getConfig().dialogDefaults()).toEqual({
 			addTag: { type: 'lightweight' },
 			deleteBranch: { forceDelete: true },
+			fetchIntoLocalBranch: { forceFetch: false },
 			merge: { noFastForward: false },
+			pullBranch: { noFastForward: false, squashCommits: false },
+			rebase: { ignoreDate: true },
 			resetCurrentBranchToCommit: { mode: 'hard' },
 			general: { referenceInputSpaceSubstitution: '_' }
 		});
@@ -106,7 +112,7 @@ describe('Config.contextMenuActionsVisibility', () => {
 	it('shows every action by default', () => {
 		const visibility = getConfig().contextMenuActionsVisibility();
 		expect(Object.values(visibility.commit).every(v => v === true)).toBe(true);
-		expect(Object.keys(visibility.commit).sort()).toEqual(['addTag', 'checkout', 'cherrypick', 'copyHash', 'createBranch', 'merge', 'reset', 'revert']);
+		expect(Object.keys(visibility.commit).sort()).toEqual(['addTag', 'checkout', 'cherrypick', 'copyHash', 'createBranch', 'merge', 'rebase', 'reset', 'revert']);
 		expect(visibility.tag).toEqual({ delete: true, push: true, copyName: true });
 	});
 

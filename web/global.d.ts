@@ -13,6 +13,8 @@ declare global {
 		autoCenterCommitDetailsView: boolean;
 		contextMenuActionsVisibility: GG.ContextMenuActionsVisibility;
 		dialogDefaults: GG.DialogDefaults;
+		fetchAndPrune: boolean;
+		fetchAndPruneTags: boolean;
 		fetchAvatars: boolean;
 		graphColours: string[];
 		graphStyle: 'rounded' | 'angular';
@@ -116,6 +118,7 @@ declare global {
 		gitRepos: GG.GitRepoSet;
 		gitBranches: string[];
 		gitBranchHead: string | null;
+		gitRemotes: string[];
 		commits: GG.GitCommitNode[];
 		commitHead: string | null;
 		avatars: AvatarImageCollection;

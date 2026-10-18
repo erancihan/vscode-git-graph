@@ -146,10 +146,28 @@ export class GitGraphView {
 						status: await this.dataSource.deleteBranch(msg.repo, msg.branchName, msg.forceDelete)
 					});
 					break;
+				case 'deleteRemoteBranch':
+					this.sendMessage({
+						command: 'deleteRemoteBranch',
+						status: await this.dataSource.deleteRemoteBranch(msg.repo, msg.branchName, msg.remote)
+					});
+					break;
 				case 'deleteTag':
 					this.sendMessage({
 						command: 'deleteTag',
 						status: await this.dataSource.deleteTag(msg.repo, msg.tagName)
+					});
+					break;
+				case 'fetch':
+					this.sendMessage({
+						command: 'fetch',
+						status: await this.dataSource.fetch(msg.repo, msg.remote, msg.prune, msg.pruneTags)
+					});
+					break;
+				case 'fetchIntoLocalBranch':
+					this.sendMessage({
+						command: 'fetchIntoLocalBranch',
+						status: await this.dataSource.fetchIntoLocalBranch(msg.repo, msg.remote, msg.remoteBranch, msg.localBranch, msg.force)
 					});
 					break;
 				case 'loadBranches':
@@ -162,6 +180,7 @@ export class GitGraphView {
 						command: 'loadBranches',
 						branches: branchData.branches,
 						head: branchData.head,
+						remotes: isRepo ? await this.dataSource.getRemotes(msg.repo) : [],
 						hard: msg.hard,
 						isRepo: isRepo
 					});
@@ -196,10 +215,28 @@ export class GitGraphView {
 						status: await this.dataSource.mergeCommit(msg.repo, msg.commitHash, msg.createNewCommit)
 					});
 					break;
+				case 'pullBranch':
+					this.sendMessage({
+						command: 'pullBranch',
+						status: await this.dataSource.pullBranch(msg.repo, msg.branchName, msg.remote, msg.createNewCommit, msg.squash)
+					});
+					break;
+				case 'pushBranch':
+					this.sendMessage({
+						command: 'pushBranch',
+						status: await this.dataSource.pushBranch(msg.repo, msg.branchName, msg.remote, msg.setUpstream, msg.mode)
+					});
+					break;
 				case 'pushTag':
 					this.sendMessage({
 						command: 'pushTag',
 						status: await this.dataSource.pushTag(msg.repo, msg.tagName)
+					});
+					break;
+				case 'rebase':
+					this.sendMessage({
+						command: 'rebase',
+						status: await this.dataSource.rebase(msg.repo, msg.obj, msg.type, msg.ignoreDate)
 					});
 					break;
 				case 'renameBranch':
@@ -262,6 +299,8 @@ export class GitGraphView {
 			contextMenuActionsVisibility: config.contextMenuActionsVisibility(),
 			dateFormat: config.dateFormat(),
 			dialogDefaults: config.dialogDefaults(),
+			fetchAndPrune: config.fetchAndPrune(),
+			fetchAndPruneTags: config.fetchAndPruneTags(),
 			fetchAvatars: config.fetchAvatars() && this.extensionState.isAvatarStorageAvailable(),
 			graphColours: config.graphColours(),
 			graphStyle: config.graphStyle(),
@@ -285,6 +324,7 @@ export class GitGraphView {
 				<span id="repoControl"><span class="unselectable">Repo: </span><div id="repoSelect" class="dropdown"></div></span>
 				<span id="branchControl"><span class="unselectable">Branch: </span><div id="branchSelect" class="dropdown"></div></span>
 				<label id="showRemoteBranchesControl"><input type="checkbox" id="showRemoteBranchesCheckbox" value="1"${viewState.showRemoteBranches ? ' checked' : ''}>Show Remote Branches</label>
+				<div id="fetchBtn" class="roundedBtn" style="display:none" title="Fetch from Remote(s)">Fetch</div>
 				<div id="refreshBtn" class="roundedBtn">Refresh</div>
 			</div>
 			<div id="content">

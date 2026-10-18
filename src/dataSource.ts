@@ -2,7 +2,7 @@ import * as cp from 'child_process';
 import { getConfig } from './config';
 import { findGitExecutable } from './gitExecutable';
 import { Logger } from './logger';
-import { GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChangeType, GitRefData, GitResetMode, GitUnsavedChanges } from './types';
+import { GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChangeType, GitPushBranchMode, GitRebaseType, GitRefData, GitResetMode, GitUnsavedChanges } from './types';
 import { getPathFromStr } from './utils';
 
 const eolRegex = /\r\n|\r|\n/g;
@@ -175,6 +175,11 @@ export class DataSource {
 		return this.spawnGit(['config', '--get', 'remote.origin.url'], repo, (stdout) => stdout.split(eolRegex)[0]).catch(() => null);
 	}
 
+	/** Names of the configured remotes. */
+	public getRemotes(repo: string) {
+		return this.spawnGit(['remote'], repo, (stdout) => stdout.split(eolRegex).filter((line) => line !== '')).catch((): string[] => []);
+	}
+
 	public isGitRepository(path: string) {
 		return this.spawnGit(['rev-parse', '--git-dir'], path, () => true, false).catch(() => false);
 	}
@@ -260,6 +265,60 @@ export class DataSource {
 		if (!isCommitHash(commitHash)) return rejectArguments();
 		const args = ['revert', '--no-edit', commitHash];
 		if (parentIndex > 0) args.push('-m', parentIndex.toString());
+		return this.runGitCommand(args, repo);
+	}
+
+	/* Remote actions */
+
+	/** Fetch from one remote, or from all remotes when `remote` is null. */
+	public fetch(repo: string, remote: string | null, prune: boolean, pruneTags: boolean) {
+		if (remote !== null && !isSafeRefName(remote)) return rejectArguments();
+		const args = ['fetch', remote === null ? '--all' : remote];
+		if (prune) args.push('--prune');
+		if (prune && pruneTags) args.push('--prune-tags');
+		return this.runGitCommand(args, repo);
+	}
+
+	public pushBranch(repo: string, branchName: string, remote: string, setUpstream: boolean, mode: GitPushBranchMode) {
+		if (!isSafeRefName(branchName) || !isSafeRefName(remote)) return rejectArguments();
+		const args = ['push'];
+		if (setUpstream) args.push('--set-upstream');
+		if (mode === 'force') args.push('--force');
+		if (mode === 'force-with-lease') args.push('--force-with-lease');
+		args.push(remote, branchName);
+		return this.runGitCommand(args, repo);
+	}
+
+	public pullBranch(repo: string, branchName: string, remote: string, createNewCommit: boolean, squash: boolean) {
+		if (!isSafeRefName(branchName) || !isSafeRefName(remote)) return rejectArguments();
+		const args = ['pull', remote, branchName];
+		if (squash) {
+			args.push('--squash');
+		} else if (createNewCommit) {
+			args.push('--no-ff');
+		}
+		return this.runGitCommand(args, repo);
+	}
+
+	public deleteRemoteBranch(repo: string, branchName: string, remote: string) {
+		if (!isSafeRefName(branchName) || !isSafeRefName(remote)) return rejectArguments();
+		return this.runGitCommand(['push', remote, '--delete', branchName], repo);
+	}
+
+	/** Update `localBranch` to `remote/remoteBranch` without checking it out. */
+	public fetchIntoLocalBranch(repo: string, remote: string, remoteBranch: string, localBranch: string, force: boolean) {
+		if (!isSafeRefName(remote) || !isSafeRefName(remoteBranch) || !isSafeRefName(localBranch)) return rejectArguments();
+		const args = ['fetch'];
+		if (force) args.push('--force');
+		args.push(remote, remoteBranch + ':' + localBranch);
+		return this.runGitCommand(args, repo);
+	}
+
+	/** Rebase the current branch on a branch or a commit. */
+	public rebase(repo: string, obj: string, type: GitRebaseType, ignoreDate: boolean) {
+		if (type === 'Commit' ? !isCommitHash(obj) : !isSafeRefName(obj)) return rejectArguments();
+		const args = ['rebase', obj];
+		if (ignoreDate) args.push('--ignore-date');
 		return this.runGitCommand(args, repo);
 	}
 

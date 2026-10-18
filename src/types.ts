@@ -52,16 +52,19 @@ export interface GitUnsavedChanges {
 }
 
 export interface ContextMenuActionsVisibility {
-	branch: { checkout: boolean, rename: boolean, delete: boolean, merge: boolean, copyName: boolean };
-	commit: { addTag: boolean, createBranch: boolean, checkout: boolean, cherrypick: boolean, revert: boolean, merge: boolean, reset: boolean, copyHash: boolean };
-	remoteBranch: { checkout: boolean, copyName: boolean };
+	branch: { checkout: boolean, rename: boolean, delete: boolean, merge: boolean, rebase: boolean, push: boolean, copyName: boolean };
+	commit: { addTag: boolean, createBranch: boolean, checkout: boolean, cherrypick: boolean, revert: boolean, merge: boolean, rebase: boolean, reset: boolean, copyHash: boolean };
+	remoteBranch: { checkout: boolean, delete: boolean, fetch: boolean, pull: boolean, copyName: boolean };
 	tag: { delete: boolean, push: boolean, copyName: boolean };
 }
 
 export interface DialogDefaults {
 	addTag: { type: 'annotated' | 'lightweight' };
 	deleteBranch: { forceDelete: boolean };
+	fetchIntoLocalBranch: { forceFetch: boolean };
 	merge: { noFastForward: boolean };
+	pullBranch: { noFastForward: boolean, squashCommits: boolean };
+	rebase: { ignoreDate: boolean };
 	resetCurrentBranchToCommit: { mode: GitResetMode };
 	general: { referenceInputSpaceSubstitution: string | null };
 }
@@ -71,6 +74,8 @@ export interface GitGraphViewState {
 	contextMenuActionsVisibility: ContextMenuActionsVisibility;
 	dateFormat: DateFormat;
 	dialogDefaults: DialogDefaults;
+	fetchAndPrune: boolean;
+	fetchAndPruneTags: boolean;
 	fetchAvatars: boolean;
 	graphColours: string[];
 	graphStyle: GraphStyle;
@@ -105,6 +110,8 @@ export type TabIconColourTheme = 'colour' | 'grey';
 export type GitCommandStatus = string | null;
 export type GitResetMode = 'soft' | 'mixed' | 'hard';
 export type CommitOrdering = 'date' | 'author-date' | 'topo';
+export type GitPushBranchMode = 'normal' | 'force' | 'force-with-lease';
+export type GitRebaseType = 'Branch' | 'Commit';
 export type GitFileChangeType = 'A' | 'M' | 'D' | 'R';
 
 
@@ -230,6 +237,7 @@ export interface ResponseLoadBranches {
 	command: 'loadBranches';
 	branches: string[];
 	head: string | null;
+	remotes: string[];
 	hard: boolean;
 	isRepo: boolean;
 }
@@ -329,6 +337,80 @@ export interface ResponseRevertCommit {
 	status: GitCommandStatus;
 }
 
+export interface RequestFetch {
+	command: 'fetch';
+	repo: string;
+	remote: string | null; // null => all remotes
+	prune: boolean;
+	pruneTags: boolean;
+}
+export interface ResponseFetch {
+	command: 'fetch';
+	status: GitCommandStatus;
+}
+
+export interface RequestPushBranch {
+	command: 'pushBranch';
+	repo: string;
+	branchName: string;
+	remote: string;
+	setUpstream: boolean;
+	mode: GitPushBranchMode;
+}
+export interface ResponsePushBranch {
+	command: 'pushBranch';
+	status: GitCommandStatus;
+}
+
+export interface RequestPullBranch {
+	command: 'pullBranch';
+	repo: string;
+	branchName: string;
+	remote: string;
+	createNewCommit: boolean;
+	squash: boolean;
+}
+export interface ResponsePullBranch {
+	command: 'pullBranch';
+	status: GitCommandStatus;
+}
+
+export interface RequestDeleteRemoteBranch {
+	command: 'deleteRemoteBranch';
+	repo: string;
+	branchName: string;
+	remote: string;
+}
+export interface ResponseDeleteRemoteBranch {
+	command: 'deleteRemoteBranch';
+	status: GitCommandStatus;
+}
+
+export interface RequestFetchIntoLocalBranch {
+	command: 'fetchIntoLocalBranch';
+	repo: string;
+	remote: string;
+	remoteBranch: string;
+	localBranch: string;
+	force: boolean;
+}
+export interface ResponseFetchIntoLocalBranch {
+	command: 'fetchIntoLocalBranch';
+	status: GitCommandStatus;
+}
+
+export interface RequestRebase {
+	command: 'rebase';
+	repo: string;
+	obj: string;
+	type: GitRebaseType;
+	ignoreDate: boolean;
+}
+export interface ResponseRebase {
+	command: 'rebase';
+	status: GitCommandStatus;
+}
+
 export interface RequestSaveRepoState {
 	command: 'saveRepoState';
 	repo: string;
@@ -357,14 +439,20 @@ export type RequestMessage =
 	| RequestCopyToClipboard
 	| RequestCreateBranch
 	| RequestDeleteBranch
+	| RequestDeleteRemoteBranch
 	| RequestDeleteTag
+	| RequestFetch
 	| RequestFetchAvatar
+	| RequestFetchIntoLocalBranch
 	| RequestLoadBranches
 	| RequestLoadCommits
 	| RequestLoadRepos
 	| RequestMergeBranch
 	| RequestMergeCommit
+	| RequestPullBranch
+	| RequestPushBranch
 	| RequestPushTag
+	| RequestRebase
 	| RequestRenameBranch
 	| RequestResetToCommit
 	| RequestRevertCommit
@@ -380,14 +468,20 @@ export type ResponseMessage =
 	| ResponseCopyToClipboard
 	| ResponseCreateBranch
 	| ResponseDeleteBranch
+	| ResponseDeleteRemoteBranch
 	| ResponseDeleteTag
+	| ResponseFetch
 	| ResponseFetchAvatar
+	| ResponseFetchIntoLocalBranch
 	| ResponseLoadBranches
 	| ResponseLoadCommits
 	| ResponseLoadRepos
 	| ResponseMergeBranch
 	| ResponseMergeCommit
+	| ResponsePullBranch
+	| ResponsePushBranch
 	| ResponsePushTag
+	| ResponseRebase
 	| ResponseRefresh
 	| ResponseRenameBranch
 	| ResponseResetToCommit
