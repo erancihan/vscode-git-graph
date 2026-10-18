@@ -138,6 +138,7 @@ This extension contributes the following settings:
 * `git-graph.repository.showUntrackedFiles`: Count untracked files in the "Uncommitted Changes" row. Default: true.
 * `git-graph.repository.useMailmap`: Apply the repository's `.mailmap` to author and committer identities. Default: false.
 * `git-graph.repositoryDropdownOrder`: Order of the "Repo" dropdown: `Full Path`, `Name` or `Workspace Full Path`. Default: `Workspace Full Path`.
+* `git-graph.gpg.passphrasePrompt`: Ask for the GPG passphrase in an input box when gpg cannot show its own prompt (see "GPG signing"). User Settings only. Default: true.
 * `git-graph.integratedAskpass`: Ask for git credentials in an input box when no credential helper answers (fetch, pull, push over HTTPS; SSH passphrases). Default: true.
 * `git-graph.integratedTerminalShell`: Shell executable for the terminals Git Graph opens (interactive rebase). Empty: the default shell. User Settings only. Default: empty.
 * `git-graph.retainContextWhenHidden`: Keep the view alive while its tab is hidden so it restores instantly. Default: true.
@@ -176,6 +177,10 @@ See [CHANGELOG.md](CHANGELOG.md).
 ## Roadmap
 
 See [ROADMAP.md](ROADMAP.md) for milestones and the plan to reach parity with Git Graph 1.30 and with the wider field. A feature comparison with other Git graph extensions is in [docs/COMPETITORS.md](docs/COMPETITORS.md).
+
+## GPG signing
+
+Git Graph runs git without a terminal. A text-mode pinentry cannot ask for the passphrase there, so signed commits, tags, rebases and merges failed with `gpg failed to sign the data` unless gpg-agent already held the passphrase. With `git-graph.gpg.passphrasePrompt` (default on) Git Graph sets `gpg.program` to a small wrapper for the git processes it starts. The wrapper runs your gpg first, so nothing changes when the agent or a graphical pinentry answers. When gpg fails, the wrapper asks for the passphrase in an input box and runs gpg again with a loopback pinentry; the passphrase travels over a private pipe and a file descriptor and is never stored. Three wrong attempts, or a cancelled prompt, report gpg's original error. `gpg.format = ssh` is unaffected. Signing itself follows your git configuration (`commit.gpgsign`, `tag.gpgsign`, `user.signingkey`) and the `git-graph.repository.sign.*` settings.
 
 ## Contributing
 

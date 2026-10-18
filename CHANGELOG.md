@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* GPG signing works without a terminal: with `git-graph.gpg.passphrasePrompt` (default on) the git processes Git Graph starts use a gpg wrapper that runs your gpg first and, when gpg cannot show its own passphrase prompt, asks for the passphrase in an input box and retries with a loopback pinentry. Applies to signed commits, tags, merges, cherry picks, reverts and the rebase editor. Signing errors now carry a hint. User Settings only.
 * Commit Details View: the committer's email is shown next to the name, and when the author date and the commit date differ both are listed ("Author Date" and "Commit Date").
 * Polish: emoji shortcodes such as `:tada:` and `:bug:` render in commit messages (built-in gitmoji and GitHub names plus `git-graph.customEmojiShortcodeMappings`); the Add Tag dialog shows the latest tag as a hint; creating or renaming a branch to a name that already exists is refused before git runs; the row of HEAD flashes briefly after "scroll to HEAD"; the HEAD dot has a tooltip.
 

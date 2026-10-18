@@ -380,6 +380,11 @@ class Config {
 	}
 
 	/** Let git ask for credentials through Git Graph when no credential helper answers. */
+	/** Ask for the GPG passphrase in an input box when gpg cannot show its own prompt (routes gpg through a wrapper). */
+	public gpgPassphrasePrompt() {
+		return this.getBoolean('gpg.passphrasePrompt', null, true);
+	}
+
 	public integratedAskpass() {
 		return this.getBoolean('integratedAskpass', null, true);
 	}

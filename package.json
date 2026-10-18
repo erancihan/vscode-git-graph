@@ -1018,6 +1018,12 @@
 					"default": "Workspace Full Path",
 					"description": "%config.repositoryDropdownOrder.description%"
 				},
+				"git-graph.gpg.passphrasePrompt": {
+					"type": "boolean",
+					"default": true,
+					"scope": "application",
+					"markdownDescription": "%config.gpg.passphrasePrompt.markdownDescription%"
+				},
 				"git-graph.integratedAskpass": {
 					"type": "boolean",
 					"default": true,
