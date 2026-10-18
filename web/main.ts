@@ -2,6 +2,7 @@ class GitGraphView {
 	private gitRepos: GG.GitRepoSet;
 	private gitBranches: string[] = [];
 	private gitBranchHead: string | null = null;
+	private gitRemotes: string[] = [];
 	private commits: GG.GitCommitNode[] = [];
 	private commitHead: string | null = null;
 	private commitLookup: { [hash: string]: number } = {};
@@ -61,6 +62,10 @@ class GitGraphView {
 		document.getElementById('refreshBtn')!.addEventListener('click', () => {
 			this.refresh(true);
 		});
+		document.getElementById('fetchBtn')!.addEventListener('click', () => {
+			showActionRunningDialog('Fetching from Remote(s)');
+			sendMessage({ command: 'fetch', repo: this.currentRepo!, remote: null, prune: this.config.fetchAndPrune, pruneTags: this.config.fetchAndPruneTags });
+		});
 		this.observeWindowSizeChanges();
 		this.observeWebviewStyleChanges();
 		this.observeWebviewScroll();
@@ -75,7 +80,7 @@ class GitGraphView {
 				this.maxCommits = prevState.maxCommits;
 				this.expandedCommit = prevState.expandedCommit;
 				this.avatars = prevState.avatars;
-				this.loadBranches(prevState.gitBranches, prevState.gitBranchHead, true, true);
+				this.loadBranches(prevState.gitBranches, prevState.gitBranchHead, prevState.gitRemotes || [], true, true);
 				this.loadCommits(prevState.commits, prevState.commitHead, prevState.moreCommitsAvailable, true);
 			}
 		}
@@ -112,18 +117,20 @@ class GitGraphView {
 		}
 	}
 
-	public loadBranches(branchOptions: string[], branchHead: string | null, hard: boolean, isRepo: boolean) {
+	public loadBranches(branchOptions: string[], branchHead: string | null, remotes: string[], hard: boolean, isRepo: boolean) {
 		if (!isRepo) {
 			this.triggerLoadBranchesCallback(false, isRepo);
 			return;
 		}
-		if (!hard && arraysEqual(this.gitBranches, branchOptions, (a, b) => a === b) && this.gitBranchHead === branchHead) {
+		if (!hard && arraysEqual(this.gitBranches, branchOptions, (a, b) => a === b) && this.gitBranchHead === branchHead && arraysEqual(this.gitRemotes, remotes, (a, b) => a === b)) {
 			this.triggerLoadBranchesCallback(false, isRepo);
 			return;
 		}
 
 		this.gitBranches = branchOptions;
 		this.gitBranchHead = branchHead;
+		this.gitRemotes = remotes;
+		document.getElementById('fetchBtn')!.style.display = remotes.length > 0 ? '' : 'none';
 		if (this.currentBranch === null || (this.currentBranch !== '' && this.gitBranches.indexOf(this.currentBranch) === -1)) {
 			this.currentBranch = this.config.showCurrentBranchByDefault && this.gitBranchHead !== null ? this.gitBranchHead : '';
 		}
@@ -259,6 +266,7 @@ class GitGraphView {
 			gitRepos: this.gitRepos,
 			gitBranches: this.gitBranches,
 			gitBranchHead: this.gitBranchHead,
+			gitRemotes: this.gitRemotes,
 			commits: this.commits,
 			commitHead: this.commitHead,
 			avatars: this.avatars,
@@ -423,6 +431,16 @@ class GitGraphView {
 					}
 				},
 				{
+					title: 'Rebase current branch on this Commit' + ELLIPSIS,
+					visible: visibility.rebase,
+					onClick: () => {
+						showCheckboxDialog('Are you sure you want to rebase the <b>current branch</b> on commit <b><i>' + abbrevCommit(hash) + '</i></b>?', 'Ignore Date (non-interactive rebase only)', this.config.dialogDefaults.rebase.ignoreDate, 'Yes, rebase', (ignoreDate) => {
+							showActionRunningDialog('Rebasing');
+							sendMessage({ command: 'rebase', repo: this.currentRepo!, obj: hash, type: 'Commit', ignoreDate: ignoreDate });
+						}, sourceElem);
+					}
+				},
+				{
 					title: 'Reset current branch to this Commit' + ELLIPSIS,
 					visible: visibility.reset,
 					onClick: () => {
@@ -518,12 +536,81 @@ class GitGraphView {
 							}
 						);
 					}
+					if (this.gitBranchHead !== refName) {
+						menu.push({
+							title: 'Rebase current branch on this branch' + ELLIPSIS,
+							visible: this.config.contextMenuActionsVisibility.branch.rebase,
+							onClick: () => {
+								showCheckboxDialog('Are you sure you want to rebase the <b>current branch</b> on branch <b><i>' + escapeHtml(refName) + '</i></b>?', 'Ignore Date (non-interactive rebase only)', this.config.dialogDefaults.rebase.ignoreDate, 'Yes, rebase', (ignoreDate) => {
+									showActionRunningDialog('Rebasing');
+									sendMessage({ command: 'rebase', repo: this.currentRepo!, obj: refName, type: 'Branch', ignoreDate: ignoreDate });
+								}, null);
+							}
+						});
+					}
+					if (this.gitRemotes.length > 0) {
+						menu.push({
+							title: 'Push Branch' + ELLIPSIS,
+							visible: this.config.contextMenuActionsVisibility.branch.push,
+							onClick: () => {
+								const inputs: DialogInput[] = [
+									{ type: 'checkbox', name: 'Set Upstream', value: true },
+									{ type: 'select', name: 'Mode: ', default: 'normal', options: [{ name: 'Normal', value: 'normal' }, { name: 'Force With Lease', value: 'force-with-lease' }, { name: 'Force', value: 'force' }] }
+								];
+								if (this.gitRemotes.length > 1) {
+									inputs.unshift({ type: 'select', name: 'Remote: ', default: this.gitRemotes.indexOf('origin') > -1 ? 'origin' : this.gitRemotes[0], options: this.gitRemotes.map((remote) => ({ name: remote, value: remote })) });
+								}
+								showFormDialog('Are you sure you want to push the branch <b><i>' + escapeHtml(refName) + '</i></b>' + (this.gitRemotes.length === 1 ? ' to the remote <b><i>' + escapeHtml(this.gitRemotes[0]) + '</i></b>' : '') + '?', inputs, 'Yes, push', (values) => {
+									const remote = this.gitRemotes.length > 1 ? values.shift()! : this.gitRemotes[0];
+									showActionRunningDialog('Pushing Branch');
+									sendMessage({ command: 'pushBranch', repo: this.currentRepo!, branchName: refName, remote: remote, setUpstream: values[0] === 'checked', mode: <GG.GitPushBranchMode>values[1] });
+								}, null);
+							}
+						});
+					}
 				} else {
+					const remote = this.getRemoteOfBranch(refName), remoteBranch = remote !== null ? refName.substring(remote.length + 1) : refName;
 					menu = [{
 						title: 'Checkout Branch' + ELLIPSIS,
 						visible: this.config.contextMenuActionsVisibility.remoteBranch.checkout,
 						onClick: () => this.checkoutBranchAction(sourceElem, refName)
 					}];
+					if (remote !== null) {
+						menu.push({
+							title: 'Delete Remote Branch' + ELLIPSIS,
+							visible: this.config.contextMenuActionsVisibility.remoteBranch.delete,
+							onClick: () => {
+								showConfirmationDialog('Are you sure you want to delete the remote branch <b><i>' + escapeHtml(refName) + '</i></b>? This removes the branch from the remote <b><i>' + escapeHtml(remote) + '</i></b>.', () => {
+									showActionRunningDialog('Deleting Remote Branch');
+									sendMessage({ command: 'deleteRemoteBranch', repo: this.currentRepo!, branchName: remoteBranch, remote: remote });
+								}, null);
+							}
+						}, {
+							title: 'Fetch into local branch' + ELLIPSIS,
+							visible: this.config.contextMenuActionsVisibility.remoteBranch.fetch,
+							onClick: () => {
+								showFormDialog('Fetch the remote branch <b><i>' + escapeHtml(refName) + '</i></b> into a local branch (the local branch must not be checked out):', [
+									{ type: 'text-ref', name: 'Local branch: ', default: remoteBranch },
+									{ type: 'checkbox', name: 'Force Fetch', value: this.config.dialogDefaults.fetchIntoLocalBranch.forceFetch }
+								], 'Yes, fetch', (values) => {
+									showActionRunningDialog('Fetching Branch');
+									sendMessage({ command: 'fetchIntoLocalBranch', repo: this.currentRepo!, remote: remote, remoteBranch: remoteBranch, localBranch: values[0], force: values[1] === 'checked' });
+								}, null);
+							}
+						}, {
+							title: 'Pull into current branch' + ELLIPSIS,
+							visible: this.config.contextMenuActionsVisibility.remoteBranch.pull,
+							onClick: () => {
+								showFormDialog('Are you sure you want to pull the remote branch <b><i>' + escapeHtml(refName) + '</i></b> into the current branch?', [
+									{ type: 'checkbox', name: 'Create a new commit even if fast-forward is possible', value: this.config.dialogDefaults.pullBranch.noFastForward },
+									{ type: 'checkbox', name: 'Squash Commits', value: this.config.dialogDefaults.pullBranch.squashCommits }
+								], 'Yes, pull', (values) => {
+									showActionRunningDialog('Pulling Branch');
+									sendMessage({ command: 'pullBranch', repo: this.currentRepo!, branchName: remoteBranch, remote: remote, createNewCommit: values[0] === 'checked', squash: values[1] === 'checked' });
+								}, null);
+							}
+						});
+					}
 				}
 				copyType = 'Branch Name';
 			}
@@ -553,6 +640,16 @@ class GitGraphView {
 		this.graph.clear();
 		this.tableElem.innerHTML = '<h2 id="loadingHeader">' + svgIcons.loading + 'Loading ...</h2>';
 		this.footerElem.innerHTML = '';
+	}
+	/** The remote that a remote branch name such as "origin/feature" belongs to, or null when none matches. */
+	private getRemoteOfBranch(remoteBranchName: string) {
+		let match: string | null = null;
+		for (let i = 0; i < this.gitRemotes.length; i++) {
+			if (remoteBranchName.startsWith(this.gitRemotes[i] + '/') && (match === null || this.gitRemotes[i].length > match.length)) {
+				match = this.gitRemotes[i];
+			}
+		}
+		return match;
 	}
 	private checkoutBranchAction(sourceElem: HTMLElement, refName: string) {
 		if (sourceElem.classList.contains('head')) {
@@ -782,6 +879,8 @@ const gitGraph = new GitGraphView(viewState.repos, viewState.lastActiveRepo, {
 	autoCenterCommitDetailsView: viewState.autoCenterCommitDetailsView,
 	contextMenuActionsVisibility: viewState.contextMenuActionsVisibility,
 	dialogDefaults: viewState.dialogDefaults,
+	fetchAndPrune: viewState.fetchAndPrune,
+	fetchAndPruneTags: viewState.fetchAndPruneTags,
 	fetchAvatars: viewState.fetchAvatars,
 	graphColours: viewState.graphColours,
 	graphStyle: viewState.graphStyle,
@@ -827,14 +926,23 @@ window.addEventListener('message', event => {
 		case 'deleteBranch':
 			refreshGraphOrDisplayError(msg.status, 'Unable to Delete Branch');
 			break;
+		case 'deleteRemoteBranch':
+			refreshGraphOrDisplayError(msg.status, 'Unable to Delete Remote Branch');
+			break;
 		case 'deleteTag':
 			refreshGraphOrDisplayError(msg.status, 'Unable to Delete Tag');
+			break;
+		case 'fetch':
+			refreshGraphOrDisplayError(msg.status, 'Unable to Fetch from Remote(s)');
+			break;
+		case 'fetchIntoLocalBranch':
+			refreshGraphOrDisplayError(msg.status, 'Unable to Fetch into Local Branch');
 			break;
 		case 'fetchAvatar':
 			gitGraph.loadAvatar(msg.email, msg.image);
 			break;
 		case 'loadBranches':
-			gitGraph.loadBranches(msg.branches, msg.head, msg.hard, msg.isRepo);
+			gitGraph.loadBranches(msg.branches, msg.head, msg.remotes, msg.hard, msg.isRepo);
 			break;
 		case 'loadCommits':
 			gitGraph.loadCommits(msg.commits, msg.head, msg.moreCommitsAvailable, msg.hard);
@@ -848,8 +956,17 @@ window.addEventListener('message', event => {
 		case 'mergeCommit':
 			refreshGraphOrDisplayError(msg.status, 'Unable to Merge Commit');
 			break;
+		case 'pullBranch':
+			refreshGraphOrDisplayError(msg.status, 'Unable to Pull Branch');
+			break;
+		case 'pushBranch':
+			refreshGraphOrDisplayError(msg.status, 'Unable to Push Branch');
+			break;
 		case 'pushTag':
 			refreshGraphOrDisplayError(msg.status, 'Unable to Push Tag');
+			break;
+		case 'rebase':
+			refreshGraphOrDisplayError(msg.status, 'Unable to Rebase');
 			break;
 		case 'renameBranch':
 			refreshGraphOrDisplayError(msg.status, 'Unable to Rename Branch');
@@ -870,6 +987,7 @@ window.addEventListener('message', event => {
 });
 function refreshGraphOrDisplayError(status: GG.GitCommandStatus, errorMessage: string) {
 	if (status === null) {
+		hideDialog(); // Close the "action running" dialog, if one is open
 		gitGraph.refresh(true);
 	} else {
 		showErrorDialog(errorMessage, status, null);

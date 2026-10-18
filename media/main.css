@@ -370,7 +370,7 @@ svg.openFolderIcon, svg.closedFolderIcon, svg.fileIcon{
 	width:14px;
 	vertical-align:text-top;
 }
-#refreshBtn{
+#refreshBtn, #fetchBtn{
 	position:absolute;
 	right:8px;
 	top:50%;

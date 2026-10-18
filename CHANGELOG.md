@@ -1,5 +1,12 @@
 # Change Log
 
+## Unreleased
+
+* Remote actions: a Fetch button (all remotes, with the `git-graph.repository.fetchAndPrune` and `fetchAndPruneTags` options), "Push Branch" with set-upstream and force / force-with-lease modes, "Pull into current branch" with no-fast-forward and squash options, "Delete Remote Branch", and "Fetch into local branch" (update a local branch that is not checked out).
+* "Rebase current branch on this branch" and "Rebase current branch on this Commit", with an "Ignore Date" option.
+* New `git-graph.dialog.*` defaults for the new dialogs (`fetchIntoLocalBranch.forceFetch`, `pullBranch.noFastForward`, `pullBranch.squashCommits`, `rebase.ignoreDate`) and new keys in `git-graph.contextMenuActionsVisibility` (`branch.rebase`, `branch.push`, `commit.rebase`, `remoteBranch.delete`, `remoteBranch.fetch`, `remoteBranch.pull`).
+* The "action running" dialog closes by itself when the action succeeds.
+
 ## 2.1.0 - 2026-10-18
 
 Milestone "2.1 Foundations". Everything below was re-implemented from feature descriptions; no code was taken from upstream versions after 1.4.6 or from other extensions.

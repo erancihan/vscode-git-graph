@@ -37,6 +37,7 @@ describe('DataSource', () => {
 		git(repo, ['init', '-q', '-b', 'master']);
 		git(repo, ['config', 'user.name', 'Test Committer']);
 		git(repo, ['config', 'user.email', 'committer@example.com']);
+		git(repo, ['config', 'commit.gpgsign', 'false']);
 		first = commit(repo, 'a.txt', 'one\n', 'First commit');
 		second = commit(repo, 'b.txt', 'two\n', 'Second commit with "quotes" and \'apostrophes\'');
 		git(repo, ['tag', 'v1']);
@@ -134,6 +135,92 @@ describe('DataSource', () => {
 	});
 });
 
+describe('DataSource remote actions', () => {
+	let repo: string, remote: string, other: string;
+	let dataSource: DataSource;
+	let base: string;
+
+	beforeAll(() => {
+		remote = fs.mkdtempSync(path.join(os.tmpdir(), 'git-graph-remote-'));
+		git(remote, ['init', '-q', '--bare', '-b', 'master']);
+		repo = fs.mkdtempSync(path.join(os.tmpdir(), 'git-graph-local-'));
+		git(repo, ['init', '-q', '-b', 'master']);
+		git(repo, ['config', 'user.name', 'Test Committer']);
+		git(repo, ['config', 'user.email', 'committer@example.com']);
+		git(repo, ['config', 'commit.gpgsign', 'false']);
+		git(repo, ['remote', 'add', 'origin', remote]);
+		base = commit(repo, 'a.txt', 'one\n', 'Base commit');
+		git(repo, ['push', '-q', '-u', 'origin', 'master']);
+		// A second clone that pushes a branch the first repository does not know about yet
+		other = fs.mkdtempSync(path.join(os.tmpdir(), 'git-graph-other-'));
+		git(other, ['clone', '-q', remote, '.']);
+		git(other, ['config', 'user.name', 'Test Committer']);
+		git(other, ['config', 'user.email', 'committer@example.com']);
+		git(other, ['checkout', '-q', '-b', 'feature']);
+		commit(other, 'b.txt', 'two\n', 'Feature commit');
+		git(other, ['push', '-q', 'origin', 'feature']);
+		dataSource = new DataSource(new Logger());
+	});
+
+	afterAll(() => {
+		for (const dir of [repo, remote, other]) fs.rmSync(dir, { recursive: true, force: true });
+	});
+
+	it('lists remotes', async () => {
+		expect(await dataSource.getRemotes(repo)).toEqual(['origin']);
+	});
+
+	it('fetches from all remotes', async () => {
+		expect(await dataSource.fetch(repo, null, true, false)).toBeNull();
+		expect(git(repo, ['branch', '-r'])).toContain('origin/feature');
+	});
+
+	it('fetches a remote branch into a local branch without checking it out', async () => {
+		expect(await dataSource.fetchIntoLocalBranch(repo, 'origin', 'feature', 'feature', false)).toBeNull();
+		expect(git(repo, ['rev-parse', 'feature'])).toBe(git(repo, ['rev-parse', 'origin/feature']));
+		expect(git(repo, ['rev-parse', '--abbrev-ref', 'HEAD'])).toBe('master');
+	});
+
+	it('pulls a remote branch into the current branch', async () => {
+		expect(await dataSource.pullBranch(repo, 'feature', 'origin', true, false)).toBeNull();
+		expect(git(repo, ['log', '-1', '--format=%P']).split(' ')).toHaveLength(2); // merge commit because of --no-ff
+		expect(fs.existsSync(path.join(repo, 'b.txt'))).toBe(true);
+	});
+
+	it('pushes a branch and sets the upstream', async () => {
+		git(repo, ['checkout', '-q', '-b', 'topic', base]);
+		commit(repo, 'c.txt', 'three\n', 'Topic commit');
+		expect(await dataSource.pushBranch(repo, 'topic', 'origin', true, 'normal')).toBeNull();
+		expect(git(repo, ['rev-parse', '--abbrev-ref', 'topic@{upstream}'])).toBe('origin/topic');
+		expect(git(remote, ['rev-parse', 'topic'])).toBe(git(repo, ['rev-parse', 'topic']));
+		git(repo, ['checkout', '-q', 'master']);
+	});
+
+	it('deletes a remote branch', async () => {
+		expect(await dataSource.deleteRemoteBranch(repo, 'topic', 'origin')).toBeNull();
+		expect(git(remote, ['branch', '--list', 'topic'])).toBe('');
+	});
+
+	it('rebases the current branch on a branch and on a commit', async () => {
+		git(repo, ['checkout', '-q', '-b', 'rebased', base]);
+		const tip = commit(repo, 'd.txt', 'four\n', 'Rebased commit');
+		expect(await dataSource.rebase(repo, 'master', 'Branch', true)).toBeNull();
+		expect(git(repo, ['rev-parse', 'HEAD'])).not.toBe(tip);
+		expect(git(repo, ['merge-base', '--is-ancestor', 'master', 'HEAD'])).toBe('');
+		// Rebasing on an ancestor replays every commit after it, so only check that the rebase ran and kept the tip commit
+		expect(await dataSource.rebase(repo, base, 'Commit', false)).toBeNull();
+		expect(git(repo, ['log', '-1', '--format=%s'])).toBe('Rebased commit');
+		git(repo, ['checkout', '-q', 'master']);
+	});
+
+	it('rejects option-like remote and branch names', async () => {
+		expect(await dataSource.fetch(repo, '--all', false, false)).toMatch(/not a valid/i);
+		expect(await dataSource.pushBranch(repo, 'master', '--mirror', false, 'normal')).toMatch(/not a valid/i);
+		expect(await dataSource.rebase(repo, '--root', 'Branch', false)).toMatch(/not a valid/i);
+		expect(await dataSource.rebase(repo, 'master', 'Commit', false)).toMatch(/not a valid/i);
+	});
+});
+
 describe('DataSource commit loading options', () => {
 	let repo: string;
 	let dataSource: DataSource;
@@ -144,6 +231,7 @@ describe('DataSource commit loading options', () => {
 		git(repo, ['init', '-q', '-b', 'master']);
 		git(repo, ['config', 'user.name', 'Test Committer']);
 		git(repo, ['config', 'user.email', 'committer@example.com']);
+		git(repo, ['config', 'commit.gpgsign', 'false']);
 		base = commit(repo, 'a.txt', 'one\n', 'Base commit');
 		git(repo, ['checkout', '-q', '--detach', base]);
 		tagOnly = commit(repo, 'b.txt', 'two\n', 'Only reachable from a tag');

@@ -54,9 +54,9 @@ class Config {
 			return <T>result;
 		};
 		return {
-			branch: read('branch', { checkout: true, rename: true, delete: true, merge: true, copyName: true }),
-			commit: read('commit', { addTag: true, createBranch: true, checkout: true, cherrypick: true, revert: true, merge: true, reset: true, copyHash: true }),
-			remoteBranch: read('remoteBranch', { checkout: true, copyName: true }),
+			branch: read('branch', { checkout: true, rename: true, delete: true, merge: true, rebase: true, push: true, copyName: true }),
+			commit: read('commit', { addTag: true, createBranch: true, checkout: true, cherrypick: true, revert: true, merge: true, rebase: true, reset: true, copyHash: true }),
+			remoteBranch: read('remoteBranch', { checkout: true, delete: true, fetch: true, pull: true, copyName: true }),
 			tag: read('tag', { delete: true, push: true, copyName: true })
 		};
 	}
@@ -73,8 +73,18 @@ class Config {
 			deleteBranch: {
 				forceDelete: this.getBoolean('dialog.deleteBranch.forceDelete', null, false)
 			},
+			fetchIntoLocalBranch: {
+				forceFetch: this.getBoolean('dialog.fetchIntoLocalBranch.forceFetch', null, false)
+			},
 			merge: {
 				noFastForward: this.getBoolean('dialog.merge.noFastForward', null, true)
+			},
+			pullBranch: {
+				noFastForward: this.getBoolean('dialog.pullBranch.noFastForward', null, false),
+				squashCommits: this.getBoolean('dialog.pullBranch.squashCommits', null, false)
+			},
+			rebase: {
+				ignoreDate: this.getBoolean('dialog.rebase.ignoreDate', null, true)
 			},
 			resetCurrentBranchToCommit: {
 				mode: <GitResetMode>this.getEnum('dialog.resetCurrentBranchToCommit.mode', null, ['Soft', 'Mixed', 'Hard'], 'Mixed').toLowerCase()
@@ -103,6 +113,14 @@ class Config {
 
 	public commitOrdering(): CommitOrdering {
 		return this.getEnum<CommitOrdering>('repository.commits.order', 'commitOrdering', ['date', 'author-date', 'topo'], 'date');
+	}
+
+	public fetchAndPrune() {
+		return this.getBoolean('repository.fetchAndPrune', 'fetchAndPrune', false);
+	}
+
+	public fetchAndPruneTags() {
+		return this.getBoolean('repository.fetchAndPruneTags', null, false);
 	}
 
 	public fetchAvatars() {
