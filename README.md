@@ -32,7 +32,8 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
         * Checkout, cherry pick, merge, rebase on, revert, and drop commits
         * Reset the current branch to a commit; reset or clean the uncommitted changes
         * Stash the uncommitted changes; apply, pop, drop, or branch from a stash
-        * Copy commit hashes, tag names, branch names, and stash names to the clipboard
+        * Copy commit hashes (full or short), tag names, branch names, and stash names to the clipboard
+    * Show only the commits of one branch, of the checked-out commit (HEAD), or of everything
     * Fetch from all remotes with the Fetch button
     * Find commits with Ctrl/Cmd+F: match case and regular expression modes, step through the matches
     * Show or hide the Date, Author and Commit columns (right-click a column header), mute merge commits or commits outside the ancestry of HEAD
