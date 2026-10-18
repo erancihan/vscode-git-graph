@@ -11,7 +11,12 @@ export interface GitCommitNode {
 	stash: GitStash | null;
 	/** Set when `git-graph.repository.commits.showSignatureStatus` is enabled and the commit is not the uncommitted changes row. */
 	signature: GitSignature | null;
+	/** Mark given during a running bisection (from refs/bisect/*), or null. */
+	bisect: GitBisectMark | null;
 }
+
+export type GitBisectMark = 'good' | 'bad' | 'skip';
+export type GitBisectAction = GitBisectMark | 'reset';
 
 /** A stash entry. The stash commit is shown as a row above `baseHash`, the commit it was created from. */
 export interface GitStash {
@@ -64,6 +69,8 @@ export interface GitRef {
 export interface GitRefData {
 	head: string | null;
 	refs: GitRef[];
+	/** Marks of a running bisection, by commit hash. */
+	bisect: { [hash: string]: GitBisectMark };
 }
 
 export type GitRepoSet = { [repo: string]: GitRepoState };
@@ -131,7 +138,7 @@ export interface GitUnsavedChanges {
 
 export interface ContextMenuActionsVisibility {
 	branch: { checkout: boolean, rename: boolean, delete: boolean, merge: boolean, rebase: boolean, push: boolean, createPullRequest: boolean, archive: boolean, copyName: boolean };
-	commit: { addTag: boolean, createBranch: boolean, checkout: boolean, cherrypick: boolean, revert: boolean, drop: boolean, merge: boolean, rebase: boolean, reset: boolean, archive: boolean, codeReview: boolean, reword: boolean, filterByAuthor: boolean, copyHash: boolean };
+	commit: { addTag: boolean, createBranch: boolean, checkout: boolean, cherrypick: boolean, revert: boolean, drop: boolean, merge: boolean, rebase: boolean, reset: boolean, archive: boolean, codeReview: boolean, reword: boolean, filterByAuthor: boolean, bisect: boolean, copyHash: boolean };
 	remoteBranch: { checkout: boolean, delete: boolean, fetch: boolean, pull: boolean, copyName: boolean };
 	stash: { apply: boolean, createBranch: boolean, pop: boolean, drop: boolean, copyName: boolean, copyHash: boolean };
 	tag: { delete: boolean, push: boolean, archive: boolean, copyName: boolean };
@@ -415,6 +422,7 @@ export interface ResponseLoadCommits {
 	commits: GitCommitNode[];
 	head: string | null;
 	moreCommitsAvailable: boolean;
+	bisecting: boolean;
 	hard: boolean;
 }
 
@@ -833,6 +841,18 @@ export interface ResponseAmendCommit {
 	status: GitCommandStatus;
 }
 
+export interface RequestBisect {
+	command: 'bisect';
+	repo: string;
+	action: GitBisectAction;
+	commitHash: string | null; // null for "reset"
+}
+export interface ResponseBisect {
+	command: 'bisect';
+	status: GitCommandStatus;
+	message: string | null; // git's progress line, for example "Bisecting: 3 revisions left to test after this (roughly 2 steps)"
+}
+
 export interface RequestOpenExternalUrl {
 	command: 'openExternalUrl';
 	url: string; // http(s) only
@@ -941,6 +961,7 @@ export type RequestMessage =
 	| RequestSetUserDetails
 	| RequestOpenExtensionSettings
 	| RequestOpenExternalUrl
+	| RequestBisect
 	| RequestGetCommitMessage
 	| RequestRewordCommit
 	| RequestAmendCommit
@@ -999,6 +1020,7 @@ export type ResponseMessage =
 	| ResponsePruneRemote
 	| ResponseSetUserDetails
 	| ResponseOpenExternalUrl
+	| ResponseBisect
 	| ResponseGetCommitMessage
 	| ResponseRewordCommit
 	| ResponseAmendCommit

@@ -267,6 +267,11 @@
 									"default": true,
 									"description": "Show only commits by this author"
 								},
+								"bisect": {
+									"type": "boolean",
+									"default": true,
+									"description": "Bisect: Mark as Bad / Good / Skip / Stop"
+								},
 								"rebase": {
 									"type": "boolean",
 									"default": true,

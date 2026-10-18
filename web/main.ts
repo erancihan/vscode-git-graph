@@ -11,6 +11,8 @@ class GitGraphView {
 	private avatars: AvatarImageCollection = {};
 	private currentBranches: string[] | null = null;
 	private filters: GG.GraphFilters = { authors: [], paths: [] };
+	private bisecting: boolean = false;
+	private bisectMessage: string | null = null;
 	private currentRepo!: string;
 
 	private graph: Graph;
@@ -52,6 +54,7 @@ class GitGraphView {
 		this.graph = new Graph('commitGraph', this.config);
 		this.tableElem = document.getElementById('commitTable')!;
 		this.registerTableListeners();
+		this.registerDragAndDrop();
 		this.findWidget = new FindWidget({
 			getCommits: () => this.commits,
 			getRowElem: (id) => <HTMLElement | null>this.tableElem.querySelector('tr.commit[data-id="' + id + '"]'),
@@ -281,8 +284,13 @@ class GitGraphView {
 		}
 	}
 
-	public loadCommits(commits: GG.GitCommitNode[], commitHead: string | null, moreAvailable: boolean, hard: boolean) {
-		if (!hard && this.moreCommitsAvailable === moreAvailable && this.commitHead === commitHead && arraysEqual(this.commits, commits, (a, b) => a.hash === b.hash && arraysEqual(a.refs, b.refs, (a, b) => a.name === b.name && a.type === b.type) && arraysEqual(a.parentHashes, b.parentHashes, (a, b) => a === b))) {
+	public loadCommits(commits: GG.GitCommitNode[], commitHead: string | null, moreAvailable: boolean, hard: boolean, bisecting: boolean = false) {
+		if (this.bisecting !== bisecting) {
+			this.bisecting = bisecting;
+			if (!bisecting) this.bisectMessage = null;
+			this.renderBisectBar();
+		}
+		if (!hard && this.moreCommitsAvailable === moreAvailable && this.commitHead === commitHead && arraysEqual(this.commits, commits, (a, b) => a.hash === b.hash && arraysEqual(a.refs, b.refs, (a, b) => a.name === b.name && a.type === b.type) && arraysEqual(a.parentHashes, b.parentHashes, (a, b) => a === b) && a.bisect === b.bisect)) {
 			if (this.commits.length > 0 && this.commits[0].hash === '*') {
 				this.commits[0] = commits[0];
 				this.saveState();
@@ -443,11 +451,13 @@ class GitGraphView {
 			const message = linkifyMessage(this.commits[i].message, issueLinking, false), date = getCommitDate(this.commits[i].date), labels = this.renderRefLabels(this.commits[i]);
 			const graphCell = branchesInGraph && labels.branches !== '' ? '<td><span class="gitRefsGraph">' + labels.branches + '</span></td>' : '<td></td>';
 			const refs = (branchesInGraph ? '' : labels.branches) + (tagsOnRight ? '' : labels.tags);
+			const bisectMark = this.commits[i].bisect || null;
+			const bisectBadge = bisectMark !== null ? '<span class="bisectBadge ' + bisectMark + '" title="Bisect: ' + bisectMark + '">' + (bisectMark === 'good' ? 'G' : bisectMark === 'bad' ? 'B' : 'S') + '</span>' : '';
 			const muted = this.commits[i].hash !== '*' && (
 				(this.config.muteMergeCommits && this.commits[i].parentHashes.length > 1 && this.commits[i].stash === null) ||
 				(ancestorsOfHead !== null && !ancestorsOfHead[this.commits[i].hash])
 			);
-			html += '<tr ' + (this.commits[i].hash !== '*' ? 'class="commit' + (muted ? ' mute' : '') + '" data-hash="' + this.commits[i].hash + '"' : 'class="unsavedChanges"') + ' data-id="' + i + '" data-color="' + this.graph.getVertexColour(i) + '"">' + graphCell + '<td>' + (tagsOnRight && labels.tags !== '' ? '<div class="descriptionCell"><span class="descriptionMain">' : '') + (this.commits[i].hash === this.commitHead ? '<span class="commitHeadDot"></span>' : '') + refs + (this.commits[i].hash === currentHash ? '<b>' + message + '</b>' : message) + (tagsOnRight && labels.tags !== '' ? '</span><span class="gitRefsRight">' + labels.tags + '</span></div>' : '') + '</td><td class="colDate" title="' + date.title + '">' + date.value + '</td><td class="colAuthor" title="' + escapeHtml(this.commits[i].author + ' <' + this.commits[i].email + '>') + '">' + (this.config.fetchAvatars ? '<span class="avatar" data-email="' + escapeHtml(this.commits[i].email) + '">' + (typeof this.avatars[this.commits[i].email] === 'string' ? '<img class="avatarImg" src="' + this.avatars[this.commits[i].email] + '">' : '') + '</span>' : '') + escapeHtml(this.commits[i].author) + '</td><td class="colCommit" title="' + escapeHtml(this.commits[i].hash) + '">' + signatureIconHtml(this.commits[i].signature) + abbrevCommit(this.commits[i].hash) + '</td></tr>';
+			html += '<tr ' + (this.commits[i].hash !== '*' ? 'class="commit' + (muted ? ' mute' : '') + (bisectMark !== null ? ' bisect' + bisectMark : '') + '" data-hash="' + this.commits[i].hash + '" draggable="true"' : 'class="unsavedChanges"') + ' data-id="' + i + '" data-color="' + this.graph.getVertexColour(i) + '"">' + graphCell + '<td>' + (tagsOnRight && labels.tags !== '' ? '<div class="descriptionCell"><span class="descriptionMain">' : '') + (this.commits[i].hash === this.commitHead ? '<span class="commitHeadDot"></span>' : '') + refs + (this.commits[i].hash === currentHash ? '<b>' + message + '</b>' : message) + (tagsOnRight && labels.tags !== '' ? '</span><span class="gitRefsRight">' + labels.tags + '</span></div>' : '') + '</td><td class="colDate" title="' + date.title + '">' + date.value + '</td><td class="colAuthor" title="' + escapeHtml(this.commits[i].author + ' <' + this.commits[i].email + '>') + '">' + (this.config.fetchAvatars ? '<span class="avatar" data-email="' + escapeHtml(this.commits[i].email) + '">' + (typeof this.avatars[this.commits[i].email] === 'string' ? '<img class="avatarImg" src="' + this.avatars[this.commits[i].email] + '">' : '') + '</span>' : '') + escapeHtml(this.commits[i].author) + '</td><td class="colCommit" title="' + escapeHtml(this.commits[i].hash) + '">' + bisectBadge + signatureIconHtml(this.commits[i].signature) + abbrevCommit(this.commits[i].hash) + '</td></tr>';
 		}
 		this.tableElem.innerHTML = '<table>' + html + '</table>';
 		this.footerElem.innerHTML = this.moreCommitsAvailable ? '<div id="loadMoreCommitsBtn" class="roundedBtn">Load More Commits</div>' : '';
@@ -550,26 +560,7 @@ class GitGraphView {
 				{
 					title: 'Cherry Pick' + ELLIPSIS,
 					visible: visibility.cherrypick,
-					onClick: () => {
-						const isMerge = this.commits[this.commitLookup[hash]].parentHashes.length > 1;
-						const inputs: DialogInput[] = [
-							{ type: 'checkbox', name: 'Record Origin (add "cherry picked from commit" to the message)', value: this.config.dialogDefaults.cherryPick.recordOrigin },
-							{ type: 'checkbox', name: 'No Commit (stage the changes only)', value: this.config.dialogDefaults.cherryPick.noCommit }
-						];
-						if (isMerge) {
-							inputs.unshift({
-								type: 'select', name: 'Parent: ', default: '1',
-								options: this.commits[this.commitLookup[hash]].parentHashes.map((hash, index) => ({
-									name: abbrevCommit(hash) + (typeof this.commitLookup[hash] === 'number' ? ': ' + this.commits[this.commitLookup[hash]].message : ''),
-									value: (index + 1).toString()
-								}))
-							});
-						}
-						showFormDialog('Are you sure you want to cherry pick ' + (isMerge ? 'merge commit <b><i>' + abbrevCommit(hash) + '</i></b>? Choose the parent on the main branch, to cherry pick the commit relative to:' : 'commit <b><i>' + abbrevCommit(hash) + '</i></b>?'), inputs, 'Yes, cherry pick', (values) => {
-							const parentIndex = isMerge ? parseInt(values.shift()!) : 0;
-							sendMessage({ command: 'cherrypickCommit', repo: this.currentRepo!, commitHash: hash, parentIndex: parentIndex, recordOrigin: values[0] === 'checked', noCommit: values[1] === 'checked' });
-						}, sourceElem);
-					}
+					onClick: () => this.showCherryPickDialog(hash, sourceElem)
 				},
 				{
 					title: 'Revert' + ELLIPSIS,
@@ -629,6 +620,26 @@ class GitGraphView {
 							sendMessage({ command: 'resetToCommit', repo: this.currentRepo!, commitHash: hash, resetMode: <GG.GitResetMode>mode });
 						}, sourceElem);
 					}
+				},
+				{
+					title: 'Bisect: Mark as Bad',
+					visible: visibility.bisect && this.commits[this.commitLookup[hash]].bisect !== 'bad',
+					onClick: () => this.bisect('bad', hash)
+				},
+				{
+					title: 'Bisect: Mark as Good',
+					visible: visibility.bisect && this.commits[this.commitLookup[hash]].bisect !== 'good',
+					onClick: () => this.bisect('good', hash)
+				},
+				{
+					title: 'Bisect: Skip this Commit',
+					visible: visibility.bisect && this.bisecting && this.commits[this.commitLookup[hash]].bisect !== 'skip',
+					onClick: () => this.bisect('skip', hash)
+				},
+				{
+					title: 'Bisect: Stop',
+					visible: visibility.bisect && this.bisecting,
+					onClick: () => this.bisect('reset', null)
 				},
 				{
 					title: 'Show only commits by ' + escapeHtml(this.commits[this.commitLookup[hash]].author),
@@ -951,7 +962,7 @@ class GitGraphView {
 					}
 				}
 			}
-			const html = '<span class="gitRef head' + (active ? ' active' : '') + (remotesHtml !== '' ? ' combined' : '') + '" data-name="' + name + '" title="Branch: ' + name + '">' + svgIcons.branch + name + remotesHtml + '</span>';
+			const html = '<span class="gitRef head' + (active ? ' active' : '') + (remotesHtml !== '' ? ' combined' : '') + '" data-name="' + name + '" title="Branch: ' + name + '" draggable="true">' + svgIcons.branch + name + remotesHtml + '</span>';
 			branches = active ? html + branches : branches + html;
 		}
 		for (i = 0; i < refs.length; i++) {
@@ -960,7 +971,7 @@ class GitGraphView {
 			const name = escapeHtml(refs[i].name);
 			const icon = type === 'tag' ? svgIcons.tag : type === 'stash' ? svgIcons.stash : svgIcons.branch;
 			const kind = type === 'tag' ? 'Tag' : type === 'stash' ? 'Stash' : 'Remote Branch';
-			const html = '<span class="gitRef ' + type + '" data-name="' + name + '" title="' + kind + ': ' + name + '">' + icon + name + '</span>';
+			const html = '<span class="gitRef ' + type + '" data-name="' + name + '" title="' + kind + ': ' + name + '"' + (type !== 'stash' ? ' draggable="true"' : '') + '>' + icon + name + '</span>';
 			if (type === 'tag') tags += html; else branches += html;
 		}
 		return { branches: branches, tags: tags };
@@ -974,7 +985,8 @@ class GitGraphView {
 		const controls = document.getElementById('controls'), filterBar = document.getElementById('filterBar');
 		if (controls !== null) {
 			document.body.style.setProperty('--git-graph-controls-height', controls.offsetHeight + 'px');
-			document.body.style.setProperty('--git-graph-header-offset', (controls.offsetHeight + (filterBar !== null ? filterBar.offsetHeight : 0)) + 'px');
+			const bisectBar = document.getElementById('bisectBar');
+			document.body.style.setProperty('--git-graph-header-offset', (controls.offsetHeight + (filterBar !== null ? filterBar.offsetHeight : 0) + (bisectBar !== null ? bisectBar.offsetHeight : 0)) + 'px');
 		}
 	}
 	/** Tells the stylesheet how wide the graph is, so labels placed in the Graph column start to its right. */
@@ -1073,6 +1085,135 @@ class GitGraphView {
 				sendMessage({ command: 'amendCommit', repo: this.currentRepo!, commitHash: commitHash, message: values[0], stageTracked: values[1] === 'checked' });
 			}
 		}, null);
+	}
+
+	/* Bisect */
+	private bisect(action: GG.GitBisectAction, hash: string | null) {
+		const run = () => {
+			showActionRunningDialog(action === 'reset' ? 'Stopping Bisect' : 'Bisecting');
+			sendMessage({ command: 'bisect', repo: this.currentRepo!, action: action, commitHash: hash });
+		};
+		if (!this.bisecting && action !== 'reset') {
+			showConfirmationDialog('Start bisecting with commit <b><i>' + abbrevCommit(hash!) + '</i></b> marked as <b>' + action + '</b>? Once a good and a bad commit are known, git checks out the commits to test, so the working tree must be clean.', run, null);
+		} else {
+			run();
+		}
+	}
+	public bisectCompleted(status: GG.GitCommandStatus, message: string | null) {
+		if (status !== null) {
+			showErrorDialog('Unable to Bisect', status, null);
+			return;
+		}
+		this.bisectMessage = message;
+		hideDialog();
+		this.refresh(true);
+		this.renderBisectBar();
+	}
+	private renderBisectBar() {
+		const bar = document.getElementById('bisectBar');
+		if (bar === null) return;
+		if (!this.bisecting) {
+			bar.className = '';
+			bar.innerHTML = '';
+		} else {
+			bar.className = 'active';
+			bar.innerHTML = '<span class="bisectBarLabel">Bisecting</span><span class="bisectBarMessage">' + (this.bisectMessage !== null ? escapeHtml(this.bisectMessage) : 'Mark commits as good or bad from their context menu.') + '</span><span id="bisectStop" class="roundedBtn" title="git bisect reset">Stop</span>';
+			document.getElementById('bisectStop')!.addEventListener('click', () => this.bisect('reset', null));
+		}
+		this.updateControlsHeightVariable();
+	}
+
+	/* Drag and drop */
+	/** Dragging a label or a commit row onto the checked-out commit offers merge, rebase or cherry pick. */
+	private registerDragAndDrop() {
+		let dragged: { kind: 'branch' | 'tag' | 'commit', value: string } | null = null;
+		this.tableElem.addEventListener('dragstart', (e) => {
+			const target = <HTMLElement>e.target;
+			const label = <HTMLElement | null>target.closest('.gitRef'), row = <HTMLElement | null>target.closest('tr.commit');
+			if (label !== null && !label.classList.contains('stash')) {
+				dragged = { kind: label.classList.contains('tag') ? 'tag' : 'branch', value: unescapeHtml(label.dataset.name!) };
+			} else if (row !== null) {
+				dragged = { kind: 'commit', value: row.dataset.hash! };
+			} else {
+				dragged = null;
+				return;
+			}
+			if (e.dataTransfer) {
+				e.dataTransfer.effectAllowed = 'move';
+				e.dataTransfer.setData('text/plain', dragged.value);
+			}
+			document.body.classList.add('dragging');
+		});
+		const headRow = () => this.commitHead !== null ? this.getRowElemByHash(this.commitHead) : null;
+		this.tableElem.addEventListener('dragover', (e) => {
+			if (dragged === null) return;
+			const row = <HTMLElement | null>(<HTMLElement>e.target).closest('tr.commit'), target = headRow();
+			if (row !== null && target !== null && row === target && !(dragged.kind === 'commit' && dragged.value === this.commitHead) && !(dragged.kind === 'branch' && dragged.value === this.gitBranchHead)) {
+				e.preventDefault();
+				if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+				row.classList.add('dropTarget');
+			}
+		});
+		this.tableElem.addEventListener('dragleave', (e) => {
+			const row = <HTMLElement | null>(<HTMLElement>e.target).closest('tr.commit');
+			if (row !== null) row.classList.remove('dropTarget');
+		});
+		const end = () => {
+			dragged = null;
+			document.body.classList.remove('dragging');
+			const marked = this.tableElem.querySelectorAll('tr.dropTarget');
+			for (let i = 0; i < marked.length; i++) marked[i].classList.remove('dropTarget');
+		};
+		this.tableElem.addEventListener('dragend', end);
+		this.tableElem.addEventListener('drop', (e) => {
+			const row = <HTMLElement | null>(<HTMLElement>e.target).closest('tr.commit'), target = headRow();
+			if (dragged === null || row === null || target === null || row !== target) { end(); return; }
+			e.preventDefault();
+			const item = dragged;
+			end();
+			this.showDropActionDialog(item.kind, item.value, row);
+		});
+	}
+	private showDropActionDialog(kind: 'branch' | 'tag' | 'commit', value: string, sourceElem: HTMLElement) {
+		if (kind === 'commit') {
+			this.showCherryPickDialog(value, sourceElem);
+			return;
+		}
+		const what = (kind === 'tag' ? 'tag' : 'branch') + ' <b><i>' + escapeHtml(value) + '</i></b>';
+		showSelectDialog('What should happen with ' + what + ' and the <b>current branch</b>?', 'merge', [
+			{ name: 'Merge ' + value + ' into the current branch', value: 'merge' },
+			{ name: 'Rebase the current branch on ' + value, value: 'rebase' }
+		], 'Continue', (choice) => {
+			if (choice === 'merge') {
+				this.showMergeDialog('Are you sure you want to merge ' + what + ' into the current branch?', (options) => {
+					sendMessage(kind === 'tag'
+						? { command: 'mergeCommit', repo: this.currentRepo!, commitHash: value, ...options }
+						: { command: 'mergeBranch', repo: this.currentRepo!, branchName: value, ...options });
+				});
+			} else {
+				this.showRebaseDialog('Are you sure you want to rebase the <b>current branch</b> on ' + what + '?', value, kind === 'tag' ? 'Commit' : 'Branch', sourceElem);
+			}
+		}, sourceElem);
+	}
+	private showCherryPickDialog(hash: string, sourceElem: HTMLElement) {
+		const isMerge = this.commits[this.commitLookup[hash]].parentHashes.length > 1;
+		const inputs: DialogInput[] = [
+			{ type: 'checkbox', name: 'Record Origin (add "cherry picked from commit" to the message)', value: this.config.dialogDefaults.cherryPick.recordOrigin },
+			{ type: 'checkbox', name: 'No Commit (stage the changes only)', value: this.config.dialogDefaults.cherryPick.noCommit }
+		];
+		if (isMerge) {
+			inputs.unshift({
+				type: 'select', name: 'Parent: ', default: '1',
+				options: this.commits[this.commitLookup[hash]].parentHashes.map((parent, index) => ({
+					name: abbrevCommit(parent) + (typeof this.commitLookup[parent] === 'number' ? ': ' + this.commits[this.commitLookup[parent]].message : ''),
+					value: (index + 1).toString()
+				}))
+			});
+		}
+		showFormDialog('Are you sure you want to cherry pick ' + (isMerge ? 'merge commit <b><i>' + abbrevCommit(hash) + '</i></b>? Choose the parent on the main branch, to cherry pick the commit relative to:' : 'commit <b><i>' + abbrevCommit(hash) + '</i></b>?'), inputs, 'Yes, cherry pick', (values) => {
+			const parentIndex = isMerge ? parseInt(values.shift()!) : 0;
+			sendMessage({ command: 'cherrypickCommit', repo: this.currentRepo!, commitHash: hash, parentIndex: parentIndex, recordOrigin: values[0] === 'checked', noCommit: values[1] === 'checked' });
+		}, sourceElem);
 	}
 
 	/* Filters */
@@ -1948,7 +2089,7 @@ window.addEventListener('message', event => {
 			gitGraph.loadBranches(msg.branches, msg.head, msg.remotes, msg.hard, msg.isRepo);
 			break;
 		case 'loadCommits':
-			gitGraph.loadCommits(msg.commits, msg.head, msg.moreCommitsAvailable, msg.hard);
+			gitGraph.loadCommits(msg.commits, msg.head, msg.moreCommitsAvailable, msg.hard, msg.bisecting);
 			break;
 		case 'loadRepos':
 			gitGraph.loadRepos(msg.repos, msg.lastActiveRepo);
@@ -1999,6 +2140,9 @@ window.addEventListener('message', event => {
 			break;
 		case 'createPullRequest':
 			if (msg.error !== null) showErrorDialog('Unable to Create Pull Request', msg.error, null);
+			break;
+		case 'bisect':
+			gitGraph.bisectCompleted(msg.status, msg.message);
 			break;
 		case 'codeReviewsChanged':
 			gitGraph.setCodeReviews(msg.repo, msg.reviews);

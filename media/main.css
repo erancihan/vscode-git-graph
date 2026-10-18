@@ -1209,3 +1209,73 @@ body.stickyHeader #filterBar.active{
 	font-size:12px;
 	vertical-align:top;
 }
+
+/* Bisect */
+#bisectBar{
+	display:none;
+}
+#bisectBar.active{
+	display:block;
+	padding:4px 8px;
+	border-bottom:1px solid rgba(128,128,128,0.3);
+	line-height:22px;
+	font-size:12px;
+	white-space:nowrap;
+	overflow:hidden;
+	text-overflow:ellipsis;
+	background-color:var(--vscode-editor-background);
+}
+body.stickyHeader #bisectBar.active{
+	position:sticky;
+	top:var(--git-graph-controls-height, 41px);
+	z-index:4;
+}
+.bisectBarLabel{
+	font-weight:700;
+	margin-right:8px;
+	color:var(--vscode-editorWarning-foreground, #e2c08d);
+}
+#bisectStop{
+	display:inline-block;
+	height:20px;
+	line-height:20px;
+	padding:0 10px;
+	border-radius:10px;
+	font-size:12px;
+	vertical-align:top;
+	margin-left:10px;
+}
+.bisectBadge{
+	display:inline-block;
+	width:16px;
+	height:16px;
+	line-height:16px;
+	margin-right:4px;
+	margin-top:4px;
+	border-radius:3px;
+	text-align:center;
+	font-size:10px;
+	font-weight:700;
+	vertical-align:top;
+	color:var(--vscode-editor-background);
+	background-color:rgb(128,128,128);
+}
+.bisectBadge.good{
+	background-color:var(--vscode-gitDecoration-addedResourceForeground, #4caf50);
+}
+.bisectBadge.bad{
+	background-color:var(--vscode-gitDecoration-deletedResourceForeground, #f44336);
+}
+
+/* Drag and drop */
+body.dragging #commitTable tr.commit td{
+	cursor:grabbing;
+}
+#commitTable tr.commit.dropTarget td{
+	background-color:var(--vscode-list-dropBackground, rgba(128,128,128,0.35));
+	outline:1px dashed var(--vscode-focusBorder);
+	outline-offset:-1px;
+}
+.gitRef[draggable=true]{
+	cursor:grab;
+}
