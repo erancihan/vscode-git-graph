@@ -1,6 +1,8 @@
 # Change Log
 
-## Unreleased
+## 2.4.2 - 2026-10-18
+
+Milestone "2.4 Beyond upstream", third release. Designed from the descriptions on the tracking issues; nothing is taken from other extensions.
 
 * Worktrees: every other worktree of the repository that has uncommitted changes gets a row "Uncommitted Changes in <folder> (N)" directly above the commit it has checked out, drawn as a child of that commit. Its context menu offers "Open Worktree in New Window" and "Add to Git Graph". The rows follow `git-graph.repository.showUncommittedChanges`; repositories without linked worktrees run no extra git process.
 * Conflict prediction: the merge, rebase and cherry pick dialogs show a line with the files that would conflict ("No conflicts expected", or "N files would conflict: ...") before the action is confirmed. The prediction uses `git merge-tree --write-tree` (git 2.38 or later), which merges in memory and never touches the working tree; for rebase and cherry pick it is an approximation based on a three-way merge of the two tips and says so. Nothing is shown with an older git. Designed from the description on the tracking issue; nothing is taken from other extensions.
