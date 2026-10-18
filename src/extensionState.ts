@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import { ExtensionContext, Memento } from 'vscode';
-import { pruneCodeReviews } from './codeReview';
+import { isSafeObjectKey, isValidCodeReview, pruneCodeReviews } from './codeReview';
 import { Avatar, AvatarCache, CodeReview, CodeReviewSet, GitRepoSet } from './types';
 import { getPathFromStr } from './utils';
 
@@ -67,23 +67,26 @@ export class ExtensionState {
 	}
 	public getCodeReviewsOfRepo(repo: string) {
 		const reviews = this.getCodeReviews();
-		return typeof reviews[repo] === 'object' ? reviews[repo] : {};
+		return isSafeObjectKey(repo) && Object.prototype.hasOwnProperty.call(reviews, repo) && typeof reviews[repo] === 'object' ? reviews[repo] : {};
 	}
+	/** Store a review. Ignores keys that could reach Object.prototype and reviews of an unexpected shape. */
 	public saveCodeReview(repo: string, review: CodeReview) {
+		if (!isSafeObjectKey(repo) || !isValidCodeReview(review)) return this.getCodeReviewsOfRepo(repo);
 		const reviews = this.getCodeReviews();
-		if (typeof reviews[repo] !== 'object') reviews[repo] = {};
+		if (!Object.prototype.hasOwnProperty.call(reviews, repo) || typeof reviews[repo] !== 'object') reviews[repo] = {};
 		reviews[repo][review.id] = review;
 		this.workspaceState.update(CODE_REVIEWS, reviews);
 		return reviews[repo];
 	}
 	public removeCodeReview(repo: string, id: string) {
+		if (!isSafeObjectKey(repo) || !isSafeObjectKey(id)) return this.getCodeReviewsOfRepo(repo);
 		const reviews = this.getCodeReviews();
-		if (typeof reviews[repo] === 'object') {
+		if (Object.prototype.hasOwnProperty.call(reviews, repo) && typeof reviews[repo] === 'object') {
 			delete reviews[repo][id];
 			if (Object.keys(reviews[repo]).length === 0) delete reviews[repo];
 		}
 		this.workspaceState.update(CODE_REVIEWS, reviews);
-		return typeof reviews[repo] === 'object' ? reviews[repo] : {};
+		return Object.prototype.hasOwnProperty.call(reviews, repo) && typeof reviews[repo] === 'object' ? reviews[repo] : {};
 	}
 	public endAllCodeReviews() {
 		const count = Object.keys(this.getCodeReviews()).reduce((sum, repo) => sum + Object.keys(this.getCodeReviews()[repo]).length, 0);

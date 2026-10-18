@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Security: the view state inlined into the webview is escaped so repository data (paths, messages, names) cannot close the script element; code review messages are accepted for known repositories only, review ids and shapes are validated, and keys that could reach `Object.prototype` are refused when reading or writing stored reviews.
+
 * Accessibility and theming: `git-graph.commitDetailsView.fileView.showChangeTypeLetters` shows A / M / D / R letters before file names so colour is not the only cue; row highlights, dialog inputs, selects, checkboxes and text selection follow the editor theme colours (list, input, dropdown, checkbox and selection colours); high contrast themes get their contrast border on labels, buttons, dialogs, menus and widgets; keyboard focus is visible on buttons and labels.
 
 * Code review mode: "Start Code Review" on a commit (or on a comparison via the commit menu) tracks which changed files were viewed. Reviewed files are dimmed and ticked in the Commit Details View, a banner shows the progress, files can be marked reviewed or not reviewed from their context menu, and "End Code Review" closes the review. Reviews are kept per workspace, survive restarts, expire after 90 days, and the command "Git Graph: End All Code Reviews in Workspace" clears them. New key `commit.codeReview` in `git-graph.contextMenuActionsVisibility`.
