@@ -32,7 +32,7 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
         * Archive a branch, tag or commit as a zip or tar file
         * Delete remote branches, fetch a remote branch into a local branch, pull a remote branch into the current branch
         * Add, delete, and push tags
-        * Checkout, cherry pick, merge, rebase on (also interactively, in the integrated terminal), revert, and drop commits
+        * Checkout, cherry pick, merge, rebase on (also interactively, in the integrated terminal), revert, and drop commits; reword the checked-out commit or amend it with the uncommitted changes
         * Reset the current branch to a commit; reset or clean the uncommitted changes
         * Stash the uncommitted changes; apply, pop, drop, or branch from a stash
         * Copy commit hashes (full or short), tag names, branch names, and stash names to the clipboard
@@ -41,6 +41,7 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
     * Repository Settings widget (gear button): custom repository name, per-repository overrides for tags, stashes, reflogs and first-parent loading, remotes (add, edit, delete, fetch, prune, hide), user name and email, issue linking (pattern and URL template, so issue references in commit messages open in the browser)
     * Find commits with Ctrl/Cmd+F: match case and regular expression modes, step through the matches
     * Show or hide the Date, Author and Commit columns (right-click a column header), mute merge commits or commits outside the ancestry of HEAD
+    * Sticky controls bar and column headers while scrolling (`git-graph.stickyHeader`)
     * Keyboard shortcuts: Ctrl/Cmd+R refresh, Ctrl/Cmd+H scroll to HEAD, Ctrl/Cmd+S next stash
 * Configurable settings (graph style, branch colours, and more)
 * "Git Graph: View Git Graph" command in the Command Palette
@@ -121,6 +122,7 @@ This extension contributes the following settings:
 * `git-graph.integratedTerminalShell`: Shell executable for the terminals Git Graph opens (interactive rebase). Empty: the default shell. User Settings only. Default: empty.
 * `git-graph.retainContextWhenHidden`: Keep the view alive while its tab is hidden so it restores instantly. Default: true.
 * `git-graph.sourceCodeProviderIntegrationLocation`: Where "View Git Graph" appears in the Source Control view: `Inline` (title bar button) or `More Actions`. Default: `Inline`.
+* `git-graph.stickyHeader`: Keep the controls bar and the column headers visible while scrolling. Default: true.
 * `git-graph.showStatusBarItem`: Show a Status Bar item that opens Git Graph when clicked.
 * `git-graph.tabIconColourTheme`: Specifies the colour theme of the icon displayed on the Git Graph tab.
 

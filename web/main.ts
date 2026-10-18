@@ -43,6 +43,7 @@ class GitGraphView {
 		this.config = config;
 		this.codeReviews = codeReviews && typeof codeReviews === 'object' ? codeReviews : {};
 		showChangeTypeLetters = config.commitDetailsView.showChangeTypeLetters;
+		if (config.stickyHeader) document.body.classList.add('stickyHeader');
 		this.maxCommits = config.initialLoadCommits;
 		this.showRemoteBranches = config.showRemoteBranches;
 		this.scrollToHeadPending = config.scrollToHeadOnLoad && prevState === null;
@@ -417,6 +418,7 @@ class GitGraphView {
 		const alignment = this.config.referenceLabels.alignment, tagsOnRight = alignment !== 'Normal', branchesInGraph = alignment === 'Branches (aligned to the graph) & Tags (on the right)';
 		const issueLinking = compileIssueLinking(this.getIssueLinkingConfig());
 		this.updateGraphWidthVariable();
+		this.updateControlsHeightVariable();
 		for (i = 0; i < this.commits.length; i++) {
 			const message = linkifyMessage(this.commits[i].message, issueLinking, false), date = getCommitDate(this.commits[i].date), labels = this.renderRefLabels(this.commits[i]);
 			const graphCell = branchesInGraph && labels.branches !== '' ? '<td><span class="gitRefsGraph">' + labels.branches + '</span></td>' : '<td></td>';
@@ -609,6 +611,11 @@ class GitGraphView {
 					}
 				},
 				{
+					title: 'Reword Commit Message' + ELLIPSIS,
+					visible: visibility.reword && hash === this.commitHead,
+					onClick: () => sendMessage({ command: 'getCommitMessage', repo: this.currentRepo!, commitHash: hash, purpose: 'reword' })
+				},
+				{
 					title: (this.getCodeReviewById(hash) !== null ? 'End Code Review' : 'Start Code Review'),
 					visible: visibility.codeReview,
 					onClick: () => {
@@ -673,6 +680,11 @@ class GitGraphView {
 							sendMessage({ command: 'pushStash', repo: this.currentRepo!, message: values[0], includeUntracked: values[1] === 'checked' });
 						}, sourceElem);
 					}
+				},
+				{
+					title: 'Amend Last Commit with Uncommitted Changes' + ELLIPSIS,
+					visible: visibility.amend && this.commitHead !== null,
+					onClick: () => sendMessage({ command: 'getCommitMessage', repo: this.currentRepo!, commitHash: this.commitHead!, purpose: 'amend' })
 				},
 				{
 					title: 'Reset uncommitted changes' + ELLIPSIS,
@@ -932,6 +944,11 @@ class GitGraphView {
 		const state = typeof this.gitRepos[this.currentRepo] !== 'undefined' ? this.gitRepos[this.currentRepo] : null;
 		return state !== null && state.issueLinkingConfig ? state.issueLinkingConfig : null;
 	}
+	/** The sticky column headers sit directly below the controls bar, whose height depends on wrapping. */
+	private updateControlsHeightVariable() {
+		const controls = document.getElementById('controls');
+		if (controls !== null) document.body.style.setProperty('--git-graph-controls-height', controls.offsetHeight + 'px');
+	}
 	/** Tells the stylesheet how wide the graph is, so labels placed in the Graph column start to its right. */
 	private updateGraphWidthVariable() {
 		const columnWidths = this.currentRepo !== '' && typeof this.gitRepos[this.currentRepo] !== 'undefined' ? this.gitRepos[this.currentRepo].columnWidths : null;
@@ -1003,6 +1020,33 @@ class GitGraphView {
 		], sourceElem);
 	}
 	/** Merge dialog shared by the commit and branch menus: no-fast-forward, squash and no-commit options. */
+	/** Dialog for rewording the checked-out commit or folding the uncommitted changes into it. Warns when the commit was pushed. */
+	public showAmendDialog(purpose: 'reword' | 'amend', commitHash: string, message: string | null, pushed: boolean) {
+		if (message === null) {
+			showErrorDialog('Unable to read the commit message', null, null);
+			return;
+		}
+		const warning = pushed ? '<br><span class="dialogWarning">' + svgIcons.alert + 'This commit is already on its upstream branch. Amending it rewrites history; the next push needs force-with-lease.</span>' : '';
+		const inputs: DialogInput[] = [{ type: 'textarea', name: 'Message: ', default: message, placeholder: 'Commit message' }];
+		if (purpose === 'amend') inputs.push({ type: 'checkbox', name: 'Also stage modified and deleted tracked files (git add -u)', value: false });
+		const title = purpose === 'reword'
+			? 'Change the message of the checked-out commit <b><i>' + abbrevCommit(commitHash) + '</i></b>:'
+			: 'Amend the checked-out commit <b><i>' + abbrevCommit(commitHash) + '</i></b> with the staged changes. Untracked files are not added.';
+		showFormDialog(title + warning, inputs, purpose === 'reword' ? 'Reword' : 'Amend', (values) => {
+			if (values[0].trim() === '') {
+				showErrorDialog('The commit message cannot be empty', null, null);
+				return;
+			}
+			if (purpose === 'reword') {
+				showActionRunningDialog('Rewording Commit');
+				sendMessage({ command: 'rewordCommit', repo: this.currentRepo!, commitHash: commitHash, message: values[0] });
+			} else {
+				showActionRunningDialog('Amending Commit');
+				sendMessage({ command: 'amendCommit', repo: this.currentRepo!, commitHash: commitHash, message: values[0], stageTracked: values[1] === 'checked' });
+			}
+		}, null);
+	}
+
 	/* Code Reviews */
 	private getCodeReviewById(id: string): GG.CodeReview | null {
 		const reviews = this.codeReviews[this.currentRepo];
@@ -1295,6 +1339,7 @@ class GitGraphView {
 	private observeWindowSizeChanges() {
 		let windowWidth = window.outerWidth, windowHeight = window.outerHeight;
 		window.addEventListener('resize', () => {
+			this.updateControlsHeightVariable();
 			if (windowWidth === window.outerWidth && windowHeight === window.outerHeight) {
 				this.renderGraph();
 			} else {
@@ -1728,7 +1773,8 @@ const gitGraph = new GitGraphView(viewState.repos, viewState.lastActiveRepo, {
 	referenceLabels: viewState.referenceLabels,
 	scrollToHeadOnLoad: viewState.scrollToHeadOnLoad,
 	showCurrentBranchByDefault: viewState.showCurrentBranchByDefault,
-	showRemoteBranches: viewState.showRemoteBranches
+	showRemoteBranches: viewState.showRemoteBranches,
+	stickyHeader: viewState.stickyHeader
 }, viewState.codeReviews, vscode.getState());
 
 
@@ -1871,6 +1917,15 @@ window.addEventListener('message', event => {
 			break;
 		case 'codeReviewsChanged':
 			gitGraph.setCodeReviews(msg.repo, msg.reviews);
+			break;
+		case 'getCommitMessage':
+			gitGraph.showAmendDialog(msg.purpose, msg.commitHash, msg.message, msg.pushed);
+			break;
+		case 'rewordCommit':
+			refreshGraphOrDisplayError(msg.status, 'Unable to Reword Commit Message');
+			break;
+		case 'amendCommit':
+			refreshGraphOrDisplayError(msg.status, 'Unable to Amend Commit');
 			break;
 		case 'openExternalUrl':
 			if (msg.success === false) showErrorDialog('Unable to open the link', 'Only http and https links can be opened.', null);
@@ -2145,6 +2200,8 @@ function showFormDialog(message: string, inputs: DialogInput[], actionName: stri
 			html += '</select>';
 		} else if (input.type === 'checkbox') {
 			html += '<span class="dialogFormCheckbox"><label><input id="dialogInput' + i + '" type="checkbox"' + (input.value ? ' checked' : '') + '/>' + (multiElementForm ? '' : input.name) + '</label></span>';
+		} else if (input.type === 'textarea') {
+			html += '<textarea id="dialogInput' + i + '" rows="6"' + (input.placeholder !== null ? ' placeholder="' + escapeHtml(input.placeholder) + '"' : '') + '>' + escapeHtml(input.default) + '</textarea>';
 		} else {
 			// Defaults can come from the repository (for example a branch name in the rename dialog), so they are escaped
 			html += '<input id="dialogInput' + i + '" type="text" value="' + escapeHtml(input.default) + '"' + (input.type === 'text' && input.placeholder !== null ? ' placeholder="' + escapeHtml(input.placeholder) + '"' : '') + '/>';
@@ -2162,6 +2219,8 @@ function showFormDialog(message: string, inputs: DialogInput[], actionName: stri
 				values.push((<HTMLSelectElement>elem).value);
 			} else if (input.type === 'checkbox') {
 				values.push((<HTMLInputElement>elem).checked ? 'checked' : 'unchecked');
+			} else if (input.type === 'textarea') {
+				values.push((<HTMLTextAreaElement>elem).value);
 			} else {
 				values.push((<HTMLInputElement>elem).value);
 			}

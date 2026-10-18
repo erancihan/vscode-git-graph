@@ -346,6 +346,27 @@ export class GitGraphView {
 				case 'updateCodeReview':
 					if (this.isKnownRepo(msg.repo)) this.extensionState.saveCodeReview(msg.repo, msg.review);
 					break;
+				case 'getCommitMessage':
+					this.sendMessage({
+						command: 'getCommitMessage',
+						commitHash: msg.commitHash,
+						purpose: msg.purpose,
+						message: await this.dataSource.getCommitMessage(msg.repo, msg.commitHash),
+						pushed: await this.dataSource.isHeadPushed(msg.repo)
+					});
+					break;
+				case 'rewordCommit':
+					this.sendMessage({
+						command: 'rewordCommit',
+						status: await this.dataSource.rewordCommit(msg.repo, msg.commitHash, msg.message)
+					});
+					break;
+				case 'amendCommit':
+					this.sendMessage({
+						command: 'amendCommit',
+						status: await this.dataSource.amendCommit(msg.repo, msg.commitHash, msg.message, msg.stageTracked)
+					});
+					break;
 				case 'openExternalUrl':
 					this.sendMessage({
 						command: 'openExternalUrl',
@@ -546,7 +567,8 @@ export class GitGraphView {
 			repos: this.repoManager.getRepos(),
 			scrollToHeadOnLoad: config.scrollToHeadOnLoad(),
 			showCurrentBranchByDefault: config.showCurrentBranchByDefault(),
-			showRemoteBranches: config.showRemoteBranches()
+			showRemoteBranches: config.showRemoteBranches(),
+			stickyHeader: config.stickyHeader()
 		};
 
 		let body, numRepos = Object.keys(viewState.repos).length, colorVars = '', colorParams = '';

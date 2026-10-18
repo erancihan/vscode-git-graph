@@ -131,11 +131,11 @@ export interface GitUnsavedChanges {
 
 export interface ContextMenuActionsVisibility {
 	branch: { checkout: boolean, rename: boolean, delete: boolean, merge: boolean, rebase: boolean, push: boolean, createPullRequest: boolean, archive: boolean, copyName: boolean };
-	commit: { addTag: boolean, createBranch: boolean, checkout: boolean, cherrypick: boolean, revert: boolean, drop: boolean, merge: boolean, rebase: boolean, reset: boolean, archive: boolean, codeReview: boolean, copyHash: boolean };
+	commit: { addTag: boolean, createBranch: boolean, checkout: boolean, cherrypick: boolean, revert: boolean, drop: boolean, merge: boolean, rebase: boolean, reset: boolean, archive: boolean, codeReview: boolean, reword: boolean, copyHash: boolean };
 	remoteBranch: { checkout: boolean, delete: boolean, fetch: boolean, pull: boolean, copyName: boolean };
 	stash: { apply: boolean, createBranch: boolean, pop: boolean, drop: boolean, copyName: boolean, copyHash: boolean };
 	tag: { delete: boolean, push: boolean, archive: boolean, copyName: boolean };
-	uncommittedChanges: { reset: boolean, clean: boolean, stash: boolean };
+	uncommittedChanges: { reset: boolean, clean: boolean, stash: boolean, amend: boolean };
 }
 
 export interface KeyboardShortcuts {
@@ -213,6 +213,7 @@ export interface GitGraphViewState {
 	scrollToHeadOnLoad: boolean;
 	showCurrentBranchByDefault: boolean;
 	showRemoteBranches: boolean;
+	stickyHeader: boolean;
 }
 
 export interface GitFileChange {
@@ -788,6 +789,43 @@ export interface ResponseCodeReviewsChanged {
 	reviews: { [id: string]: CodeReview };
 }
 
+export interface RequestGetCommitMessage {
+	command: 'getCommitMessage';
+	repo: string;
+	commitHash: string;
+	purpose: 'reword' | 'amend';
+}
+export interface ResponseGetCommitMessage {
+	command: 'getCommitMessage';
+	commitHash: string;
+	purpose: 'reword' | 'amend';
+	message: string | null; // null => the message could not be read
+	pushed: boolean; // true when the commit is already part of its upstream branch
+}
+
+export interface RequestRewordCommit {
+	command: 'rewordCommit';
+	repo: string;
+	commitHash: string; // must still be HEAD
+	message: string;
+}
+export interface ResponseRewordCommit {
+	command: 'rewordCommit';
+	status: GitCommandStatus;
+}
+
+export interface RequestAmendCommit {
+	command: 'amendCommit';
+	repo: string;
+	commitHash: string; // must still be HEAD
+	message: string;
+	stageTracked: boolean; // git add -u before amending
+}
+export interface ResponseAmendCommit {
+	command: 'amendCommit';
+	status: GitCommandStatus;
+}
+
 export interface RequestOpenExternalUrl {
 	command: 'openExternalUrl';
 	url: string; // http(s) only
@@ -896,6 +934,9 @@ export type RequestMessage =
 	| RequestSetUserDetails
 	| RequestOpenExtensionSettings
 	| RequestOpenExternalUrl
+	| RequestGetCommitMessage
+	| RequestRewordCommit
+	| RequestAmendCommit
 	| RequestStartCodeReview
 	| RequestEndCodeReview
 	| RequestUpdateCodeReview
@@ -951,6 +992,9 @@ export type ResponseMessage =
 	| ResponsePruneRemote
 	| ResponseSetUserDetails
 	| ResponseOpenExternalUrl
+	| ResponseGetCommitMessage
+	| ResponseRewordCommit
+	| ResponseAmendCommit
 	| ResponseCodeReviewsChanged
 	| ResponseCreatePullRequest
 	| ResponseOpenExternalDiff
