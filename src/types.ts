@@ -157,7 +157,7 @@ export interface GitUnsavedChanges {
 
 export interface ContextMenuActionsVisibility {
 	branch: { checkout: boolean, rename: boolean, delete: boolean, merge: boolean, rebase: boolean, push: boolean, createPullRequest: boolean, archive: boolean, createWorktree: boolean, copyName: boolean };
-	commit: { addTag: boolean, createBranch: boolean, checkout: boolean, cherrypick: boolean, revert: boolean, drop: boolean, merge: boolean, rebase: boolean, reset: boolean, archive: boolean, codeReview: boolean, reword: boolean, filterByAuthor: boolean, bisect: boolean, createWorktree: boolean, copyHash: boolean };
+	commit: { addTag: boolean, createBranch: boolean, checkout: boolean, cherrypick: boolean, revert: boolean, drop: boolean, merge: boolean, rebase: boolean, interactiveRebase: boolean, fixup: boolean, reset: boolean, archive: boolean, codeReview: boolean, reword: boolean, filterByAuthor: boolean, bisect: boolean, createWorktree: boolean, copyHash: boolean };
 	remoteBranch: { checkout: boolean, delete: boolean, fetch: boolean, pull: boolean, copyName: boolean };
 	stash: { apply: boolean, createBranch: boolean, pop: boolean, drop: boolean, copyName: boolean, copyHash: boolean };
 	tag: { delete: boolean, push: boolean, archive: boolean, copyName: boolean };
@@ -609,6 +609,48 @@ export interface ResponseRebase {
 	status: GitCommandStatus;
 }
 
+export type GitRebaseAction = 'pick' | 'reword' | 'edit' | 'squash' | 'fixup' | 'drop';
+/** One line of the interactive rebase editor. `message` replaces the commit message for reword and squash (null: keep / git's default). */
+export interface GitRebaseTodoEntry {
+	action: GitRebaseAction;
+	hash: string;
+	subject: string;
+	message: string | null;
+}
+export interface RequestGetRebaseTodo {
+	command: 'getRebaseTodo';
+	repo: string;
+	baseHash: string; // the commits after this one, up to HEAD, are rebased
+}
+export interface ResponseGetRebaseTodo {
+	command: 'getRebaseTodo';
+	baseHash: string;
+	headHash: string | null;
+	todo: GitRebaseTodoEntry[] | null; // null => error is set
+	error: string | null;
+	pushed: boolean; // true when HEAD is already part of its upstream branch
+}
+export interface RequestInteractiveRebase {
+	command: 'interactiveRebase';
+	repo: string;
+	baseHash: string;
+	headHash: string; // HEAD when the todo list was built; the rebase is refused when it changed
+	todo: GitRebaseTodoEntry[];
+}
+export interface ResponseInteractiveRebase {
+	command: 'interactiveRebase';
+	status: GitCommandStatus;
+}
+export interface RequestFixupCommit {
+	command: 'fixupCommit';
+	repo: string;
+	commitHash: string; // folded into its parent
+}
+export interface ResponseFixupCommit {
+	command: 'fixupCommit';
+	status: GitCommandStatus;
+}
+
 export interface RequestDropCommit {
 	command: 'dropCommit';
 	repo: string;
@@ -1019,6 +1061,9 @@ export type RequestMessage =
 	| RequestPushStash
 	| RequestPushTag
 	| RequestRebase
+	| RequestGetRebaseTodo
+	| RequestInteractiveRebase
+	| RequestFixupCommit
 	| RequestRenameBranch
 	| RequestResetToCommit
 	| RequestResetUncommittedChanges
@@ -1083,6 +1128,9 @@ export type ResponseMessage =
 	| ResponsePushStash
 	| ResponsePushTag
 	| ResponseRebase
+	| ResponseGetRebaseTodo
+	| ResponseInteractiveRebase
+	| ResponseFixupCommit
 	| ResponseRefresh
 	| ResponseRenameBranch
 	| ResponseResetToCommit

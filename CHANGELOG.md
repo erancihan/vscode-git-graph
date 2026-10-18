@@ -1,5 +1,9 @@
 # Change Log
 
+## Unreleased
+
+* Interactive rebase editor: "Interactive Rebase from this Commit..." in the commit menu opens a panel listing the commits after that commit up to HEAD, oldest first. Each commit has an action (pick, reword, edit, squash, fixup, drop), a message box for reword and squash, and arrows for reordering; the list follows `rebase.autoSquash` when it is set. "Start Rebase" runs `git rebase --interactive` with the prepared list through a sequence editor helper (`resources/sequence-editor.sh`), reworded and squashed messages through `exec` lines, and no editor is ever opened. When git stops (edit, conflicts) the conflict help bar takes over. "Fixup into Parent..." folds a commit into its parent with the same mechanism. New keys `commit.interactiveRebase` and `commit.fixup` in `git-graph.contextMenuActionsVisibility`. Designed from the description on the tracking issue; nothing is taken from other extensions.
+
 ## 2.4.1 - 2026-10-18
 
 Milestone "2.4 Beyond upstream", second release. Designed from the descriptions on the tracking issues; nothing is taken from other extensions.
