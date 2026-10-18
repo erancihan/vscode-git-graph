@@ -10,6 +10,9 @@ web/
 .gitattributes
 .gitignore
 eslint.config.mjs
+jest.config.js
+tests/
+coverage/
 package-lock.json
 *.vsix
 .remember/

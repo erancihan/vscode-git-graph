@@ -20,6 +20,9 @@ const gitConfigOverrides = ['-c', 'color.ui=false', '-c', 'log.showSignature=fal
  * Runs git and parses its output. Every invocation uses `child_process.spawn` with an argument
  * array, so no value ever passes through a shell. Every invocation is written to the logger.
  */
+/** Message returned when an argument could be mistaken for a git option. */
+const INVALID_ARGUMENT = 'The value is not a valid reference name or commit hash.';
+
 export class DataSource {
 	private readonly logger: Logger;
 	private gitPath: string = 'git';
@@ -113,6 +116,7 @@ export class DataSource {
 	}
 
 	public commitDetails(repo: string, commitHash: string): Promise<GitCommitDetails | null> {
+		if (!isCommitHash(commitHash)) return Promise.resolve(null);
 		return Promise.all([
 			this.spawnGit(['show', '--quiet', commitHash, '--format=' + this.gitCommitDetailsFormat], repo, (stdout): GitCommitDetails => {
 				const lines = stdout.split(eolRegex);
@@ -157,6 +161,7 @@ export class DataSource {
 	}
 
 	public getCommitFile(repo: string, commitHash: string, filePath: string) {
+		if (!isCommitHash(commitHash)) return Promise.resolve('');
 		return this.spawnGit(['show', commitHash + ':' + filePath], repo, (stdout) => stdout).catch(() => '');
 	}
 
@@ -169,6 +174,7 @@ export class DataSource {
 	}
 
 	public addTag(repo: string, tagName: string, commitHash: string, lightweight: boolean, message: string) {
+		if (!isSafeRefName(tagName) || !isCommitHash(commitHash)) return rejectArguments();
 		const args = ['tag'];
 		if (lightweight) {
 			args.push(tagName);
@@ -180,18 +186,22 @@ export class DataSource {
 	}
 
 	public deleteTag(repo: string, tagName: string) {
+		if (!isSafeRefName(tagName)) return rejectArguments();
 		return this.runGitCommand(['tag', '-d', tagName], repo);
 	}
 
 	public pushTag(repo: string, tagName: string) {
-		return this.runGitCommand(['push', 'origin', tagName], repo);
+		if (!isSafeRefName(tagName)) return rejectArguments();
+		return this.runGitCommand(['push', 'origin', 'refs/tags/' + tagName], repo);
 	}
 
 	public createBranch(repo: string, branchName: string, commitHash: string) {
+		if (!isSafeRefName(branchName) || !isCommitHash(commitHash)) return rejectArguments();
 		return this.runGitCommand(['branch', branchName, commitHash], repo);
 	}
 
 	public checkoutBranch(repo: string, branchName: string, remoteBranch: string | null) {
+		if (!isSafeRefName(branchName) || (remoteBranch !== null && !isSafeRefName(remoteBranch))) return rejectArguments();
 		const args = ['checkout'];
 		if (remoteBranch === null) {
 			args.push(branchName);
@@ -202,10 +212,12 @@ export class DataSource {
 	}
 
 	public checkoutCommit(repo: string, commitHash: string) {
+		if (!isCommitHash(commitHash)) return rejectArguments();
 		return this.runGitCommand(['checkout', commitHash], repo);
 	}
 
 	public deleteBranch(repo: string, branchName: string, forceDelete: boolean) {
+		if (!isSafeRefName(branchName)) return rejectArguments();
 		const args = ['branch', '--delete'];
 		if (forceDelete) args.push('--force');
 		args.push(branchName);
@@ -213,34 +225,40 @@ export class DataSource {
 	}
 
 	public renameBranch(repo: string, oldName: string, newName: string) {
+		if (!isSafeRefName(oldName) || !isSafeRefName(newName)) return rejectArguments();
 		return this.runGitCommand(['branch', '-m', oldName, newName], repo);
 	}
 
 	public mergeBranch(repo: string, branchName: string, createNewCommit: boolean) {
+		if (!isSafeRefName(branchName)) return rejectArguments();
 		const args = ['merge', branchName];
 		if (createNewCommit) args.push('--no-ff');
 		return this.runGitCommand(args, repo);
 	}
 
 	public mergeCommit(repo: string, commitHash: string, createNewCommit: boolean) {
+		if (!isCommitHash(commitHash)) return rejectArguments();
 		const args = ['merge', commitHash];
 		if (createNewCommit) args.push('--no-ff');
 		return this.runGitCommand(args, repo);
 	}
 
 	public cherrypickCommit(repo: string, commitHash: string, parentIndex: number) {
+		if (!isCommitHash(commitHash)) return rejectArguments();
 		const args = ['cherry-pick', commitHash];
 		if (parentIndex > 0) args.push('-m', parentIndex.toString());
 		return this.runGitCommand(args, repo);
 	}
 
 	public revertCommit(repo: string, commitHash: string, parentIndex: number) {
+		if (!isCommitHash(commitHash)) return rejectArguments();
 		const args = ['revert', '--no-edit', commitHash];
 		if (parentIndex > 0) args.push('-m', parentIndex.toString());
 		return this.runGitCommand(args, repo);
 	}
 
 	public resetToCommit(repo: string, commitHash: string, resetMode: GitResetMode) {
+		if (!isCommitHash(commitHash)) return rejectArguments();
 		return this.runGitCommand(['reset', '--' + resetMode, commitHash], repo);
 	}
 
@@ -275,6 +293,7 @@ export class DataSource {
 	private getGitLog(repo: string, branch: string, num: number, showRemoteBranches: boolean) {
 		const args = ['log', '--max-count=' + num, '--format=' + this.gitLogFormat, '--date-order'];
 		if (branch !== '') {
+			if (!isSafeRefName(branch)) return Promise.resolve(<GitCommit[]>[]);
 			args.push(branch);
 		} else {
 			args.push('--branches', '--tags');
@@ -357,6 +376,23 @@ export class DataSource {
 			});
 		});
 	}
+}
+
+/**
+ * A reference name supplied by the user or read from the repository must never be mistaken for a
+ * git option. Git itself rejects names that start with "-", so refusing them loses nothing.
+ */
+function isSafeRefName(name: string) {
+	return name !== '' && name[0] !== '-' && !/[\x00-\x1f\x7f]/.test(name);
+}
+
+/** Commit hashes are hexadecimal (SHA-1 or SHA-256), abbreviated to at least 4 characters. */
+function isCommitHash(hash: string) {
+	return /^[0-9a-f]{4,64}$/i.test(hash);
+}
+
+function rejectArguments(): Promise<GitCommandStatus> {
+	return Promise.resolve(INVALID_ARGUMENT);
 }
 
 /**
