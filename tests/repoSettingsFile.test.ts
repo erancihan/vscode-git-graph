@@ -55,6 +55,10 @@ describe('repository settings file', () => {
 		expect(text).toContain('hidden remotes: upstream');
 		expect(text).toContain('branches on load: checked-out branch + develop');
 		expect(describeRepoSettings({ showTags: null })).toBe('show tags: default');
+		const long = describeRepoSettings({ hideRemotes: ['x'.repeat(500)], issueLinkingConfig: { issue: 'a\nb\u0007c', url: 'https://e.com/' + 'y'.repeat(300) } });
+		expect(long.length).toBeLessThanOrEqual(400);
+		expect(long).not.toMatch(/[\n\u0007]/);
+		expect(long).toContain('a b c');
 	});
 
 	it('refuses symbolic links in the file path and writes atomically otherwise', () => {
