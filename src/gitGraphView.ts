@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { AvatarManager } from './avatarManager';
+import { CiStatusManager } from './ciStatus';
 import { getConfig } from './config';
 import { DataSource, isCommitHash, isSafeRefName } from './dataSource';
 import { encodeDiffDocUri } from './diffDocProvider';
@@ -19,6 +20,7 @@ export class GitGraphView {
 	private readonly panel: vscode.WebviewPanel;
 	private readonly extensionPath: string;
 	private readonly avatarManager: AvatarManager;
+	private readonly ciStatusManager: CiStatusManager;
 	private readonly dataSource: DataSource;
 	private readonly extensionState: ExtensionState;
 	private readonly repoFileWatcher: RepoFileWatcher;
@@ -33,7 +35,7 @@ export class GitGraphView {
 	 * Show the view. `loadRepo` is the repository to show (for example the one that contains the
 	 * active editor's document), or null to keep the last active repository.
 	 */
-	public static createOrShow(extensionPath: string, dataSource: DataSource, extensionState: ExtensionState, avatarManager: AvatarManager, repoManager: RepoManager, logger: Logger, loadRepo: string | null) {
+	public static createOrShow(extensionPath: string, dataSource: DataSource, extensionState: ExtensionState, avatarManager: AvatarManager, ciStatusManager: CiStatusManager, repoManager: RepoManager, logger: Logger, loadRepo: string | null) {
 		const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
 
 		if (GitGraphView.currentPanel) {
@@ -51,18 +53,20 @@ export class GitGraphView {
 			]
 		});
 
-		GitGraphView.currentPanel = new GitGraphView(panel, extensionPath, dataSource, extensionState, avatarManager, repoManager, logger);
+		GitGraphView.currentPanel = new GitGraphView(panel, extensionPath, dataSource, extensionState, avatarManager, ciStatusManager, repoManager, logger);
 	}
 
-	private constructor(panel: vscode.WebviewPanel, extensionPath: string, dataSource: DataSource, extensionState: ExtensionState, avatarManager: AvatarManager, repoManager: RepoManager, logger: Logger) {
+	private constructor(panel: vscode.WebviewPanel, extensionPath: string, dataSource: DataSource, extensionState: ExtensionState, avatarManager: AvatarManager, ciStatusManager: CiStatusManager, repoManager: RepoManager, logger: Logger) {
 		this.panel = panel;
 		this.logger = logger;
 		this.extensionPath = extensionPath;
 		this.avatarManager = avatarManager;
+		this.ciStatusManager = ciStatusManager;
 		this.dataSource = dataSource;
 		this.extensionState = extensionState;
 		this.repoManager = repoManager;
 		this.avatarManager.registerView(this);
+		this.ciStatusManager.registerView(this);
 		this.logger.log('Git Graph View opened');
 
 		panel.iconPath = getConfig().tabIconColourTheme() === 'colour'
@@ -141,6 +145,11 @@ export class GitGraphView {
 				case 'fetchAvatar':
 					this.avatarManager.fetchAvatarImage(msg.email, msg.repo, msg.commits);
 					break;
+				case 'fetchCiStatus': {
+					const ciStatus = getConfig().ciStatus();
+					if (ciStatus.enabled && this.isKnownRepo(msg.repo) && Array.isArray(msg.commits)) this.ciStatusManager.fetchStatuses(msg.repo, msg.commits.filter((hash) => typeof hash === 'string'), ciStatus.maxCommits, ciStatus.hosts);
+					break;
+				}
 				case 'checkoutBranch':
 					this.sendMessage({
 						command: 'checkoutBranch',
@@ -292,18 +301,21 @@ export class GitGraphView {
 					});
 					break;
 				case 'addRemote':
+					this.ciStatusManager.forgetRepo(msg.repo);
 					this.sendMessage({
 						command: 'addRemote',
 						status: await this.dataSource.addRemote(msg.repo, msg.name, msg.url, msg.pushUrl, msg.fetch)
 					});
 					break;
 				case 'editRemote':
+					this.ciStatusManager.forgetRepo(msg.repo);
 					this.sendMessage({
 						command: 'editRemote',
 						status: await this.dataSource.editRemote(msg.repo, msg.nameOld, msg.nameNew, msg.url, msg.pushUrl)
 					});
 					break;
 				case 'deleteRemote':
+					this.ciStatusManager.forgetRepo(msg.repo);
 					this.sendMessage({
 						command: 'deleteRemote',
 						status: await this.dataSource.deleteRemote(msg.repo, msg.name)
@@ -530,6 +542,7 @@ export class GitGraphView {
 		this.logger.log('Git Graph View closed');
 		this.panel.dispose();
 		this.avatarManager.deregisterView();
+		this.ciStatusManager.deregisterView();
 		this.repoFileWatcher.stop();
 		this.repoManager.deregisterViewCallback();
 		while (this.disposables.length) {
@@ -657,6 +670,7 @@ export class GitGraphView {
 			fetchAndPrune: config.fetchAndPrune(),
 			fetchAndPruneTags: config.fetchAndPruneTags(),
 			fetchAvatars: config.fetchAvatars() && this.extensionState.isAvatarStorageAvailable(),
+			ciStatus: config.ciStatus(),
 			graphColours: config.graphColours(),
 			graphStyle: config.graphStyle(),
 			initialLoadCommits: config.initialLoadCommits(),

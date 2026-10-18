@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ColumnVisibility, CommitDetailsViewConfig, CommitDetailsViewLocation, CommitOrdering, ContextMenuActionsVisibility, CustomBranchGlobPattern, CustomPullRequestProvider, DateFormat, DateType, DialogDefaults, GitResetMode, GraphStyle, KeyboardShortcuts, ReferenceLabelAlignment, ReferenceLabelsConfig, RepoDropdownOrder, SquashMessageFormat, TabIconColourTheme } from './types';
+import { ColumnVisibility, CommitDetailsViewConfig, CommitDetailsViewLocation, CommitOrdering, ContextMenuActionsVisibility, CustomBranchGlobPattern, CustomPullRequestProvider, DateFormat, DateType, DialogDefaults, GitResetMode, GraphStyle, KeyboardShortcuts, ReferenceLabelAlignment, ReferenceLabelsConfig, RepoDropdownOrder, SquashMessageFormat, TabIconColourTheme, CiHostMap, CiStatusConfig } from './types';
 
 const DEFAULT_GRAPH_COLOURS = ['#0085d9', '#d9008f', '#00d90a', '#d98500', '#a300d9', '#ff0000', '#00d9cc', '#e138e8', '#85d900', '#dc5b23', '#6f24d6', '#ffcc00'];
 const GRAPH_COLOUR_REGEX = /^\s*(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|rgb[a]?\s*\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\))\s*$/;
@@ -346,6 +346,23 @@ class Config {
 	}
 
 	/** Keep the controls bar and the column headers visible while the graph scrolls. */
+	/** CI status settings: off by default, at most `maxCommits` newest commits, extra hosts mapped to a provider. */
+	public ciStatus(): CiStatusConfig {
+		const rawHosts = this.workspaceConfiguration.get<unknown>('ciStatus.hosts', {}), hosts: CiHostMap = {};
+		if (typeof rawHosts === 'object' && rawHosts !== null && !Array.isArray(rawHosts)) {
+			for (const host of Object.keys(rawHosts)) {
+				const type = (<{ [key: string]: unknown }>rawHosts)[host];
+				if ((type === 'GitHub' || type === 'GitLab') && /^[A-Za-z0-9.-]+$/.test(host)) hosts[host.toLowerCase()] = type;
+			}
+		}
+		const maxCommits = this.workspaceConfiguration.get<number>('ciStatus.maxCommits', 30);
+		return {
+			enabled: this.getBoolean('ciStatus.enabled', null, false),
+			maxCommits: typeof maxCommits === 'number' && isFinite(maxCommits) ? Math.min(100, Math.max(1, Math.round(maxCommits))) : 30,
+			hosts: hosts
+		};
+	}
+
 	public stickyHeader() {
 		return this.getBoolean('stickyHeader', null, true);
 	}

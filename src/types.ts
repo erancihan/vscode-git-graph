@@ -219,6 +219,7 @@ export interface L10nBundle {
 
 export interface GitGraphViewState {
 	autoCenterCommitDetailsView: boolean;
+	ciStatus: CiStatusConfig;
 	/** Translations of the current display language, or null for English. */
 	l10n: L10nBundle | null;
 	codeReviews: CodeReviewSet;
@@ -399,6 +400,39 @@ export interface RequestDeleteTag {
 export interface ResponseDeleteTag {
 	command: 'deleteTag';
 	status: GitCommandStatus;
+}
+
+/* CI status */
+
+export type CiProviderType = 'GitHub' | 'GitLab';
+/** Host name (lower case, without "www.") to provider type, for self-hosted instances. */
+export interface CiHostMap {
+	[host: string]: CiProviderType;
+}
+export type CiCheckState = 'success' | 'failure' | 'pending' | 'none';
+export interface CiCheck {
+	name: string;
+	state: CiCheckState;
+	url: string | null; // http(s) link to the run, or null
+}
+export interface CommitCiStatus {
+	state: CiCheckState; // summary of the checks
+	checks: CiCheck[];
+}
+export interface CiStatusConfig {
+	enabled: boolean;
+	maxCommits: number;
+	hosts: CiHostMap;
+}
+export interface RequestFetchCiStatus {
+	command: 'fetchCiStatus';
+	repo: string;
+	commits: string[]; // newest first
+}
+export interface ResponseFetchCiStatus {
+	command: 'fetchCiStatus';
+	repo: string;
+	statuses: { [hash: string]: CommitCiStatus };
 }
 
 export interface RequestFetchAvatar {
@@ -1055,6 +1089,7 @@ export type RequestMessage =
 	| RequestDropStash
 	| RequestFetch
 	| RequestFetchAvatar
+	| RequestFetchCiStatus
 	| RequestFetchIntoLocalBranch
 	| RequestLoadBranches
 	| RequestLoadCommits
@@ -1122,6 +1157,7 @@ export type ResponseMessage =
 	| ResponseDropStash
 	| ResponseFetch
 	| ResponseFetchAvatar
+	| ResponseFetchCiStatus
 	| ResponseFetchIntoLocalBranch
 	| ResponseLoadBranches
 	| ResponseLoadCommits
