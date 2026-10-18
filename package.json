@@ -507,6 +507,11 @@
 					"default": true,
 					"description": "Default state of the \"Ignore Date\" checkbox in the \"Rebase\" dialogs (use the current time as the committer date of the rebased commits)."
 				},
+				"git-graph.dialog.rebase.launchInteractiveRebase": {
+					"type": "boolean",
+					"default": false,
+					"description": "Default state of the \"Launch Interactive Rebase in new Terminal\" checkbox in the \"Rebase\" dialogs."
+				},
 				"git-graph.dialog.resetCurrentBranchToCommit.mode": {
 					"type": "string",
 					"enum": [
@@ -749,6 +754,12 @@
 					],
 					"default": "Workspace Full Path",
 					"description": "Order of the repositories in the \"Repo\" dropdown."
+				},
+				"git-graph.integratedTerminalShell": {
+					"type": "string",
+					"default": "",
+					"description": "Path of the shell executable used by the integrated terminals that Git Graph opens (for example for an interactive rebase). Leave empty to use the default shell of Visual Studio Code. For security reasons this setting can only be set in the User Settings, not in the Workspace Settings.",
+					"scope": "application"
 				},
 				"git-graph.retainContextWhenHidden": {
 					"type": "boolean",

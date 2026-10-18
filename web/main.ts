@@ -533,10 +533,7 @@ class GitGraphView {
 					title: 'Rebase current branch on this Commit' + ELLIPSIS,
 					visible: visibility.rebase,
 					onClick: () => {
-						showCheckboxDialog('Are you sure you want to rebase the <b>current branch</b> on commit <b><i>' + abbrevCommit(hash) + '</i></b>?', 'Ignore Date (non-interactive rebase only)', this.config.dialogDefaults.rebase.ignoreDate, 'Yes, rebase', (ignoreDate) => {
-							showActionRunningDialog('Rebasing');
-							sendMessage({ command: 'rebase', repo: this.currentRepo!, obj: hash, type: 'Commit', ignoreDate: ignoreDate });
-						}, sourceElem);
+						this.showRebaseDialog('Are you sure you want to rebase the <b>current branch</b> on commit <b><i>' + abbrevCommit(hash) + '</i></b>?', hash, 'Commit', sourceElem);
 					}
 				},
 				{
@@ -699,10 +696,7 @@ class GitGraphView {
 							title: 'Rebase current branch on this branch' + ELLIPSIS,
 							visible: this.config.contextMenuActionsVisibility.branch.rebase,
 							onClick: () => {
-								showCheckboxDialog('Are you sure you want to rebase the <b>current branch</b> on branch <b><i>' + escapeHtml(refName) + '</i></b>?', 'Ignore Date (non-interactive rebase only)', this.config.dialogDefaults.rebase.ignoreDate, 'Yes, rebase', (ignoreDate) => {
-									showActionRunningDialog('Rebasing');
-									sendMessage({ command: 'rebase', repo: this.currentRepo!, obj: refName, type: 'Branch', ignoreDate: ignoreDate });
-								}, null);
+								this.showRebaseDialog('Are you sure you want to rebase the <b>current branch</b> on branch <b><i>' + escapeHtml(refName) + '</i></b>?', refName, 'Branch', null);
 							}
 						});
 					}
@@ -854,6 +848,21 @@ class GitGraphView {
 		], sourceElem);
 	}
 	/** Merge dialog shared by the commit and branch menus: no-fast-forward, squash and no-commit options. */
+	/**
+	 * Asks for confirmation of a rebase. An interactive rebase runs in a new integrated terminal,
+	 * so the graph does not show the "action running" dialog for it; the view refreshes when the
+	 * repository changes.
+	 */
+	private showRebaseDialog(message: string, obj: string, type: GG.GitRebaseType, sourceElem: HTMLElement | null) {
+		showFormDialog(message, [
+			{ type: 'checkbox', name: 'Launch Interactive Rebase in new Terminal', value: this.config.dialogDefaults.rebase.launchInteractiveRebase },
+			{ type: 'checkbox', name: 'Ignore Date (non-interactive rebase only)', value: this.config.dialogDefaults.rebase.ignoreDate }
+		], 'Yes, rebase', (values) => {
+			const interactive = values[0] === 'checked';
+			if (!interactive) showActionRunningDialog('Rebasing');
+			sendMessage({ command: 'rebase', repo: this.currentRepo!, obj: obj, type: type, ignoreDate: values[1] === 'checked', interactive: interactive });
+		}, sourceElem);
+	}
 	private showMergeDialog(message: string, actioned: (options: GG.MergeOptions) => void) {
 		showFormDialog(message, [
 			{ type: 'checkbox', name: 'Create a new commit even if fast-forward is possible', value: this.config.dialogDefaults.merge.noFastForward },
@@ -1432,7 +1441,12 @@ window.addEventListener('message', event => {
 			refreshGraphOrDisplayError(msg.status, 'Unable to Push Tag');
 			break;
 		case 'rebase':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Rebase');
+			if (msg.status === null) {
+				hideDialog();
+				gitGraph.refresh(true);
+			} else {
+				showErrorDialog('Unable to Rebase', msg.status, null);
+			}
 			break;
 		case 'renameBranch':
 			refreshGraphOrDisplayError(msg.status, 'Unable to Rename Branch');
