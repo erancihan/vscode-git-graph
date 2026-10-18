@@ -197,18 +197,22 @@
 		"compile-src": "tsc -p ./src",
 		"compile-web": "tsc -p ./web && node ./.vscode/package-web.js",
 		"compile-web-debug": "tsc -p ./web && node ./.vscode/package-web.js debug",
-		"lint": "eslint src web",
+		"lint": "eslint src web tests",
 		"package": "npm run clean && vsce package",
 		"package-and-install": "npm run clean && vsce package && node ./.vscode/install-package.js",
 		"publish:vsce": "vsce publish",
-		"publish:ovsx": "ovsx publish"
+		"publish:ovsx": "ovsx publish",
+		"test": "jest"
 	},
 	"devDependencies": {
+		"@types/jest": "^29.5.14",
 		"@types/node": "^20.19.43",
 		"@types/vscode": "^1.74.0",
 		"@vscode/vsce": "3.6.0",
 		"eslint": "^10.0.0",
+		"jest": "^29.7.0",
 		"ovsx": "0.10.6",
+		"ts-jest": "^29.4.15",
 		"typescript": "^5.9.0",
 		"typescript-eslint": "^8.46.0",
 		"uglify-js": "^3.19.3"
