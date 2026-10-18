@@ -2,7 +2,7 @@ import * as cp from 'child_process';
 import { getConfig } from './config';
 import { findGitExecutable } from './gitExecutable';
 import { Logger } from './logger';
-import { CherryPickOptions, GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChangeType, GitPushBranchMode, GitRebaseType, GitRefData, GitResetMode, GitStash, GitUnsavedChanges, MergeOptions } from './types';
+import { CherryPickOptions, GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChange, GitFileChangeType, GitPushBranchMode, GitRebaseType, GitRefData, GitResetMode, GitStash, GitUnsavedChanges, MergeOptions } from './types';
 import { getPathFromStr } from './utils';
 
 const eolRegex = /\r\n|\r|\n/g;
@@ -12,9 +12,10 @@ const gitLogSeparator = 'XX7Nal-YARtTpjCikii9nJxER19D6diSyk-AWkPb';
 /**
  * Configuration overrides passed to every git invocation. Colour codes would break output parsing
  * when the user has `color.ui=always`, and GPG signature blocks would break `git log` parsing when
- * the user has `log.showSignature=true`.
+ * the user has `log.showSignature=true`. `safe.bareRepository=explicit` stops git from treating a
+ * bare repository that is embedded in a checkout (a known attack vector) as the repository to use.
  */
-const gitConfigOverrides = ['-c', 'color.ui=false', '-c', 'log.showSignature=false'];
+const gitConfigOverrides = ['-c', 'color.ui=false', '-c', 'log.showSignature=false', '-c', 'safe.bareRepository=explicit'];
 
 /**
  * Runs git and parses its output. Every invocation uses `child_process.spawn` with an argument
@@ -154,30 +155,34 @@ export class DataSource {
 					fileChanges: []
 				};
 			}),
-			this.spawnGit(['diff-tree', '--name-status', '-r', '-m', '--root', '--find-renames', '--diff-filter=AMDR', commitHash], repo, (stdout) => stdout.split(eolRegex)),
-			this.spawnGit(['diff-tree', '--numstat', '-r', '-m', '--root', '--find-renames', '--diff-filter=AMDR', commitHash], repo, (stdout) => stdout.split(eolRegex))
+			this.getFileChangesOfCommit(repo, commitHash)
 		]).then((results) => {
-			const details = results[0], fileLookup: { [file: string]: number } = {};
-
-			for (let i = 1; i < results[1].length - 1; i++) {
-				const line = results[1][i].split('\t');
-				if (line.length < 2) break;
-				const oldFilePath = getPathFromStr(line[1]), newFilePath = getPathFromStr(line[line.length - 1]);
-				fileLookup[newFilePath] = details.fileChanges.length;
-				details.fileChanges.push({ oldFilePath: oldFilePath, newFilePath: newFilePath, type: <GitFileChangeType>line[0][0], additions: null, deletions: null });
-			}
-
-			for (let i = 1; i < results[2].length - 1; i++) {
-				const line = results[2][i].split('\t');
-				if (line.length !== 3) break;
-				const fileName = line[2].replace(/(.*){.* => (.*)}/, '$1$2').replace(/.* => (.*)/, '$1');
-				if (typeof fileLookup[fileName] === 'number') {
-					details.fileChanges[fileLookup[fileName]].additions = parseInt(line[0]);
-					details.fileChanges[fileLookup[fileName]].deletions = parseInt(line[1]);
-				}
-			}
-			return details;
+			results[0].fileChanges = results[1];
+			return results[0];
 		}).catch(() => null);
+	}
+
+	/** The files changed by a commit, relative to its first parent (or everything for a root commit). */
+	private getFileChangesOfCommit(repo: string, commitHash: string) {
+		const common = ['-r', '-m', '--root', '--find-renames', '--diff-filter=AMDR', commitHash];
+		return Promise.all([
+			this.spawnGit(['diff-tree', '--name-status', ...common], repo, (stdout) => stdout.split(eolRegex).slice(1)),
+			this.spawnGit(['diff-tree', '--numstat', ...common], repo, (stdout) => stdout.split(eolRegex).slice(1))
+		]).then((results) => parseFileChanges(results[0], results[1]));
+	}
+
+	/**
+	 * The files that differ between two commits, or between a commit and the working tree when
+	 * `toHash` is "*". Resolves to null when git fails.
+	 */
+	public compareCommits(repo: string, fromHash: string, toHash: string): Promise<GitFileChange[] | null> {
+		if (!isCommitHash(fromHash) || (toHash !== '*' && !isCommitHash(toHash))) return Promise.resolve(null);
+		const common = ['--find-renames', '--diff-filter=AMDR', fromHash];
+		if (toHash !== '*') common.push(toHash);
+		return Promise.all([
+			this.spawnGit(['diff', '--name-status', ...common], repo, (stdout) => stdout.split(eolRegex)),
+			this.spawnGit(['diff', '--numstat', ...common], repo, (stdout) => stdout.split(eolRegex))
+		]).then((results) => parseFileChanges(results[0], results[1])).catch(() => null);
 	}
 
 	public getCommitFile(repo: string, commitHash: string, filePath: string) {
@@ -194,13 +199,22 @@ export class DataSource {
 		return this.spawnGit(['remote'], repo, (stdout) => stdout.split(eolRegex).filter((line) => line !== '')).catch((): string[] => []);
 	}
 
-	/** Paths (relative to the repository) of the submodules declared in .gitmodules. */
+	/**
+	 * Paths (relative to the repository) of the submodules recorded in the index as gitlink entries
+	 * (mode 160000). The index is used instead of .gitmodules because that file is content under the
+	 * control of whoever wrote the repository. Paths are additionally checked to stay inside the
+	 * repository.
+	 */
 	public getSubmodules(repo: string) {
-		return this.spawnGit(['config', '--file', '.gitmodules', '--get-regexp', '^submodule\\..*\\.path$'], repo, (stdout) => {
-			const lines = stdout.split(eolRegex), paths: string[] = [];
-			for (let i = 0; i < lines.length; i++) {
-				const space = lines[i].indexOf(' ');
-				if (space > -1) paths.push(getPathFromStr(lines[i].substring(space + 1).trim()));
+		return this.spawnGit(['ls-files', '--stage', '-z'], repo, (stdout) => {
+			const entries = stdout.split('\0'), paths: string[] = [];
+			for (let i = 0; i < entries.length; i++) {
+				// Format: "<mode> <object> <stage>\t<path>"
+				if (!entries[i].startsWith('160000 ')) continue;
+				const tab = entries[i].indexOf('\t');
+				if (tab === -1) continue;
+				const submodulePath = getPathFromStr(entries[i].substring(tab + 1));
+				if (isSafeRelativePath(submodulePath)) paths.push(submodulePath);
 			}
 			return paths;
 		}, false).catch((): string[] => []);
@@ -605,6 +619,40 @@ export class DataSource {
  */
 function isSafeRefName(name: string) {
 	return name !== '' && name[0] !== '-' && !/[\x00-\x1f\x7f]/.test(name);
+}
+
+/**
+ * Combine the output lines of git's --name-status and --numstat formats (without any header line)
+ * into file changes. Binary files have no line counts and keep null additions and deletions.
+ */
+function parseFileChanges(nameStatusLines: string[], numStatLines: string[]) {
+	const fileChanges: GitFileChange[] = [], fileLookup: { [file: string]: number } = {};
+	for (let i = 0; i < nameStatusLines.length; i++) {
+		const line = nameStatusLines[i].split('\t');
+		if (line.length < 2) continue;
+		const oldFilePath = getPathFromStr(line[1]), newFilePath = getPathFromStr(line[line.length - 1]);
+		fileLookup[newFilePath] = fileChanges.length;
+		fileChanges.push({ oldFilePath: oldFilePath, newFilePath: newFilePath, type: <GitFileChangeType>line[0][0], additions: null, deletions: null });
+	}
+	for (let i = 0; i < numStatLines.length; i++) {
+		const line = numStatLines[i].split('\t');
+		if (line.length !== 3) continue;
+		const fileName = getPathFromStr(line[2].replace(/(.*){.* => (.*)}/, '$1$2').replace(/.* => (.*)/, '$1'));
+		if (typeof fileLookup[fileName] === 'number' && line[0] !== '-') {
+			fileChanges[fileLookup[fileName]].additions = parseInt(line[0]);
+			fileChanges[fileLookup[fileName]].deletions = parseInt(line[1]);
+		}
+	}
+	return fileChanges;
+}
+
+/**
+ * A path from repository content is only used when it is relative, non-empty, and stays inside the
+ * repository: no absolute paths, drive letters, or ".." segments.
+ */
+export function isSafeRelativePath(relativePath: string) {
+	if (relativePath === '' || relativePath.startsWith('/') || /^[a-zA-Z]:/.test(relativePath) || relativePath.indexOf('\0') > -1) return false;
+	return relativePath.split('/').every((segment) => segment !== '' && segment !== '.' && segment !== '..');
 }
 
 /** Stash selectors have the form "stash@{N}". */
