@@ -17,7 +17,7 @@ Work is tracked in GitHub milestones. Each theme has a tracking issue labeled `t
 3. No account, no telemetry, no network calls except the ones the user enables (avatars, issue links).
 4. Each milestone ships as a Marketplace and Open VSX release. Small releases are preferred over large ones.
 
-## Where we stand (2.2.1)
+## Where we stand (2.3.0)
 
 Shipped in 2.0.x: the Git Graph 1.4.6 feature set, a current toolchain (TypeScript 5, ESLint, Node 20, VS Code 1.74 or later), CI, release pipeline, two bug fixes.
 
@@ -27,7 +27,9 @@ Shipped in 2.2.0 (milestone "Core actions", first release): fetch, push, pull, d
 
 Shipped in 2.2.1 (milestone "Core actions", second release): interactive rebase in the integrated terminal; reference label alignment, combined local and remote branch labels and label tooltips; docked and resizable details view with clickable parents and arrow-key navigation; commit signature status; archive; external diff tool; push to several remotes. Milestone 2.2 is complete.
 
-Missing versus Git Graph 1.30 beyond that: milestone 2.3 (Repository Settings widget, code review mode, issue linking, avatars, askpass, accessibility, utility commands). Missing versus the field: see the ranked table in `docs/COMPETITORS.md`, section 3.
+Shipped in 2.3.0 (milestone "Integrations"): Repository Settings widget (custom name, per-repository overrides, remotes with add / edit / delete / fetch / prune / hide, user details, issue linking); pull request creation for GitHub, GitLab, Bitbucket and custom providers; code review mode with an end-all command; avatar polish (SSH remotes, high DPI, Gravatar normalisation, no bundled token); utility commands (fetch, version information, open file); accessibility and theming (change type letters, theme colours, high contrast, focus outlines); askpass helper for credential prompts.
+
+Still missing versus Git Graph 1.30: export and import of repository settings, `git config` includes, initial branches per repository, pull request configuration stored per repository, and the smaller presentation items listed in `docs/UPSTREAM_GAP.md`. Missing versus the field: see the ranked table in `docs/COMPETITORS.md`, section 3 (milestone 2.4).
 
 ## Milestone 2.1: Foundations
 

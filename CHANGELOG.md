@@ -1,6 +1,8 @@
 # Change Log
 
-## Unreleased
+## 2.3.0 - 2026-10-18
+
+Milestone "2.3 Integrations". Everything below was re-implemented from feature descriptions; no code was taken from upstream versions after 1.4.6 or from other extensions.
 
 * Askpass: when git needs a user name, password or passphrase during fetch, pull or push and no credential helper answers, Git Graph shows an input box instead of failing. The helper (`resources/askpass.sh` and `out/askpassMain.js`) talks to the extension over a local pipe with a per-session nonce; nothing is stored. `git-graph.integratedAskpass` (default true) turns it off. Git never falls back to a terminal prompt (`GIT_TERMINAL_PROMPT=0`), so actions no longer hang.
 
