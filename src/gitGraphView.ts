@@ -27,13 +27,19 @@ export class GitGraphView {
 	private isPanelVisible: boolean = true;
 	private currentRepo: string | null = null;
 
-	public static createOrShow(extensionPath: string, dataSource: DataSource, extensionState: ExtensionState, avatarManager: AvatarManager, repoManager: RepoManager, logger: Logger) {
+	/**
+	 * Show the view. `loadRepo` is the repository to show (for example the one that contains the
+	 * active editor's document), or null to keep the last active repository.
+	 */
+	public static createOrShow(extensionPath: string, dataSource: DataSource, extensionState: ExtensionState, avatarManager: AvatarManager, repoManager: RepoManager, logger: Logger, loadRepo: string | null) {
 		const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
 
 		if (GitGraphView.currentPanel) {
 			GitGraphView.currentPanel.panel.reveal(column);
+			if (loadRepo !== null) GitGraphView.currentPanel.sendMessage({ command: 'selectRepo', repo: loadRepo });
 			return;
 		}
+		if (loadRepo !== null) extensionState.setLastActiveRepo(loadRepo);
 
 		const panel = vscode.window.createWebviewPanel('git-graph', 'Git Graph', column || vscode.ViewColumn.One, {
 			enableScripts: true,

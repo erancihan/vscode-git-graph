@@ -90,6 +90,7 @@ export class RepoManager {
 
 	private removeReposNotInWorkspace() {
 		let rootsExact = [], rootsFolder = [], workspaceFolders = vscode.workspace.workspaceFolders, repoPaths = Object.keys(this.repos), path;
+		const manuallyAdded = this.extensionState.getManuallyAddedRepos();
 		if (typeof workspaceFolders !== 'undefined') {
 			for (let i = 0; i < workspaceFolders.length; i++) {
 				path = getPathFromUri(workspaceFolders[i].uri);
@@ -98,18 +99,79 @@ export class RepoManager {
 			}
 		}
 		for (let i = 0; i < repoPaths.length; i++) {
+			if (manuallyAdded.indexOf(repoPaths[i]) > -1) continue;
 			if (rootsExact.indexOf(repoPaths[i]) === -1 && !rootsFolder.find(x => repoPaths[i].startsWith(x))) this.removeRepo(repoPaths[i]);
 		}
 	}
 
 	/* Repo Management */
+
+	/** The known repositories, in the order configured by git-graph.repositoryDropdownOrder. */
 	public getRepos() {
-		const repoPaths = Object.keys(this.repos).sort(), repos: GitRepoSet = {};
+		const repoPaths = sortRepoPaths(Object.keys(this.repos), getConfig().repositoryDropdownOrder(), getWorkspaceFolderPaths()), repos: GitRepoSet = {};
 		for (let i = 0; i < repoPaths.length; i++) {
 			repos[repoPaths[i]] = this.repos[repoPaths[i]];
 		}
 		return repos;
 	}
+
+	/** The known repository that contains `filePath`, or null. The deepest match wins. */
+	public getRepoContainingFile(filePath: string) {
+		let match: string | null = null;
+		const repoPaths = Object.keys(this.repos);
+		for (let i = 0; i < repoPaths.length; i++) {
+			if ((filePath === repoPaths[i] || filePath.startsWith(repoPaths[i] + '/')) && (match === null || repoPaths[i].length > match.length)) match = repoPaths[i];
+		}
+		return match;
+	}
+
+	/**
+	 * Add a repository that the user picked. Resolves to a message for the user, or null on success.
+	 * The repository is remembered across sessions even when it is outside the workspace folders.
+	 */
+	public async registerRepo(path: string): Promise<string | null> {
+		if (typeof this.repos[path] !== 'undefined') return 'The repository "' + path + '" is already known to Git Graph.';
+		if (!await this.dataSource.isGitRepository(path)) return 'The folder "' + path + '" is not a Git repository.';
+		this.extensionState.setIgnoredRepos(this.extensionState.getIgnoredRepos().filter((p) => p !== path));
+		const manuallyAdded = this.extensionState.getManuallyAddedRepos();
+		if (manuallyAdded.indexOf(path) === -1) this.extensionState.setManuallyAddedRepos(manuallyAdded.concat([path]));
+		this.addRepo(path);
+		await this.addSubmodulesOf(path);
+		this.sendRepos();
+		return null;
+	}
+
+	/** Remove a repository and make sure that discovery does not add it again. */
+	public ignoreRepo(path: string) {
+		const ignored = this.extensionState.getIgnoredRepos();
+		if (ignored.indexOf(path) === -1) this.extensionState.setIgnoredRepos(ignored.concat([path]));
+		this.extensionState.setManuallyAddedRepos(this.extensionState.getManuallyAddedRepos().filter((p) => p !== path));
+		if (typeof this.repos[path] !== 'undefined') {
+			this.removeRepo(path);
+			this.sendRepos();
+		}
+	}
+
+	private isIgnored(path: string) {
+		return this.extensionState.getIgnoredRepos().indexOf(path) > -1;
+	}
+
+	/** Register the submodules of a repository (declared in its .gitmodules) as repositories of their own. */
+	private async addSubmodulesOf(repo: string) {
+		const submodules = await this.dataSource.getSubmodules(repo);
+		let changes = false;
+		for (let i = 0; i < submodules.length; i++) {
+			const path = repo + '/' + submodules[i];
+			if (typeof this.repos[path] !== 'undefined' || this.isIgnored(path)) continue;
+			if (await this.dataSource.isGitRepository(path)) {
+				this.addRepo(path);
+				changes = true;
+				await this.addSubmodulesOf(path);
+			}
+		}
+		return changes;
+	}
+
 	private addRepo(repo: string) {
 		this.repos[repo] = { columnWidths: null, columnVisibility: null };
 		this.extensionState.saveRepos(this.repos);
@@ -178,9 +240,15 @@ export class RepoManager {
 				return;
 			}
 
-			this.dataSource.isGitRepository(directory).then(isRepo => {
+			if (this.isIgnored(directory)) {
+				resolve(false);
+				return;
+			}
+
+			this.dataSource.isGitRepository(directory).then(async isRepo => {
 				if (isRepo) {
 					this.addRepo(directory);
+					await this.addSubmodulesOf(directory);
 					resolve(true);
 				} else if (maxDepth > 0) {
 					fs.readdir(directory, async (err, dirContents) => {
@@ -269,6 +337,34 @@ export class RepoManager {
 		this.processChangeEventsTimeout = null;
 		if (changes) this.sendRepos();
 	}
+}
+
+/** Order repository paths for the dropdown. */
+export function sortRepoPaths(repoPaths: string[], order: 'Full Path' | 'Name' | 'Workspace Full Path', workspaceFolders: string[]) {
+	const byPath = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0;
+	const name = (p: string) => p.substring(p.lastIndexOf('/') + 1).toLowerCase();
+	const workspaceIndex = (p: string) => {
+		for (let i = 0; i < workspaceFolders.length; i++) {
+			if (p === workspaceFolders[i] || p.startsWith(workspaceFolders[i] + '/')) return i;
+		}
+		return workspaceFolders.length;
+	};
+	return repoPaths.slice().sort((a, b) => {
+		if (order === 'Name') {
+			const n = byPath(name(a), name(b));
+			return n !== 0 ? n : byPath(a, b);
+		}
+		if (order === 'Workspace Full Path') {
+			const w = workspaceIndex(a) - workspaceIndex(b);
+			if (w !== 0) return w;
+		}
+		return byPath(a, b);
+	});
+}
+
+function getWorkspaceFolderPaths() {
+	const folders = vscode.workspace.workspaceFolders;
+	return typeof folders !== 'undefined' ? folders.map((f) => getPathFromUri(f.uri)) : [];
 }
 
 function isDirectory(path: string) {

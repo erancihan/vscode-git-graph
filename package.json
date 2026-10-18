@@ -58,12 +58,26 @@
 			{
 				"category": "Git Graph",
 				"command": "git-graph.view",
-				"title": "View Git Graph (git log)"
+				"title": "View Git Graph (git log)",
+				"icon": {
+					"light": "resources/webview-icon-light.svg",
+					"dark": "resources/webview-icon-dark.svg"
+				}
 			},
 			{
 				"category": "Git Graph",
 				"command": "git-graph.clearAvatarCache",
 				"title": "Clear Avatar Cache"
+			},
+			{
+				"category": "Git Graph",
+				"command": "git-graph.addGitRepository",
+				"title": "Add Git Repository..."
+			},
+			{
+				"category": "Git Graph",
+				"command": "git-graph.removeGitRepository",
+				"title": "Remove Git Repository..."
 			}
 		],
 		"configuration": {
@@ -568,6 +582,11 @@
 					"default": 0,
 					"description": "Specifies the maximum depth of subfolders to search when discovering repositories in the workspace."
 				},
+				"git-graph.openToTheRepoOfTheActiveTextEditorDocument": {
+					"type": "boolean",
+					"default": false,
+					"description": "When Git Graph is opened, show the repository that contains the document of the active text editor."
+				},
 				"git-graph.repository.commits.fetchAvatars": {
 					"type": "boolean",
 					"default": false,
@@ -693,6 +712,21 @@
 					"default": false,
 					"description": "Apply the .mailmap file of the repository to author and committer names and email addresses."
 				},
+				"git-graph.repositoryDropdownOrder": {
+					"type": "string",
+					"enum": [
+						"Full Path",
+						"Name",
+						"Workspace Full Path"
+					],
+					"enumDescriptions": [
+						"Sort by the full path of the repository",
+						"Sort by the name of the repository (the last part of its path)",
+						"Sort by the order of the workspace folders, then by full path"
+					],
+					"default": "Workspace Full Path",
+					"description": "Order of the repositories in the \"Repo\" dropdown."
+				},
 				"git-graph.retainContextWhenHidden": {
 					"type": "boolean",
 					"default": true,
@@ -702,6 +736,19 @@
 					"type": "boolean",
 					"default": true,
 					"description": "Show a Status Bar item which opens Git Graph when clicked."
+				},
+				"git-graph.sourceCodeProviderIntegrationLocation": {
+					"type": "string",
+					"enum": [
+						"Inline",
+						"More Actions"
+					],
+					"enumDescriptions": [
+						"Show the \"View Git Graph\" button in the title bar of the Source Control view",
+						"Show \"View Git Graph\" in the \"More Actions...\" menu of the Source Control view"
+					],
+					"default": "Inline",
+					"description": "Where the \"View Git Graph\" action appears in the Source Control view."
 				},
 				"git-graph.tabIconColourTheme": {
 					"type": "string",
@@ -821,6 +868,20 @@
 					"deprecationMessage": "Deprecated: use \"git-graph.repository.showUncommittedChanges\" instead. This setting is still read when the new one is not set."
 				}
 			}
+		},
+		"menus": {
+			"scm/title": [
+				{
+					"command": "git-graph.view",
+					"group": "navigation",
+					"when": "scmProvider == git && config.git-graph.sourceCodeProviderIntegrationLocation == 'Inline'"
+				},
+				{
+					"command": "git-graph.view",
+					"group": "2_git-graph",
+					"when": "scmProvider == git && config.git-graph.sourceCodeProviderIntegrationLocation == 'More Actions'"
+				}
+			]
 		}
 	},
 	"scripts": {

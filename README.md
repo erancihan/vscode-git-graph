@@ -38,7 +38,8 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
     * Keyboard shortcuts: Ctrl/Cmd+R refresh, Ctrl/Cmd+H scroll to HEAD, Ctrl/Cmd+S next stash
 * Configurable settings (graph style, branch colours, and more)
 * "Git Graph: View Git Graph" command in the Command Palette
-* "Git Graph" button in the Status Bar
+* "Git Graph" button in the Status Bar and in the title bar of the Source Control view
+* Submodules are shown as repositories of their own; repositories can be added and removed with commands
 
 ## Extension Settings
 
@@ -76,6 +77,7 @@ This extension contributes the following settings:
 * `git-graph.keyboardShortcut.refresh`: Letter of the Ctrl/Cmd shortcut that refreshes the view. Default: `r`.
 * `git-graph.keyboardShortcut.scrollToHead`: Letter of the Ctrl/Cmd shortcut that scrolls to the checked-out commit. Default: `h`.
 * `git-graph.keyboardShortcut.scrollToStash`: Letter of the Ctrl/Cmd shortcut that scrolls to the next stash (Shift for the previous). Default: `s`.
+* `git-graph.openToTheRepoOfTheActiveTextEditorDocument`: Open the view on the repository of the active editor's document. Default: false.
 * `git-graph.maxDepthOfRepoSearch`: Specifies the maximum depth of subfolders to search when discovering repositories in the workspace. Default: 0.
 * `git-graph.repository.fetchAndPrune`: Prune remote-tracking references when the Fetch button is pressed. Default: false.
 * `git-graph.repository.fetchAndPruneTags`: Also prune local tags when the Fetch button is pressed (git 2.17 or later). Default: false.
@@ -100,7 +102,9 @@ This extension contributes the following settings:
 * `git-graph.repository.showUncommittedChanges`: Show uncommitted changes. Set to false to decrease load time on large repositories.
 * `git-graph.repository.showUntrackedFiles`: Count untracked files in the "Uncommitted Changes" row. Default: true.
 * `git-graph.repository.useMailmap`: Apply the repository's `.mailmap` to author and committer identities. Default: false.
+* `git-graph.repositoryDropdownOrder`: Order of the "Repo" dropdown: `Full Path`, `Name` or `Workspace Full Path`. Default: `Workspace Full Path`.
 * `git-graph.retainContextWhenHidden`: Keep the view alive while its tab is hidden so it restores instantly. Default: true.
+* `git-graph.sourceCodeProviderIntegrationLocation`: Where "View Git Graph" appears in the Source Control view: `Inline` (title bar button) or `More Actions`. Default: `Inline`.
 * `git-graph.showStatusBarItem`: Show a Status Bar item that opens Git Graph when clicked.
 * `git-graph.tabIconColourTheme`: Specifies the colour theme of the icon displayed on the Git Graph tab.
 
@@ -113,6 +117,8 @@ This extension reads the following setting:
 ## Extension Commands
 
 * `git-graph.view`: Git Graph: View Git Graph
+* `git-graph.addGitRepository`: Git Graph: Add Git Repository... (a repository outside the workspace folders, or one that was removed)
+* `git-graph.removeGitRepository`: Git Graph: Remove Git Repository...
 * `git-graph.clearAvatarCache`: Git Graph: Clear Avatar Cache
 
 ## Install
