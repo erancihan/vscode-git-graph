@@ -42,6 +42,7 @@ class GitGraphView {
 		this.gitRepos = repos;
 		this.config = config;
 		this.codeReviews = codeReviews && typeof codeReviews === 'object' ? codeReviews : {};
+		showChangeTypeLetters = config.commitDetailsView.showChangeTypeLetters;
 		this.maxCommits = config.initialLoadCommits;
 		this.showRemoteBranches = config.showRemoteBranches;
 		this.scrollToHeadPending = config.scrollToHeadOnLoad && prevState === null;
@@ -1993,6 +1994,9 @@ interface ReviewedFiles {
 	reviewed: string[];
 	lastViewed: string | null;
 }
+/** Set by the view from the configuration before the file lists are generated. */
+let showChangeTypeLetters = false;
+const CHANGE_TYPE_NAMES: { [type: string]: string } = { A: 'Added', M: 'Modified', D: 'Deleted', R: 'Renamed' };
 function generateGitFileTreeHtml(folder: GitFolder, gitFiles: GG.GitFileChange[], compactFolders: boolean, review: ReviewedFiles | null = null) {
 	// With compact folders, a chain of folders that each only contain one folder is shown on one line
 	let displayName = folder.name, deepest = folder;
@@ -2030,7 +2034,8 @@ function generateGitFileListHtml(gitFiles: GG.GitFileChange[], review: ReviewedF
 function generateGitFileHtml(gitFile: GG.GitFileChange, labelHtml: string, review: ReviewedFiles | null = null) {
 	const diffPossible = gitFile.additions !== null && gitFile.deletions !== null;
 	const reviewClasses = review !== null ? (review.reviewed.indexOf(gitFile.newFilePath) > -1 ? ' reviewed' : '') + (review.lastViewed === gitFile.newFilePath ? ' lastViewed' : '') : '';
-	return '<li class="gitFile ' + gitFile.type + (diffPossible ? ' gitDiffPossible' : '') + reviewClasses + '" data-oldfilepath="' + encodeURIComponent(gitFile.oldFilePath) + '" data-newfilepath="' + encodeURIComponent(gitFile.newFilePath) + '" data-type="' + gitFile.type + '"' + (!diffPossible ? ' title="This is a binary file, unable to view diff."' : '') + '><span class="gitFileIcon">' + svgIcons.file + '</span>' + labelHtml
+	const typeLetter = showChangeTypeLetters ? '<span class="gitFileTypeLetter" title="' + CHANGE_TYPE_NAMES[gitFile.type] + '">' + gitFile.type + '</span>' : '';
+	return '<li class="gitFile ' + gitFile.type + (diffPossible ? ' gitDiffPossible' : '') + reviewClasses + '" data-oldfilepath="' + encodeURIComponent(gitFile.oldFilePath) + '" data-newfilepath="' + encodeURIComponent(gitFile.newFilePath) + '" data-type="' + gitFile.type + '"' + (!diffPossible ? ' title="This is a binary file, unable to view diff."' : '') + '><span class="gitFileIcon">' + svgIcons.file + '</span>' + typeLetter + labelHtml
 		+ (gitFile.type === 'R' ? ' <span class="gitFileRename" title="' + escapeHtml(gitFile.oldFilePath + ' was renamed to ' + gitFile.newFilePath) + '">R</span>' : '')
 		+ (gitFile.type !== 'A' && gitFile.type !== 'D' && diffPossible ? '<span class="gitFileAddDel">(<span class="gitFileAdditions" title="' + gitFile.additions + ' addition' + (gitFile.additions !== 1 ? 's' : '') + '">+' + gitFile.additions + '</span>|<span class="gitFileDeletions" title="' + gitFile.deletions + ' deletion' + (gitFile.deletions !== 1 ? 's' : '') + '">-' + gitFile.deletions + '</span>)</span>' : '')
 		+ '</li>';

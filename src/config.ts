@@ -30,7 +30,8 @@ class Config {
 		return {
 			fileViewType: this.getEnum('commitDetailsView.fileView.type', 'defaultFileViewType', ['File Tree', 'File List'], 'File Tree') === 'File List' ? 'list' : 'tree',
 			compactFolders: this.getBoolean('commitDetailsView.fileView.fileTree.compactFolders', 'commitDetailsViewFileTreeCompactFolders', true),
-			location: this.getEnum<CommitDetailsViewLocation>('commitDetailsView.location', null, ['Inline', 'Docked to Bottom'], 'Inline')
+			location: this.getEnum<CommitDetailsViewLocation>('commitDetailsView.location', null, ['Inline', 'Docked to Bottom'], 'Inline'),
+			showChangeTypeLetters: this.getBoolean('commitDetailsView.fileView.showChangeTypeLetters', null, false)
 		};
 	}
 
