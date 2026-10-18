@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { CommitOrdering, ContextMenuActionsVisibility, DateFormat, DateType, DialogDefaults, GitResetMode, GraphStyle, SquashMessageFormat, TabIconColourTheme } from './types';
+import { CommitOrdering, ContextMenuActionsVisibility, DateFormat, DateType, DialogDefaults, GitResetMode, GraphStyle, KeyboardShortcuts, SquashMessageFormat, TabIconColourTheme } from './types';
 
 const DEFAULT_GRAPH_COLOURS = ['#0085d9', '#d9008f', '#00d90a', '#d98500', '#a300d9', '#ff0000', '#00d9cc', '#e138e8', '#85d900', '#dc5b23', '#6f24d6', '#ffcc00'];
 const GRAPH_COLOUR_REGEX = /^\s*(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|rgb[a]?\s*\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\))\s*$/;
@@ -121,6 +121,20 @@ class Config {
 	/** Message of the commit that a squash merge creates. */
 	public squashMessageFormat(): SquashMessageFormat {
 		return this.getEnum<SquashMessageFormat>('dialog.merge.squashMessageFormat', null, ['Default', 'Git SQUASH_MSG'], 'Default');
+	}
+
+	/* Keyboard Shortcuts */
+
+	/** The letters of the rebindable shortcuts. An invalid value falls back to the default letter. */
+	public keyboardShortcuts(): KeyboardShortcuts {
+		return {
+			find: this.getShortcutLetter('keyboardShortcut.find', 'f')
+		};
+	}
+
+	private getShortcutLetter(section: string, defaultLetter: string) {
+		const value = this.get<unknown>(section, null, defaultLetter);
+		return typeof value === 'string' && /^[a-z]$/i.test(value.trim()) ? value.trim().toLowerCase() : defaultLetter;
 	}
 
 	/* Graph */

@@ -20,6 +20,7 @@ declare global {
 		graphStyle: 'rounded' | 'angular';
 		grid: { x: number, y: number, offsetX: number, offsetY: number, expandY: number };
 		initialLoadCommits: number;
+		keyboardShortcuts: GG.KeyboardShortcuts;
 		loadMoreCommits: number;
 		loadMoreCommitsAutomatically: boolean;
 		showCurrentBranchByDefault: boolean;

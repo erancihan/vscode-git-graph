@@ -11,6 +11,7 @@ class GitGraphView {
 	private currentRepo!: string;
 
 	private graph: Graph;
+	private findWidget: FindWidget;
 	private config: Config;
 	private moreCommitsAvailable: boolean = false;
 	private showRemoteBranches: boolean = true;
@@ -35,6 +36,20 @@ class GitGraphView {
 		this.graph = new Graph('commitGraph', this.config);
 		this.tableElem = document.getElementById('commitTable')!;
 		this.registerTableListeners();
+		this.findWidget = new FindWidget({
+			getCommits: () => this.commits,
+			getRowElem: (id) => <HTMLElement | null>this.tableElem.querySelector('tr.commit[data-id="' + id + '"]'),
+			isCommitDetailsOpen: () => this.expandedCommit !== null,
+			openCommitDetails: (rowElem) => {
+				if (this.expandedCommit === null || this.expandedCommit.hash !== rowElem.dataset.hash) this.loadCommitDetails(rowElem);
+			}
+		});
+		document.addEventListener('keydown', (e) => {
+			if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === this.config.keyboardShortcuts.find) {
+				e.preventDefault();
+				this.findWidget.show();
+			}
+		});
 		this.footerElem = document.getElementById('footer')!;
 		this.repoDropdown = new Dropdown('repoSelect', true, 'Repos', value => {
 			this.currentRepo = value;
@@ -308,6 +323,7 @@ class GitGraphView {
 		this.tableElem.innerHTML = '<table>' + html + '</table>';
 		this.footerElem.innerHTML = this.moreCommitsAvailable ? '<div id="loadMoreCommitsBtn" class="roundedBtn">Load More Commits</div>' : '';
 		this.makeTableResizable();
+		this.findWidget.update();
 
 		if (this.moreCommitsAvailable) {
 			document.getElementById('loadMoreCommitsBtn')!.addEventListener('click', () => this.loadMoreCommits());
@@ -1017,6 +1033,7 @@ const gitGraph = new GitGraphView(viewState.repos, viewState.lastActiveRepo, {
 	graphStyle: viewState.graphStyle,
 	grid: { x: 16, y: 24, offsetX: 8, offsetY: 12, expandY: 250 },
 	initialLoadCommits: viewState.initialLoadCommits,
+	keyboardShortcuts: viewState.keyboardShortcuts,
 	loadMoreCommits: viewState.loadMoreCommits,
 	loadMoreCommitsAutomatically: viewState.loadMoreCommitsAutomatically,
 	showCurrentBranchByDefault: viewState.showCurrentBranchByDefault,

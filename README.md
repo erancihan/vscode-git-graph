@@ -19,14 +19,19 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
         * Local and remote branches
         * Local refs: heads, tags, and remotes
         * Local uncommitted changes
+        * Stashes
     * View commit details and file changes by clicking on a commit
         * Open the Visual Studio Code diff of a file change by clicking on it in the commit details view
-    * Perform Git actions by right clicking on a commit, branch, or tag:
-        * Create, checkout, rename, delete, and merge branches
+    * Perform Git actions by right clicking on a commit, branch, tag, stash, or the uncommitted changes:
+        * Create, checkout, rename, delete, merge, rebase on, and push branches
+        * Delete remote branches, fetch a remote branch into a local branch, pull a remote branch into the current branch
         * Add, delete, and push tags
-        * Checkout, cherry pick, merge, and revert commits
-        * Reset the current branch to a commit
-        * Copy commit hashes, tag names, and branch names to the clipboard
+        * Checkout, cherry pick, merge, rebase on, revert, and drop commits
+        * Reset the current branch to a commit; reset or clean the uncommitted changes
+        * Stash the uncommitted changes; apply, pop, drop, or branch from a stash
+        * Copy commit hashes, tag names, branch names, and stash names to the clipboard
+    * Fetch from all remotes with the Fetch button
+    * Find commits with Ctrl/Cmd+F: match case and regular expression modes, step through the matches
 * Configurable settings (graph style, branch colours, and more)
 * "Git Graph: View Git Graph" command in the Command Palette
 * "Git Graph" button in the Status Bar
@@ -60,6 +65,7 @@ This extension contributes the following settings:
 * `git-graph.dialog.stashUncommittedChanges.includeUntracked`: Default state of "Include Untracked" in the "Stash uncommitted changes" dialog. Default: false.
 * `git-graph.graph.colours`: Specifies the colours used on the graph.
 * `git-graph.graph.style`: Specifies the style of the graph.
+* `git-graph.keyboardShortcut.find`: Letter of the Ctrl/Cmd shortcut that opens the find widget. Default: `f`.
 * `git-graph.maxDepthOfRepoSearch`: Specifies the maximum depth of subfolders to search when discovering repositories in the workspace. Default: 0.
 * `git-graph.repository.fetchAndPrune`: Prune remote-tracking references when the Fetch button is pressed. Default: false.
 * `git-graph.repository.fetchAndPruneTags`: Also prune local tags when the Fetch button is pressed (git 2.17 or later). Default: false.
