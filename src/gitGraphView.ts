@@ -163,6 +163,14 @@ export class GitGraphView {
 						status: await this.dataSource.cleanUntrackedFiles(msg.repo, msg.directories)
 					});
 					break;
+				case 'compareCommits':
+					this.sendMessage({
+						command: 'compareCommits',
+						fromHash: msg.fromHash,
+						toHash: msg.toHash,
+						fileChanges: await this.dataSource.compareCommits(msg.repo, msg.fromHash, msg.toHash)
+					});
+					break;
 				case 'commitDetails':
 					this.sendMessage({
 						command: 'commitDetails',
@@ -323,7 +331,7 @@ export class GitGraphView {
 				case 'viewDiff':
 					this.sendMessage({
 						command: 'viewDiff',
-						success: await viewDiff(msg.repo, msg.commitHash, msg.oldFilePath, msg.newFilePath, msg.type)
+						success: await viewDiff(msg.repo, msg.fromHash, msg.toHash, msg.oldFilePath, msg.newFilePath, msg.type)
 					});
 					break;
 				case 'viewDiffWithWorkingFile':
@@ -462,11 +470,16 @@ export class GitGraphView {
 
 /* File actions */
 
-/** Open the Visual Studio Code diff of a file change in a commit. */
-function viewDiff(repo: string, commitHash: string, oldFilePath: string, newFilePath: string, type: GitFileChangeType) {
-	const abbrevHash = abbrevCommit(commitHash);
-	const title = fileName(newFilePath) + ' (' + (type === 'A' ? 'Added in ' + abbrevHash : type === 'D' ? 'Deleted in ' + abbrevHash : abbrevHash + '^ ↔ ' + abbrevHash) + ')';
-	return runToBoolean(vscode.commands.executeCommand('vscode.diff', encodeDiffDocUri(repo, oldFilePath, commitHash + '^'), encodeDiffDocUri(repo, newFilePath, commitHash), title, { preview: true }));
+/**
+ * Open the Visual Studio Code diff of a file between two revisions. `fromHash` may be "<hash>^" (the
+ * parent of a commit) and `toHash` may be "*" (the working tree).
+ */
+function viewDiff(repo: string, fromHash: string, toHash: string, oldFilePath: string, newFilePath: string, type: GitFileChangeType) {
+	const toLabel = toHash === '*' ? 'Working Tree' : abbrevCommit(toHash);
+	const isParentDiff = fromHash === toHash + '^';
+	const title = fileName(newFilePath) + ' (' + (isParentDiff && type === 'A' ? 'Added in ' + toLabel : isParentDiff && type === 'D' ? 'Deleted in ' + toLabel : (isParentDiff ? toLabel + '^' : abbrevCommit(fromHash)) + ' ↔ ' + toLabel) + ')';
+	const rightUri = toHash === '*' && type !== 'D' ? vscode.Uri.file(path.join(repo, newFilePath)) : encodeDiffDocUri(repo, newFilePath, toHash);
+	return runToBoolean(vscode.commands.executeCommand('vscode.diff', encodeDiffDocUri(repo, oldFilePath, fromHash), rightUri, title, { preview: true }));
 }
 
 /** Open the Visual Studio Code diff between a file at a commit and the file in the working tree. */

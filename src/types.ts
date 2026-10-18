@@ -213,6 +213,19 @@ export interface ResponseCherrypickCommit {
 	status: GitCommandStatus;
 }
 
+export interface RequestCompareCommits {
+	command: 'compareCommits';
+	repo: string;
+	fromHash: string;
+	toHash: string; // commit hash, or "*" for the working tree
+}
+export interface ResponseCompareCommits {
+	command: 'compareCommits';
+	fromHash: string;
+	toHash: string;
+	fileChanges: GitFileChange[] | null;
+}
+
 export interface RequestCommitDetails {
 	command: 'commitDetails';
 	repo: string;
@@ -597,7 +610,8 @@ export interface RequestSaveRepoState {
 export interface RequestViewDiff {
 	command: 'viewDiff';
 	repo: string;
-	commitHash: string;
+	fromHash: string; // commit hash, or "<hash>^" for the parent of a commit
+	toHash: string; // commit hash, or "*" for the working tree
 	oldFilePath: string;
 	newFilePath: string;
 	type: GitFileChangeType;
@@ -616,6 +630,7 @@ export type RequestMessage =
 	| RequestCherrypickCommit
 	| RequestCleanUntrackedFiles
 	| RequestCommitDetails
+	| RequestCompareCommits
 	| RequestCopyToClipboard
 	| RequestCreateBranch
 	| RequestDeleteBranch
@@ -656,6 +671,7 @@ export type ResponseMessage =
 	| ResponseCherrypickCommit
 	| ResponseCleanUntrackedFiles
 	| ResponseCommitDetails
+	| ResponseCompareCommits
 	| ResponseCopyToClipboard
 	| ResponseCreateBranch
 	| ResponseDeleteBranch
