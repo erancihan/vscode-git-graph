@@ -15,6 +15,14 @@ export interface GitCommitNode {
 	bisect: GitBisectMark | null;
 }
 
+export type GitOperationType = 'merge' | 'rebase' | 'cherry-pick' | 'revert';
+export type GitOperationAction = 'continue' | 'skip' | 'abort';
+/** A merge, rebase, cherry pick or revert that git stopped (usually because of conflicts). */
+export interface GitOperationInProgress {
+	type: GitOperationType;
+	conflictedFiles: string[];
+}
+
 export type GitBisectMark = 'good' | 'bad' | 'skip';
 export type GitBisectAction = GitBisectMark | 'reset';
 
@@ -434,6 +442,7 @@ export interface ResponseLoadCommits {
 	head: string | null;
 	moreCommitsAvailable: boolean;
 	bisecting: boolean;
+	operation: GitOperationInProgress | null;
 	hard: boolean;
 }
 
@@ -906,6 +915,17 @@ export interface ResponseOpenWorktree {
 	status: GitCommandStatus;
 }
 
+export interface RequestOperationAction {
+	command: 'operationAction';
+	repo: string;
+	type: GitOperationType;
+	action: GitOperationAction;
+}
+export interface ResponseOperationAction {
+	command: 'operationAction';
+	status: GitCommandStatus;
+}
+
 export interface RequestOpenExternalUrl {
 	command: 'openExternalUrl';
 	url: string; // http(s) only
@@ -1014,6 +1034,7 @@ export type RequestMessage =
 	| RequestSetUserDetails
 	| RequestOpenExtensionSettings
 	| RequestOpenExternalUrl
+	| RequestOperationAction
 	| RequestAddWorktree
 	| RequestRemoveWorktree
 	| RequestPruneWorktrees
@@ -1077,6 +1098,7 @@ export type ResponseMessage =
 	| ResponsePruneRemote
 	| ResponseSetUserDetails
 	| ResponseOpenExternalUrl
+	| ResponseOperationAction
 	| ResponseAddWorktree
 	| ResponseRemoveWorktree
 	| ResponsePruneWorktrees

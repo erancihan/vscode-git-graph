@@ -12,6 +12,7 @@ class GitGraphView {
 	private currentBranches: string[] | null = null;
 	private filters: GG.GraphFilters = { authors: [], paths: [] };
 	private bisecting: boolean = false;
+	private operation: GG.GitOperationInProgress | null = null;
 	private bisectMessage: string | null = null;
 	private currentRepo!: string;
 
@@ -284,7 +285,9 @@ class GitGraphView {
 		}
 	}
 
-	public loadCommits(commits: GG.GitCommitNode[], commitHead: string | null, moreAvailable: boolean, hard: boolean, bisecting: boolean = false) {
+	public loadCommits(commits: GG.GitCommitNode[], commitHead: string | null, moreAvailable: boolean, hard: boolean, bisecting: boolean = false, operation: GG.GitOperationInProgress | null = null) {
+		this.operation = operation;
+		this.renderOperationBar();
 		if (this.bisecting !== bisecting) {
 			this.bisecting = bisecting;
 			if (!bisecting) this.bisectMessage = null;
@@ -997,8 +1000,8 @@ class GitGraphView {
 		const controls = document.getElementById('controls'), filterBar = document.getElementById('filterBar');
 		if (controls !== null) {
 			document.body.style.setProperty('--git-graph-controls-height', controls.offsetHeight + 'px');
-			const bisectBar = document.getElementById('bisectBar');
-			document.body.style.setProperty('--git-graph-header-offset', (controls.offsetHeight + (filterBar !== null ? filterBar.offsetHeight : 0) + (bisectBar !== null ? bisectBar.offsetHeight : 0)) + 'px');
+			const bisectBar = document.getElementById('bisectBar'), operationBar = document.getElementById('operationBar');
+			document.body.style.setProperty('--git-graph-header-offset', (controls.offsetHeight + (filterBar !== null ? filterBar.offsetHeight : 0) + (bisectBar !== null ? bisectBar.offsetHeight : 0) + (operationBar !== null ? operationBar.offsetHeight : 0)) + 'px');
 		}
 	}
 	/** Tells the stylesheet how wide the graph is, so labels placed in the Graph column start to its right. */
@@ -1097,6 +1100,41 @@ class GitGraphView {
 				sendMessage({ command: 'amendCommit', repo: this.currentRepo!, commitHash: commitHash, message: values[0], stageTracked: values[1] === 'checked' });
 			}
 		}, null);
+	}
+
+	/* Operations in progress */
+	private renderOperationBar() {
+		const bar = document.getElementById('operationBar');
+		if (bar === null) return;
+		const op = this.operation;
+		if (op === null) {
+			bar.className = '';
+			bar.innerHTML = '';
+			this.updateControlsHeightVariable();
+			return;
+		}
+		const names: { [type: string]: string } = { 'merge': 'Merge', 'rebase': 'Rebase', 'cherry-pick': 'Cherry Pick', 'revert': 'Revert' };
+		const conflicts = op.conflictedFiles.length;
+		let html = '<span class="operationBarLabel">' + names[op.type] + ' in progress</span>';
+		html += '<span class="operationBarMessage">' + (conflicts > 0 ? conflicts + ' file' + (conflicts !== 1 ? 's' : '') + ' with conflicts: ' + op.conflictedFiles.map((file) => '<span class="operationFile externalFile" data-path="' + encodeURIComponent(file) + '" title="Open ' + escapeHtml(file) + '">' + escapeHtml(file) + '</span>').join(', ') : 'No conflicts remain. Continue to finish, or abort to return to the previous state.') + '</span>';
+		html += '<span class="operationBarActions">'
+			+ '<span id="operationContinue" class="roundedBtn' + (conflicts > 0 ? ' disabled' : '') + '" title="' + (conflicts > 0 ? 'Resolve and stage the conflicted files first' : 'git ' + op.type + ' --continue') + '">Continue</span>'
+			+ (op.type === 'rebase' || op.type === 'cherry-pick' ? '<span id="operationSkip" class="roundedBtn" title="git ' + op.type + ' --skip">Skip</span>' : '')
+			+ '<span id="operationAbort" class="roundedBtn" title="git ' + op.type + ' --abort">Abort</span></span>';
+		bar.className = 'active';
+		bar.innerHTML = html;
+		const run = (action: GG.GitOperationAction) => {
+			showActionRunningDialog(action === 'continue' ? 'Continuing ' + names[op.type] : action === 'skip' ? 'Skipping' : 'Aborting ' + names[op.type]);
+			sendMessage({ command: 'operationAction', repo: this.currentRepo!, type: op.type, action: action });
+		};
+		document.getElementById('operationContinue')!.addEventListener('click', () => { if (conflicts === 0) run('continue'); });
+		const skip = document.getElementById('operationSkip');
+		if (skip !== null) skip.addEventListener('click', () => showConfirmationDialog('Skip the current commit of the ' + names[op.type].toLowerCase() + '? Its changes are dropped.', () => run('skip'), null));
+		document.getElementById('operationAbort')!.addEventListener('click', () => showConfirmationDialog('Abort the ' + names[op.type].toLowerCase() + ' and return to the state before it started?', () => run('abort'), null));
+		addListenerToClass('operationFile', 'click', (e) => {
+			sendMessage({ command: 'openFile', repo: this.currentRepo!, filePath: decodeURIComponent((<HTMLElement>(<Element>e.target).closest('.operationFile')!).dataset.path!) });
+		});
+		this.updateControlsHeightVariable();
 	}
 
 	/* Worktrees */
@@ -2111,7 +2149,7 @@ window.addEventListener('message', event => {
 			gitGraph.loadBranches(msg.branches, msg.head, msg.remotes, msg.hard, msg.isRepo);
 			break;
 		case 'loadCommits':
-			gitGraph.loadCommits(msg.commits, msg.head, msg.moreCommitsAvailable, msg.hard, msg.bisecting);
+			gitGraph.loadCommits(msg.commits, msg.head, msg.moreCommitsAvailable, msg.hard, msg.bisecting, msg.operation);
 			break;
 		case 'loadRepos':
 			gitGraph.loadRepos(msg.repos, msg.lastActiveRepo);
@@ -2165,6 +2203,9 @@ window.addEventListener('message', event => {
 			break;
 		case 'bisect':
 			gitGraph.bisectCompleted(msg.status, msg.message);
+			break;
+		case 'operationAction':
+			refreshGraphOrDisplayError(msg.status, 'Unable to Continue the Operation');
 			break;
 		case 'addWorktree':
 			gitGraph.repoSettingsActionCompleted(msg.status, 'Unable to Create Worktree', false);
