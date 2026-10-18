@@ -478,7 +478,7 @@ export class GitGraphView {
 				case 'importRepoSettings':
 					this.sendMessage({
 						command: 'importRepoSettings',
-						status: await this.importRepoSettings(msg.repo, true)
+						status: await this.importRepoSettings(msg.repo)
 					});
 					break;
 				case 'getRebaseTodo': {
@@ -811,14 +811,17 @@ export class GitGraphView {
 		const apply = vscode.l10n.t('Apply'), ignore = vscode.l10n.t('Ignore this version');
 		const choice = await vscode.window.showInformationMessage(vscode.l10n.t('Git Graph: The repository "{0}" contains {1} with shared Git Graph settings ({2}). Apply them to this repository?', name, REPO_SETTINGS_FILE, describeRepoSettings(imported)), apply, ignore);
 		if (choice === apply) {
-			await this.importRepoSettings(repo, false);
+			// Apply exactly what the prompt described, never a version of the file written since
+			this.repoManager.setRepoState(repo, { ...applyRepoSettings(this.getRepoState(repo), imported), settingsFileHash: hash });
+			this.respondLoadRepos(this.repoManager.getRepos());
+			vscode.window.showInformationMessage(vscode.l10n.t('Git Graph: Repository settings applied from {0}.', REPO_SETTINGS_FILE));
 		} else if (choice === ignore) {
 			this.repoManager.setRepoState(repo, { ...this.getRepoState(repo), settingsFileHash: hash });
 		}
 	}
 
 	/** Apply the settings file to the repository state and refresh the view. */
-	private async importRepoSettings(repo: string, fromWidget: boolean): Promise<GitCommandStatus> {
+	private async importRepoSettings(repo: string): Promise<GitCommandStatus> {
 		if (!this.isKnownRepo(repo)) return 'Unknown repository.';
 		const text = await this.readRepoSettingsFile(repo);
 		if (text === null) return vscode.l10n.t('The repository has no {0} file.', REPO_SETTINGS_FILE);
@@ -826,7 +829,6 @@ export class GitGraphView {
 		if (imported === null) return vscode.l10n.t('{0} is not a valid JSON object.', REPO_SETTINGS_FILE);
 		this.repoManager.setRepoState(repo, { ...applyRepoSettings(this.getRepoState(repo), imported), settingsFileHash: hashRepoSettings(text) });
 		this.respondLoadRepos(this.repoManager.getRepos());
-		if (!fromWidget) vscode.window.showInformationMessage(vscode.l10n.t('Git Graph: Repository settings applied from {0}.', REPO_SETTINGS_FILE));
 		return null;
 	}
 

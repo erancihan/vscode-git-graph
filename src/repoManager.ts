@@ -411,11 +411,11 @@ export function normaliseRepoState(state: Partial<GitRepoState> | null | undefin
 }
 
 /**
- * True when a pattern cannot backtrack catastrophically in the common shapes: no quantifier (`*`,
- * `+`, `{n,}`, `{n,m}`) applies to a group that itself contains a quantifier or an alternation at
- * any depth (star height above one, or `(a|aa)+`), and the pattern is at most 200 characters.
- * Character classes and escapes are skipped; `?` is bounded and does not count. Malformed input is
- * unsafe.
+ * True when a pattern cannot backtrack catastrophically in the common shapes: no repeating
+ * quantifier (`*`, `+`, `{n,}`, `{n,m}` with m above 1) applies to a group that itself contains any
+ * quantifier (including `?` and `{n}`) or an alternation at any depth, at most 10 quantifiers in
+ * total, and at most 200 characters. Character classes follow the JavaScript rules (`[]` and `[^]`
+ * close at once) and escapes are skipped. Malformed input is unsafe.
  */
 export function isSafeIssuePattern(pattern: string) {
 	if (typeof pattern !== 'string' || pattern.trim() === '' || pattern.length > 200) return false;
@@ -429,13 +429,18 @@ export function isSafeIssuePattern(pattern: string) {
 
 function starHeightIsSafe(pattern: string) {
 	const frames: { quantifier: boolean, alternation: boolean }[] = [{ quantifier: false, alternation: false }];
-	const quantifierAt = (i: number) => {
-		if (pattern[i] === '*' || pattern[i] === '+') return true;
+	let quantifiers = 0;
+	// 'repeat' for quantifiers that can match more than once, 'bounded' for ? and {0,1} / {1}, null otherwise
+	const quantifierAt = (i: number): 'repeat' | 'bounded' | null => {
+		if (pattern[i] === '*' || pattern[i] === '+') return 'repeat';
+		if (pattern[i] === '?') return 'bounded';
 		if (pattern[i] === '{') {
-			const match = /^\{\d+(,\d*)?\}/.exec(pattern.substring(i));
-			return match !== null && !(match[1] === undefined && /^\{(0|1)\}/.test(match[0]));
+			const match = /^\{(\d+)(,(\d*))?\}/.exec(pattern.substring(i));
+			if (match === null) return null;
+			const min = parseInt(match[1]), max = match[2] === undefined ? min : match[3] === '' ? Infinity : parseInt(match[3]);
+			return max > 1 ? 'repeat' : 'bounded';
 		}
-		return false;
+		return null;
 	};
 	for (let i = 0; i < pattern.length; i++) {
 		const c = pattern[i];
@@ -443,21 +448,25 @@ function starHeightIsSafe(pattern: string) {
 		if (c === '[') {
 			i++;
 			if (pattern[i] === '^') i++;
-			if (pattern[i] === ']') i++;
 			while (i < pattern.length && pattern[i] !== ']') { if (pattern[i] === '\\') i++; i++; }
 			continue;
 		}
 		if (c === '(') { frames.push({ quantifier: false, alternation: false }); continue; }
 		if (c === ')') {
 			if (frames.length < 2) return false;
-			const frame = frames.pop()!, quantified = quantifierAt(i + 1);
-			if (quantified && (frame.quantifier || frame.alternation)) return false;
-			frames[frames.length - 1].quantifier = frames[frames.length - 1].quantifier || frame.quantifier || quantified;
+			const frame = frames.pop()!, following = quantifierAt(i + 1);
+			if (following === 'repeat' && (frame.quantifier || frame.alternation)) return false;
+			frames[frames.length - 1].quantifier = frames[frames.length - 1].quantifier || frame.quantifier || following !== null;
 			frames[frames.length - 1].alternation = frames[frames.length - 1].alternation || frame.alternation;
 			continue;
 		}
 		if (c === '|') { frames[frames.length - 1].alternation = true; continue; }
-		if (quantifierAt(i)) frames[frames.length - 1].quantifier = true;
+		const quantifier = quantifierAt(i);
+		if (quantifier !== null) {
+			frames[frames.length - 1].quantifier = true;
+			if (++quantifiers > 10) return false;
+			if (c === '{') i += /^\{\d+(,\d*)?\}/.exec(pattern.substring(i))![0].length - 1;
+		}
 	}
 	return frames.length === 1;
 }
