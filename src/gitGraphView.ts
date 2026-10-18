@@ -258,6 +258,7 @@ export class GitGraphView {
 		const config = getConfig(), nonce = getNonce();
 		const viewState: GitGraphViewState = {
 			autoCenterCommitDetailsView: config.autoCenterCommitDetailsView(),
+			contextMenuActionsVisibility: config.contextMenuActionsVisibility(),
 			dateFormat: config.dateFormat(),
 			dialogDefaults: config.dialogDefaults(),
 			fetchAvatars: config.fetchAvatars() && this.extensionState.isAvatarStorageAvailable(),

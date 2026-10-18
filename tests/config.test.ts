@@ -102,6 +102,32 @@ describe('Config.dialogDefaults', () => {
 	});
 });
 
+describe('Config.contextMenuActionsVisibility', () => {
+	it('shows every action by default', () => {
+		const visibility = getConfig().contextMenuActionsVisibility();
+		expect(Object.values(visibility.commit).every(v => v === true)).toBe(true);
+		expect(Object.keys(visibility.commit).sort()).toEqual(['addTag', 'checkout', 'cherrypick', 'copyHash', 'createBranch', 'merge', 'reset', 'revert']);
+		expect(visibility.tag).toEqual({ delete: true, push: true, copyName: true });
+	});
+
+	it('hides only the actions that are set to false', () => {
+		setConfig({ 'contextMenuActionsVisibility': { commit: { reset: false, checkout: 'false' }, tag: { push: false }, unknownMenu: { x: false } } });
+		const visibility = getConfig().contextMenuActionsVisibility();
+		expect(visibility.commit.reset).toBe(false);
+		expect(visibility.commit.checkout).toBe(false);
+		expect(visibility.commit.addTag).toBe(true);
+		expect(visibility.tag).toEqual({ delete: true, push: false, copyName: true });
+		expect(visibility.branch.delete).toBe(true);
+	});
+
+	it('ignores values that are not objects', () => {
+		setConfig({ 'contextMenuActionsVisibility': 'none' });
+		expect(getConfig().contextMenuActionsVisibility().commit.reset).toBe(true);
+		setConfig({ 'contextMenuActionsVisibility': { commit: false } });
+		expect(getConfig().contextMenuActionsVisibility().commit.reset).toBe(true);
+	});
+});
+
 describe('coerceBoolean', () => {
 	it('accepts booleans and boolean strings', () => {
 		expect(coerceBoolean(true, false)).toBe(true);
