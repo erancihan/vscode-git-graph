@@ -4,19 +4,23 @@ import { DataSource } from './dataSource';
 import { DiffDocProvider } from './diffDocProvider';
 import { ExtensionState } from './extensionState';
 import { GitGraphView } from './gitGraphView';
+import { Logger } from './logger';
 import { RepoManager } from './repoManager';
 import { StatusBarItem } from './statusBarItem';
 
 export function activate(context: vscode.ExtensionContext) {
+	const logger = new Logger();
+	logger.log('Starting Git Graph ...');
+
 	const extensionState = new ExtensionState(context);
-	const dataSource = new DataSource();
-	const avatarManager = new AvatarManager(dataSource, extensionState);
+	const dataSource = new DataSource(logger);
+	const avatarManager = new AvatarManager(dataSource, extensionState, logger);
 	const statusBarItem = new StatusBarItem(context);
 	const repoManager = new RepoManager(dataSource, extensionState, statusBarItem);
 
 	context.subscriptions.push(
 		vscode.commands.registerCommand('git-graph.view', () => {
-			GitGraphView.createOrShow(context.extensionPath, dataSource, extensionState, avatarManager, repoManager);
+			GitGraphView.createOrShow(context.extensionPath, dataSource, extensionState, avatarManager, repoManager, logger);
 		}),
 		vscode.commands.registerCommand('git-graph.clearAvatarCache', () => {
 			avatarManager.clearCache();
@@ -33,8 +37,10 @@ export function activate(context: vscode.ExtensionContext) {
 				dataSource.registerGitPath();
 			}
 		}),
-		repoManager
+		repoManager,
+		logger
 	);
+	logger.log('Started Git Graph - Ready to use!');
 }
 
 export function deactivate() { }

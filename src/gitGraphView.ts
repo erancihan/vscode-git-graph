@@ -5,6 +5,7 @@ import { getConfig } from './config';
 import { DataSource } from './dataSource';
 import { encodeDiffDocUri } from './diffDocProvider';
 import { ExtensionState } from './extensionState';
+import { Logger } from './logger';
 import { RepoFileWatcher } from './repoFileWatcher';
 import { RepoManager } from './repoManager';
 import { GitFileChangeType, GitGraphViewState, GitRepoSet, RequestMessage, ResponseMessage } from './types';
@@ -20,12 +21,13 @@ export class GitGraphView {
 	private readonly extensionState: ExtensionState;
 	private readonly repoFileWatcher: RepoFileWatcher;
 	private readonly repoManager: RepoManager;
+	private readonly logger: Logger;
 	private disposables: vscode.Disposable[] = [];
 	private isGraphViewLoaded: boolean = false;
 	private isPanelVisible: boolean = true;
 	private currentRepo: string | null = null;
 
-	public static createOrShow(extensionPath: string, dataSource: DataSource, extensionState: ExtensionState, avatarManager: AvatarManager, repoManager: RepoManager) {
+	public static createOrShow(extensionPath: string, dataSource: DataSource, extensionState: ExtensionState, avatarManager: AvatarManager, repoManager: RepoManager, logger: Logger) {
 		const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
 
 		if (GitGraphView.currentPanel) {
@@ -40,17 +42,19 @@ export class GitGraphView {
 			]
 		});
 
-		GitGraphView.currentPanel = new GitGraphView(panel, extensionPath, dataSource, extensionState, avatarManager, repoManager);
+		GitGraphView.currentPanel = new GitGraphView(panel, extensionPath, dataSource, extensionState, avatarManager, repoManager, logger);
 	}
 
-	private constructor(panel: vscode.WebviewPanel, extensionPath: string, dataSource: DataSource, extensionState: ExtensionState, avatarManager: AvatarManager, repoManager: RepoManager) {
+	private constructor(panel: vscode.WebviewPanel, extensionPath: string, dataSource: DataSource, extensionState: ExtensionState, avatarManager: AvatarManager, repoManager: RepoManager, logger: Logger) {
 		this.panel = panel;
+		this.logger = logger;
 		this.extensionPath = extensionPath;
 		this.avatarManager = avatarManager;
 		this.dataSource = dataSource;
 		this.extensionState = extensionState;
 		this.repoManager = repoManager;
 		this.avatarManager.registerView(this);
+		this.logger.log('Git Graph View opened');
 
 		panel.iconPath = getConfig().tabIconColourTheme() === 'colour'
 			? this.getUri('resources', 'webview-icon.svg')
@@ -86,6 +90,7 @@ export class GitGraphView {
 
 		this.panel.webview.onDidReceiveMessage(async (msg: RequestMessage) => {
 			if (this.dataSource === null) return;
+			this.logger.log('Received request from the webview: ' + msg.command);
 			this.repoFileWatcher.mute();
 			switch (msg.command) {
 				case 'addTag':
@@ -234,6 +239,7 @@ export class GitGraphView {
 
 	public dispose() {
 		GitGraphView.currentPanel = undefined;
+		this.logger.log('Git Graph View closed');
 		this.panel.dispose();
 		this.avatarManager.deregisterView();
 		this.repoFileWatcher.stop();
@@ -293,6 +299,7 @@ export class GitGraphView {
 			<h2>Unable to load Git Graph</h2>
 			<p>Either the current workspace does not contain a Git repository, or the Git executable could not be found.</p>
 			<p>If you are using a portable Git installation, make sure you have set the Visual Studio Code Setting "git.path" to the path of your portable installation (e.g. "C:\\Program Files\\Git\\bin\\git.exe" on Windows).</p>
+			<p>The "Git Graph" Output Channel (View &gt; Output) records the git commands that were run and any errors.</p>
 			</body>`;
 		}
 		this.isGraphViewLoaded = numRepos > 0;

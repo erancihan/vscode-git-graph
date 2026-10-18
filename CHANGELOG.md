@@ -1,5 +1,14 @@
 # Change Log
 
+## Unreleased
+
+* New "Git Graph" Output Channel (View > Output). It records every git command the extension runs, extension events, and errors from the avatar services (GitHub, GitLab, Gravatar). Open it when something does not load.
+* All git commands are now started with `spawn` and an argument array instead of a shell command line. Branch names, tag names and messages that contain quotes or spaces work, and the extension no longer depends on a shell.
+* Git output is collected as bytes and decoded after the process closes, so multi-byte characters split across chunks stay intact.
+* Every git command runs with `color.ui=false` and `log.showSignature=false`, so a user configuration with coloured output or signature display no longer breaks parsing.
+* The `git.path` setting of the built-in Git extension can be an array of candidate paths. The first candidate that exists is used.
+* A git executable that cannot be started is reported in the Output Channel instead of failing silently.
+
 ## 2.0.2 - 2026-10-15
 
 * The display name is now "Git Graph Community". The Visual Studio Marketplace requires display names to be unique, and "Git Graph" belongs to the original extension. Nothing else changed.
