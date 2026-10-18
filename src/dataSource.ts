@@ -431,6 +431,43 @@ export class DataSource {
 		return this.runGitCommand(commitArgs, repo);
 	}
 
+	/** Full message (%B) of a commit, or null when it cannot be read. */
+	public getCommitMessage(repo: string, commitHash: string): Promise<string | null> {
+		if (!isCommitHash(commitHash)) return Promise.resolve(null);
+		return this.spawnGit(['log', '-1', '--format=%B', commitHash, '--'], repo, (stdout) => stdout.replace(/\s+$/, '')).catch(() => null);
+	}
+
+	/** True when HEAD is reachable from its upstream branch, that is, the commit was already pushed. False without an upstream. */
+	public isHeadPushed(repo: string): Promise<boolean> {
+		return this.spawnGit(['merge-base', '--is-ancestor', 'HEAD', '@{upstream}'], repo, () => true, false).catch(() => false);
+	}
+
+	/** Change the message of the checked-out commit and nothing else (the index is left untouched). */
+	public async rewordCommit(repo: string, commitHash: string, message: string): Promise<GitCommandStatus> {
+		if (!isCommitHash(commitHash) || message.trim() === '') return rejectArguments();
+		if (!await this.isHead(repo, commitHash)) return 'The commit is no longer the checked-out commit (HEAD). Refresh the graph and try again.';
+		const args = ['commit', '--amend', '--only', '--allow-empty', '-m', message];
+		if (getConfig().signCommits()) args.push('-S');
+		return this.runGitCommand(args, repo);
+	}
+
+	/** Fold the staged changes (and, optionally, every modified or deleted tracked file) into the checked-out commit. */
+	public async amendCommit(repo: string, commitHash: string, message: string, stageTracked: boolean): Promise<GitCommandStatus> {
+		if (!isCommitHash(commitHash) || message.trim() === '') return rejectArguments();
+		if (!await this.isHead(repo, commitHash)) return 'The commit is no longer the checked-out commit (HEAD). Refresh the graph and try again.';
+		if (stageTracked) {
+			const status = await this.runGitCommand(['add', '--update', '--', '.'], repo);
+			if (status !== null) return status;
+		}
+		const args = ['commit', '--amend', '--allow-empty', '-m', message];
+		if (getConfig().signCommits()) args.push('-S');
+		return this.runGitCommand(args, repo);
+	}
+
+	private isHead(repo: string, commitHash: string) {
+		return this.spawnGit(['rev-parse', '--verify', '--quiet', 'HEAD'], repo, (stdout) => stdout.trim() === commitHash, false).catch(() => false);
+	}
+
 	public cherrypickCommit(repo: string, commitHash: string, options: CherryPickOptions) {
 		if (!isCommitHash(commitHash)) return rejectArguments();
 		const args = ['cherry-pick'];

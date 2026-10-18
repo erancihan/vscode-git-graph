@@ -64,11 +64,11 @@ class Config {
 		};
 		return {
 			branch: read('branch', { checkout: true, rename: true, delete: true, merge: true, rebase: true, push: true, createPullRequest: true, archive: true, copyName: true }),
-			commit: read('commit', { addTag: true, createBranch: true, checkout: true, cherrypick: true, revert: true, drop: true, merge: true, rebase: true, reset: true, archive: true, codeReview: true, copyHash: true }),
+			commit: read('commit', { addTag: true, createBranch: true, checkout: true, cherrypick: true, revert: true, drop: true, merge: true, rebase: true, reset: true, archive: true, codeReview: true, reword: true, copyHash: true }),
 			remoteBranch: read('remoteBranch', { checkout: true, delete: true, fetch: true, pull: true, copyName: true }),
 			stash: read('stash', { apply: true, createBranch: true, pop: true, drop: true, copyName: true, copyHash: true }),
 			tag: read('tag', { delete: true, push: true, archive: true, copyName: true }),
-			uncommittedChanges: read('uncommittedChanges', { reset: true, clean: true, stash: true })
+			uncommittedChanges: read('uncommittedChanges', { reset: true, clean: true, stash: true, amend: true })
 		};
 	}
 
@@ -343,6 +343,11 @@ class Config {
 
 	public retainContextWhenHidden() {
 		return this.getBoolean('retainContextWhenHidden', null, true);
+	}
+
+	/** Keep the controls bar and the column headers visible while the graph scrolls. */
+	public stickyHeader() {
+		return this.getBoolean('stickyHeader', null, true);
 	}
 
 	public showStatusBarItem() {

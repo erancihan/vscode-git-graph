@@ -1081,3 +1081,51 @@ svg.openFolderIcon, svg.closedFolderIcon, svg.fileIcon{
 		border-color:CanvasText;
 	}
 }
+
+/* Sticky header: controls bar and column headers stay visible while the graph scrolls */
+body.stickyHeader #controls{
+	position:sticky;
+	top:0;
+	z-index:4;
+	background-color:var(--vscode-editor-background);
+}
+body.stickyHeader #commitTable th{
+	position:sticky;
+	top:var(--git-graph-controls-height, 41px);
+	z-index:3;
+	background-color:var(--vscode-editor-background);
+}
+body.stickyHeader #scrollShadow.active{
+	top:calc(var(--git-graph-controls-height, 41px) + 31px);
+}
+
+#dialog textarea{
+	width:100%;
+	min-width:300px;
+	box-sizing:border-box;
+	resize:vertical;
+	font-family:var(--vscode-editor-font-family, monospace);
+	font-size:12px;
+	background-color:var(--vscode-input-background);
+	color:var(--vscode-input-foreground);
+	border:1px solid var(--vscode-input-border, rgba(128,128,128,0.4));
+	border-radius:3px;
+	padding:4px 6px;
+}
+#dialog textarea:focus{
+	outline:1px solid var(--vscode-focusBorder);
+	outline-offset:-1px;
+}
+#dialog .dialogWarning{
+	display:block;
+	margin:6px 0 2px 0;
+	color:var(--vscode-editorWarning-foreground, #e2c08d);
+	font-size:12px;
+}
+#dialog .dialogWarning svg{
+	width:12px;
+	height:12px;
+	fill:currentColor;
+	vertical-align:middle;
+	margin-right:4px;
+}

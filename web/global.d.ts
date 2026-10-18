@@ -33,6 +33,7 @@ declare global {
 		scrollToHeadOnLoad: boolean;
 		showCurrentBranchByDefault: boolean;
 		showRemoteBranches: boolean;
+		stickyHeader: boolean;
 	}
 
 	interface ContextMenuItem {
@@ -66,7 +67,13 @@ declare global {
 		name: string;
 		value: boolean;
 	}
-	type DialogInput = DialogTextInput | DialogTextRefInput | DialogSelectInput | DialogCheckboxInput;
+	interface DialogTextareaInput {
+		type: 'textarea';
+		name: string;
+		default: string;
+		placeholder: string | null;
+	}
+	type DialogInput = DialogTextInput | DialogTextRefInput | DialogSelectInput | DialogCheckboxInput | DialogTextareaInput;
 	type DialogInputValue = string | boolean;
 
 	interface ExpandedCommit {

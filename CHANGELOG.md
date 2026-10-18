@@ -1,5 +1,12 @@
 # Change Log
 
+## Unreleased
+
+Milestone "2.4 Beyond upstream" begins. Features in this milestone go beyond Git Graph 1.30 and are designed from scratch; nothing is taken from other extensions.
+
+* Sticky header: the controls bar and the column headers stay visible while the graph scrolls (`git-graph.stickyHeader`, default true).
+* "Reword Commit Message..." on the checked-out commit changes only the message (`git commit --amend --only`), and "Amend Last Commit with Uncommitted Changes..." on the Uncommitted Changes row folds the staged changes (optionally every modified or deleted tracked file) into it. Both show the current message in an editable box and warn when the commit is already on its upstream branch. New keys `commit.reword` and `uncommittedChanges.amend` in `git-graph.contextMenuActionsVisibility`.
+
 ## 2.3.0 - 2026-10-18
 
 Milestone "2.3 Integrations". Everything below was re-implemented from feature descriptions; no code was taken from upstream versions after 1.4.6 or from other extensions.

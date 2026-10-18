@@ -257,6 +257,11 @@
 									"default": true,
 									"description": "Start Code Review / End Code Review"
 								},
+								"reword": {
+									"type": "boolean",
+									"default": true,
+									"description": "Reword Commit Message (checked-out commit only)"
+								},
 								"rebase": {
 									"type": "boolean",
 									"default": true,
@@ -347,6 +352,11 @@
 									"type": "boolean",
 									"default": true,
 									"description": "Stash uncommitted changes"
+								},
+								"amend": {
+									"type": "boolean",
+									"default": true,
+									"description": "Amend Last Commit with Uncommitted Changes"
 								}
 							},
 							"additionalProperties": false
@@ -882,6 +892,11 @@
 					"type": "boolean",
 					"default": true,
 					"description": "Keep the Git Graph view alive while its tab is hidden, so that it restores instantly. Uses more memory. When false, the view is rebuilt when the tab becomes visible again."
+				},
+				"git-graph.stickyHeader": {
+					"type": "boolean",
+					"default": true,
+					"description": "Keep the controls bar and the column headers visible while the graph scrolls."
 				},
 				"git-graph.showStatusBarItem": {
 					"type": "boolean",

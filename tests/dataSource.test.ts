@@ -531,6 +531,31 @@ describe('DataSource remote actions', () => {
 		}
 	});
 
+	it('rewords and amends the checked-out commit, and knows whether it was pushed', async () => {
+		git(repo, ['checkout', '-q', 'master']);
+		const head = git(repo, ['rev-parse', 'HEAD']);
+		expect(await dataSource.getCommitMessage(repo, head)).toBe(git(repo, ['log', '-1', '--format=%B']).trim());
+		expect(await dataSource.rewordCommit(repo, head, 'Reworded subject\n\nWith a body')).toBeNull();
+		const reworded = git(repo, ['rev-parse', 'HEAD']);
+		expect(reworded).not.toBe(head);
+		expect(git(repo, ['log', '-1', '--format=%B']).trim()).toBe('Reworded subject\n\nWith a body');
+		expect(await dataSource.rewordCommit(repo, head, 'Stale')).toMatch(/no longer the checked-out commit/);
+		expect(await dataSource.rewordCommit(repo, reworded, '   ')).toMatch(/not a valid/i);
+
+		fs.writeFileSync(path.join(repo, 'a.txt'), 'amended content\n');
+		fs.writeFileSync(path.join(repo, 'untracked.txt'), 'never added\n');
+		expect(await dataSource.amendCommit(repo, reworded, 'Amended subject', true)).toBeNull();
+		expect(git(repo, ['log', '-1', '--format=%s'])).toBe('Amended subject');
+		expect(git(repo, ['show', '--format=', '--name-only', 'HEAD']).split(/\r?\n/).filter((l) => l !== '')).toContain('a.txt');
+		expect(git(repo, ['status', '--porcelain', 'untracked.txt'])).toMatch(/^\?\? untracked\.txt/);
+		fs.unlinkSync(path.join(repo, 'untracked.txt'));
+
+		// master tracks origin/master and has moved past it, so HEAD is not pushed; after a push it is
+		expect(await dataSource.isHeadPushed(repo)).toBe(false);
+		git(repo, ['push', '-q', '--force', 'origin', 'master']);
+		expect(await dataSource.isHeadPushed(repo)).toBe(true);
+	});
+
 	it('pushes a branch to several remotes and reports the failing one', async () => {
 		const second = fs.mkdtempSync(path.join(os.tmpdir(), 'git-graph-remote2-'));
 		git(second, ['init', '-q', '--bare']);
