@@ -12,6 +12,7 @@ declare global {
 	interface Config {
 		autoCenterCommitDetailsView: boolean;
 		contextMenuActionsVisibility: GG.ContextMenuActionsVisibility;
+		defaultColumnVisibility: GG.ColumnVisibility;
 		dialogDefaults: GG.DialogDefaults;
 		fetchAndPrune: boolean;
 		fetchAndPruneTags: boolean;
@@ -23,6 +24,9 @@ declare global {
 		keyboardShortcuts: GG.KeyboardShortcuts;
 		loadMoreCommits: number;
 		loadMoreCommitsAutomatically: boolean;
+		muteCommitsThatAreNotAncestorsOfHead: boolean;
+		muteMergeCommits: boolean;
+		scrollToHeadOnLoad: boolean;
 		showCurrentBranchByDefault: boolean;
 		showRemoteBranches: boolean;
 	}
