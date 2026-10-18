@@ -1,8 +1,8 @@
 # Change Log
 
-## Unreleased
+## 2.4.0 - 2026-10-18
 
-Milestone "2.4 Beyond upstream" begins. Features in this milestone go beyond Git Graph 1.30 and are designed from scratch; nothing is taken from other extensions.
+Milestone "2.4 Beyond upstream", first release. These features go beyond Git Graph 1.30 and were designed from the descriptions on their tracking issues; nothing is taken from other extensions.
 
 * Sticky header: the controls bar and the column headers stay visible while the graph scrolls (`git-graph.stickyHeader`, default true).
 * Bisect from the graph: "Bisect: Mark as Bad / Good / Skip" in the commit menu starts and drives `git bisect`; marked commits get a G / B / S badge in the Commit column, a bar below the controls shows git's progress line, and "Bisect: Stop" runs `git bisect reset`. New key `commit.bisect` in `git-graph.contextMenuActionsVisibility`.
