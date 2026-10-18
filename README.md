@@ -35,19 +35,21 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
 
 This extension contributes the following settings:
 
-* `git-graph.autoCenterCommitDetailsView`: Automatically center the commit details view when it is opened.
-* `git-graph.dateFormat`: Specifies the date format used in the date column of the graph.
-* `git-graph.dateType`: Specifies whether the author date or the commit date is displayed.
-* `git-graph.fetchAvatars`: Fetch avatars of commit authors and committers. Default: false.
-* `git-graph.graphColours`: Specifies the colours used on the graph.
-* `git-graph.graphStyle`: Specifies the style of the graph.
-* `git-graph.initialLoadCommits`: Specifies the number of commits to load initially.
-* `git-graph.loadMoreCommits`: Specifies the number of commits to load when the "Load More Commits" button is pressed.
+* `git-graph.commitDetailsView.autoCenter`: Automatically center the commit details view when it is opened.
+* `git-graph.date.format`: Specifies the date format used in the date column of the graph.
+* `git-graph.date.type`: Specifies whether the author date or the commit date is displayed.
+* `git-graph.graph.colours`: Specifies the colours used on the graph.
+* `git-graph.graph.style`: Specifies the style of the graph.
 * `git-graph.maxDepthOfRepoSearch`: Specifies the maximum depth of subfolders to search when discovering repositories in the workspace. Default: 0.
-* `git-graph.showCurrentBranchByDefault`: Show the current branch by default when Git Graph is opened. Default: false.
+* `git-graph.repository.commits.fetchAvatars`: Fetch avatars of commit authors and committers. Default: false.
+* `git-graph.repository.commits.initialLoad`: Specifies the number of commits to load initially.
+* `git-graph.repository.commits.loadMore`: Specifies the number of commits to load when the "Load More Commits" button is pressed.
+* `git-graph.repository.onLoad.showCheckedOutBranch`: Show only the checked-out branch when Git Graph is opened. Default: false.
+* `git-graph.repository.showUncommittedChanges`: Show uncommitted changes. Set to false to decrease load time on large repositories.
 * `git-graph.showStatusBarItem`: Show a Status Bar item that opens Git Graph when clicked.
-* `git-graph.showUncommittedChanges`: Show uncommitted changes. Set to false to decrease load time on large repositories.
 * `git-graph.tabIconColourTheme`: Specifies the colour theme of the icon displayed on the Git Graph tab.
+
+The flat setting names from version 1.x (for example `git-graph.dateFormat`) are deprecated. They are still read when the grouped name is not set, so existing configurations keep working.
 
 This extension reads the following setting:
 
