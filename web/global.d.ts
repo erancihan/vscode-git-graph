@@ -28,6 +28,7 @@ declare global {
 		loadMoreCommitsAutomatically: boolean;
 		muteCommitsThatAreNotAncestorsOfHead: boolean;
 		muteMergeCommits: boolean;
+		referenceLabels: GG.ReferenceLabelsConfig;
 		scrollToHeadOnLoad: boolean;
 		showCurrentBranchByDefault: boolean;
 		showRemoteBranches: boolean;

@@ -354,19 +354,17 @@ class GitGraphView {
 	private renderTable() {
 		let html = '<tr id="tableColHeaders"><th id="tableHeaderGraphCol" class="tableColHeader">Graph</th><th class="tableColHeader">Description</th><th class="tableColHeader colDate">Date</th><th class="tableColHeader colAuthor">Author</th><th class="tableColHeader colCommit">Commit</th></tr>', i, currentHash = this.commits.length > 0 && this.commits[0].hash === '*' ? '*' : this.commitHead;
 		const ancestorsOfHead = this.config.muteCommitsThatAreNotAncestorsOfHead ? this.getAncestorsOfHead() : null;
+		const alignment = this.config.referenceLabels.alignment, tagsOnRight = alignment !== 'Normal', branchesInGraph = alignment === 'Branches (aligned to the graph) & Tags (on the right)';
+		this.updateGraphWidthVariable();
 		for (i = 0; i < this.commits.length; i++) {
-			let refs = '', message = escapeHtml(this.commits[i].message), date = getCommitDate(this.commits[i].date), j, refName, refActive, refHtml;
-			for (j = 0; j < this.commits[i].refs.length; j++) {
-				refName = escapeHtml(this.commits[i].refs[j].name);
-				refActive = this.commits[i].refs[j].type === 'head' && this.commits[i].refs[j].name === this.gitBranchHead;
-				refHtml = '<span class="gitRef ' + this.commits[i].refs[j].type + (refActive ? ' active' : '') + '" data-name="' + refName + '">' + (this.commits[i].refs[j].type === 'tag' ? svgIcons.tag : this.commits[i].refs[j].type === 'stash' ? svgIcons.stash : svgIcons.branch) + refName + '</span>';
-				refs = refActive ? refHtml + refs : refs + refHtml;
-			}
+			const message = escapeHtml(this.commits[i].message), date = getCommitDate(this.commits[i].date), labels = this.renderRefLabels(this.commits[i]);
+			const graphCell = branchesInGraph && labels.branches !== '' ? '<td><span class="gitRefsGraph">' + labels.branches + '</span></td>' : '<td></td>';
+			const refs = (branchesInGraph ? '' : labels.branches) + (tagsOnRight ? '' : labels.tags);
 			const muted = this.commits[i].hash !== '*' && (
 				(this.config.muteMergeCommits && this.commits[i].parentHashes.length > 1 && this.commits[i].stash === null) ||
 				(ancestorsOfHead !== null && !ancestorsOfHead[this.commits[i].hash])
 			);
-			html += '<tr ' + (this.commits[i].hash !== '*' ? 'class="commit' + (muted ? ' mute' : '') + '" data-hash="' + this.commits[i].hash + '"' : 'class="unsavedChanges"') + ' data-id="' + i + '" data-color="' + this.graph.getVertexColour(i) + '"><td></td><td>' + (this.commits[i].hash === this.commitHead ? '<span class="commitHeadDot"></span>' : '') + refs + (this.commits[i].hash === currentHash ? '<b>' + message + '</b>' : message) + '</td><td class="colDate" title="' + date.title + '">' + date.value + '</td><td class="colAuthor" title="' + escapeHtml(this.commits[i].author + ' <' + this.commits[i].email + '>') + '">' + (this.config.fetchAvatars ? '<span class="avatar" data-email="' + escapeHtml(this.commits[i].email) + '">' + (typeof this.avatars[this.commits[i].email] === 'string' ? '<img class="avatarImg" src="' + this.avatars[this.commits[i].email] + '">' : '') + '</span>' : '') + escapeHtml(this.commits[i].author) + '</td><td class="colCommit" title="' + escapeHtml(this.commits[i].hash) + '">' + abbrevCommit(this.commits[i].hash) + '</td></tr>';
+			html += '<tr ' + (this.commits[i].hash !== '*' ? 'class="commit' + (muted ? ' mute' : '') + '" data-hash="' + this.commits[i].hash + '"' : 'class="unsavedChanges"') + ' data-id="' + i + '" data-color="' + this.graph.getVertexColour(i) + '"">' + graphCell + '<td>' + (tagsOnRight && labels.tags !== '' ? '<div class="descriptionCell"><span class="descriptionMain">' : '') + (this.commits[i].hash === this.commitHead ? '<span class="commitHeadDot"></span>' : '') + refs + (this.commits[i].hash === currentHash ? '<b>' + message + '</b>' : message) + (tagsOnRight && labels.tags !== '' ? '</span><span class="gitRefsRight">' + labels.tags + '</span></div>' : '') + '</td><td class="colDate" title="' + date.title + '">' + date.value + '</td><td class="colAuthor" title="' + escapeHtml(this.commits[i].author + ' <' + this.commits[i].email + '>') + '">' + (this.config.fetchAvatars ? '<span class="avatar" data-email="' + escapeHtml(this.commits[i].email) + '">' + (typeof this.avatars[this.commits[i].email] === 'string' ? '<img class="avatarImg" src="' + this.avatars[this.commits[i].email] + '">' : '') + '</span>' : '') + escapeHtml(this.commits[i].author) + '</td><td class="colCommit" title="' + escapeHtml(this.commits[i].hash) + '">' + abbrevCommit(this.commits[i].hash) + '</td></tr>';
 		}
 		this.tableElem.innerHTML = '<table>' + html + '</table>';
 		this.footerElem.innerHTML = this.moreCommitsAvailable ? '<div id="loadMoreCommitsBtn" class="roundedBtn">Load More Commits</div>' : '';
@@ -624,14 +622,15 @@ class GitGraphView {
 		});
 		addDelegatedListener(this.tableElem, 'gitRef', 'contextmenu', (e: Event) => {
 			e.stopPropagation();
-			const sourceElem = <HTMLElement>(<Element>e.target).closest('.gitRef')!;
-			let refName = unescapeHtml(sourceElem.dataset.name!), menu: ContextMenuElement[], copyType: string;
+			const sourceElem = <HTMLElement>(<Element>e.target).closest('.gitRef')!, remoteElem = <HTMLElement | null>(<Element>e.target).closest('.gitRefRemote');
+			const isTag = sourceElem.classList.contains('tag'), isHead = remoteElem === null && sourceElem.classList.contains('head');
+			let refName = unescapeHtml((remoteElem !== null ? remoteElem : sourceElem).dataset.name!), menu: ContextMenuElement[], copyType: string;
 			if (sourceElem.classList.contains('stash')) {
 				const row = <HTMLElement>sourceElem.closest('.commit')!, hash = row.dataset.hash!;
 				this.showStashContextMenu(<MouseEvent>e, hash, this.commits[this.commitLookup[hash]].stash!, row);
 				return;
 			}
-			if (sourceElem.classList.contains('tag')) {
+			if (isTag) {
 				menu = [{
 					title: 'Delete Tag' + ELLIPSIS,
 					visible: this.config.contextMenuActionsVisibility.tag.delete,
@@ -652,7 +651,7 @@ class GitGraphView {
 				}];
 				copyType = 'Tag Name';
 			} else {
-				if (sourceElem.classList.contains('head')) {
+				if (isHead) {
 					menu = [];
 					if (this.gitBranchHead !== refName) {
 						menu.push({
@@ -768,7 +767,7 @@ class GitGraphView {
 			}
 			menu.push(null, {
 				title: 'Copy ' + copyType + ' to Clipboard',
-				visible: sourceElem.classList.contains('tag') ? this.config.contextMenuActionsVisibility.tag.copyName : sourceElem.classList.contains('head') ? this.config.contextMenuActionsVisibility.branch.copyName : this.config.contextMenuActionsVisibility.remoteBranch.copyName,
+				visible: isTag ? this.config.contextMenuActionsVisibility.tag.copyName : isHead ? this.config.contextMenuActionsVisibility.branch.copyName : this.config.contextMenuActionsVisibility.remoteBranch.copyName,
 				onClick: () => {
 					sendMessage({ command: 'copyToClipboard', type: copyType, data: refName });
 				}
@@ -781,8 +780,54 @@ class GitGraphView {
 			hideDialogAndContextMenu();
 			const sourceElem = <HTMLElement>(<Element>e.target).closest('.gitRef')!;
 			if (sourceElem.classList.contains('stash') || sourceElem.classList.contains('tag')) return;
-			this.checkoutBranchAction(sourceElem, unescapeHtml(sourceElem.dataset.name!));
+			const remoteElem = <HTMLElement | null>(<Element>e.target).closest('.gitRefRemote');
+			this.checkoutBranchAction(sourceElem, unescapeHtml((remoteElem !== null ? remoteElem : sourceElem).dataset.name!));
 		});
+	}
+	/**
+	 * HTML of the reference labels of a commit. Branch, remote branch and stash labels are returned
+	 * separately from tag labels, because the alignment setting places them in different spots.
+	 * With combineLocalAndRemoteBranchLabels, a remote branch that has the same name as a local
+	 * branch on the commit is shown inside the local branch's label (as the remote's name).
+	 */
+	private renderRefLabels(commit: GG.GitCommitNode): { branches: string, tags: string } {
+		const refs = commit.refs, combine = this.config.referenceLabels.combineLocalAndRemoteBranchLabels && this.gitRemotes.length > 0;
+		const combined: { [remoteBranchName: string]: true } = {};
+		let branches = '', tags = '', i, j;
+		for (i = 0; i < refs.length; i++) {
+			if (refs[i].type !== 'head') continue;
+			const name = escapeHtml(refs[i].name), active = refs[i].name === this.gitBranchHead;
+			let remotesHtml = '';
+			if (combine) {
+				for (j = 0; j < refs.length; j++) {
+					if (refs[j].type !== 'remote') continue;
+					const remote = this.getRemoteOfBranch(refs[j].name);
+					if (remote !== null && refs[j].name === remote + '/' + refs[i].name) {
+						combined[refs[j].name] = true;
+						remotesHtml += '<span class="gitRefRemote" data-name="' + escapeHtml(refs[j].name) + '" title="Remote Branch: ' + escapeHtml(refs[j].name) + '">' + escapeHtml(remote) + '</span>';
+					}
+				}
+			}
+			const html = '<span class="gitRef head' + (active ? ' active' : '') + (remotesHtml !== '' ? ' combined' : '') + '" data-name="' + name + '" title="Branch: ' + name + '">' + svgIcons.branch + name + remotesHtml + '</span>';
+			branches = active ? html + branches : branches + html;
+		}
+		for (i = 0; i < refs.length; i++) {
+			const type = refs[i].type;
+			if (type === 'head' || combined[refs[i].name]) continue;
+			const name = escapeHtml(refs[i].name);
+			const icon = type === 'tag' ? svgIcons.tag : type === 'stash' ? svgIcons.stash : svgIcons.branch;
+			const kind = type === 'tag' ? 'Tag' : type === 'stash' ? 'Stash' : 'Remote Branch';
+			const html = '<span class="gitRef ' + type + '" data-name="' + name + '" title="' + kind + ': ' + name + '">' + icon + name + '</span>';
+			if (type === 'tag') tags += html; else branches += html;
+		}
+		return { branches: branches, tags: tags };
+	}
+	/** Tells the stylesheet how wide the graph is, so labels placed in the Graph column start to its right. */
+	private updateGraphWidthVariable() {
+		const columnWidths = this.currentRepo !== '' && typeof this.gitRepos[this.currentRepo] !== 'undefined' ? this.gitRepos[this.currentRepo].columnWidths : null;
+		let width = this.graph.getWidth();
+		if (columnWidths !== null && columnWidths[0] < width) width = columnWidths[0];
+		this.tableElem.style.setProperty('--git-graph-width', (width + 8) + 'px');
 	}
 	private renderUncommitedChanges() {
 		const date = getCommitDate(this.commits[0].date);
@@ -935,6 +980,7 @@ class GitGraphView {
 					columnWidths[0] += mouseDeltaX;
 					cols[0].style.width = columnWidths[0] + 'px';
 					this.graph.limitMaxWidth(columnWidths[0] + 16);
+					this.updateGraphWidthVariable();
 				} else if (leftCol === 1) {
 					// Flexible description column against the first visible fixed column to its right
 					const r = widthIndex(rightCol);
@@ -1333,6 +1379,7 @@ const gitGraph = new GitGraphView(viewState.repos, viewState.lastActiveRepo, {
 	loadMoreCommitsAutomatically: viewState.loadMoreCommitsAutomatically,
 	muteCommitsThatAreNotAncestorsOfHead: viewState.muteCommitsThatAreNotAncestorsOfHead,
 	muteMergeCommits: viewState.muteMergeCommits,
+	referenceLabels: viewState.referenceLabels,
 	scrollToHeadOnLoad: viewState.scrollToHeadOnLoad,
 	showCurrentBranchByDefault: viewState.showCurrentBranchByDefault,
 	showRemoteBranches: viewState.showRemoteBranches
