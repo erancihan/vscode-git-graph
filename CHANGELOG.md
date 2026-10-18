@@ -1,6 +1,8 @@
 # Change Log
 
-## Unreleased
+## 2.1.0 - 2026-10-18
+
+Milestone "2.1 Foundations". Everything below was re-implemented from feature descriptions; no code was taken from upstream versions after 1.4.6 or from other extensions.
 
 * New "Git Graph" Output Channel (View > Output). It records every git command the extension runs, extension events, and errors from the avatar services (GitHub, GitLab, Gravatar). Open it when something does not load.
 * All git commands are now started with `spawn` and an argument array instead of a shell command line. Branch names, tag names and messages that contain quotes or spaces work, and the extension no longer depends on a shell.

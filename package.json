@@ -1,7 +1,7 @@
 {
 	"name": "vscode-git-graph",
 	"displayName": "Git Graph Community",
-	"version": "2.0.2",
+	"version": "2.1.0",
 	"publisher": "erancihan",
 	"author": {
 		"name": "Cihan Eran"
