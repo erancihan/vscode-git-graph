@@ -328,6 +328,7 @@ export class GitGraphView {
 					});
 					break;
 				case 'startCodeReview':
+					if (!this.isKnownRepo(msg.repo)) break;
 					this.sendMessage({
 						command: 'codeReviewsChanged',
 						repo: msg.repo,
@@ -335,6 +336,7 @@ export class GitGraphView {
 					});
 					break;
 				case 'endCodeReview':
+					if (!this.isKnownRepo(msg.repo)) break;
 					this.sendMessage({
 						command: 'codeReviewsChanged',
 						repo: msg.repo,
@@ -342,7 +344,7 @@ export class GitGraphView {
 					});
 					break;
 				case 'updateCodeReview':
-					this.extensionState.saveCodeReview(msg.repo, msg.review);
+					if (this.isKnownRepo(msg.repo)) this.extensionState.saveCodeReview(msg.repo, msg.review);
 					break;
 				case 'openExternalUrl':
 					this.sendMessage({
@@ -505,6 +507,11 @@ export class GitGraphView {
 		}
 	}
 
+	/** Only repositories the extension discovered or the user added may carry state. */
+	private isKnownRepo(repo: string) {
+		return typeof repo === 'string' && Object.prototype.hasOwnProperty.call(this.repoManager.getRepos(), repo);
+	}
+
 	/** The stored state of a repository (defaults when the repository is unknown). */
 	private getRepoState(repo: string): GitRepoState {
 		const repos = this.repoManager.getRepos();
@@ -566,7 +573,7 @@ export class GitGraphView {
 			<div id="dialogBacking"></div>
 			<div id="dialog"></div>
 			<div id="scrollShadow"></div>
-			<script nonce="${nonce}">var viewState = ${JSON.stringify(viewState)};</script>
+			<script nonce="${nonce}">var viewState = ${serializeForScript(viewState)};</script>
 			<script nonce="${nonce}" src="${this.getMediaUri('out.min.js')}"></script>
 			</body>`;
 		} else {
@@ -640,6 +647,14 @@ function viewFileAtRevision(repo: string, commitHash: string, filePath: string) 
 /** Open the file from the working tree. */
 function openFile(repo: string, filePath: string) {
 	return runToBoolean(vscode.window.showTextDocument(vscode.Uri.file(path.join(repo, filePath)), { preview: true }));
+}
+
+/**
+ * JSON for an inline <script>: "<", ">" and the line terminators U+2028 / U+2029 are escaped so that
+ * repository data (paths, names, messages) can never close the script element or break the parser.
+ */
+export function serializeForScript(value: unknown) {
+	return JSON.stringify(value).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
 }
 
 /** Open an http(s) URL in the browser. Other schemes are refused. */
