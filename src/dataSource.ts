@@ -28,6 +28,12 @@ export class DataSource {
 	private readonly logger: Logger;
 	private gitPath: string = 'git';
 	private gitVersion: string | null = null;
+	private environmentProvider: () => { [key: string]: string } = () => ({});
+
+	/** Extra environment variables for every git process (used for the askpass helper). */
+	public setEnvironmentProvider(provider: () => { [key: string]: string }) {
+		this.environmentProvider = provider;
+	}
 
 	/** Output of `git --version`, or null until it has been read. */
 	public getGitVersion() {
@@ -740,7 +746,8 @@ export class DataSource {
 
 			let cmd: cp.ChildProcess;
 			try {
-				cmd = cp.spawn(this.gitPath, fullArgs, { cwd: repo });
+				const extraEnv = this.environmentProvider();
+				cmd = cp.spawn(this.gitPath, fullArgs, { cwd: repo, env: Object.keys(extraEnv).length > 0 ? Object.assign({}, process.env, extraEnv) : process.env });
 			} catch (e) {
 				fail('Unable to start git (' + this.gitPath + '): ' + (e instanceof Error ? e.message : String(e)));
 				return;

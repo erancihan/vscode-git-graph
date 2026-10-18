@@ -867,6 +867,11 @@
 					"default": "Workspace Full Path",
 					"description": "Order of the repositories in the \"Repo\" dropdown."
 				},
+				"git-graph.integratedAskpass": {
+					"type": "boolean",
+					"default": true,
+					"description": "Let git ask for credentials (HTTPS user names and passwords, SSH passphrases) through a Visual Studio Code input box when no credential helper answers. When false, git actions that need credentials fail instead of prompting."
+				},
 				"git-graph.integratedTerminalShell": {
 					"type": "string",
 					"default": "",

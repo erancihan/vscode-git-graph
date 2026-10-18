@@ -1,6 +1,7 @@
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { AskpassManager } from './askpassManager';
 import { AvatarManager } from './avatarManager';
 import { getConfig } from './config';
 import { DataSource } from './dataSource';
@@ -19,6 +20,11 @@ export function activate(context: vscode.ExtensionContext) {
 	const extensionState = new ExtensionState(context);
 	extensionState.pruneCodeReviews();
 	const dataSource = new DataSource(logger);
+	const askpass = new AskpassManager(context.extensionPath, (prompt, isPassword) => {
+		return Promise.resolve(vscode.window.showInputBox({ prompt: 'Git Graph: ' + prompt, password: isPassword, ignoreFocusOut: true })).then((value) => typeof value === 'string' ? value : null);
+	}, logger);
+	dataSource.setEnvironmentProvider(() => getConfig().integratedAskpass() ? askpass.getEnvironment() : {});
+	if (getConfig().integratedAskpass()) askpass.start();
 	const avatarManager = new AvatarManager(dataSource, extensionState, logger);
 	const statusBarItem = new StatusBarItem(context);
 	const repoManager = new RepoManager(dataSource, extensionState, statusBarItem);
@@ -113,8 +119,12 @@ export function activate(context: vscode.ExtensionContext) {
 			if (e.affectsConfiguration('git.path')) {
 				dataSource.registerGitPath();
 			}
+			if (e.affectsConfiguration('git-graph.integratedAskpass') && getConfig().integratedAskpass()) {
+				askpass.start();
+			}
 		}),
 		repoManager,
+		askpass,
 		logger
 	);
 	logger.log('Started Git Graph - Ready to use!');

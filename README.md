@@ -117,6 +117,7 @@ This extension contributes the following settings:
 * `git-graph.repository.showUntrackedFiles`: Count untracked files in the "Uncommitted Changes" row. Default: true.
 * `git-graph.repository.useMailmap`: Apply the repository's `.mailmap` to author and committer identities. Default: false.
 * `git-graph.repositoryDropdownOrder`: Order of the "Repo" dropdown: `Full Path`, `Name` or `Workspace Full Path`. Default: `Workspace Full Path`.
+* `git-graph.integratedAskpass`: Ask for git credentials in an input box when no credential helper answers (fetch, pull, push over HTTPS; SSH passphrases). Default: true.
 * `git-graph.integratedTerminalShell`: Shell executable for the terminals Git Graph opens (interactive rebase). Empty: the default shell. User Settings only. Default: empty.
 * `git-graph.retainContextWhenHidden`: Keep the view alive while its tab is hidden so it restores instantly. Default: true.
 * `git-graph.sourceCodeProviderIntegrationLocation`: Where "View Git Graph" appears in the Source Control view: `Inline` (title bar button) or `More Actions`. Default: `Inline`.
