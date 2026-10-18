@@ -180,9 +180,53 @@ function describeCiStatus(status: GG.CommitCiStatus): string {
 }
 
 /**
- * Same rule as the extension: an issue pattern must be short and must not nest quantifiers (for
- * example `(a+)+`), because it runs on every commit message. Compilation is checked separately.
+ * True when a pattern cannot backtrack catastrophically in the common shapes: no quantifier (`*`,
+ * `+`, `{n,}`, `{n,m}`) applies to a group that itself contains a quantifier or an alternation at
+ * any depth (star height above one, or `(a|aa)+`), and the pattern is at most 200 characters.
+ * Character classes and escapes are skipped; `?` is bounded and does not count. Malformed input is
+ * unsafe.
  */
 function isSafeIssuePattern(pattern: string) {
-	return pattern.trim() !== '' && pattern.length <= 200 && !/\((?:[^()\\]|\\.)*[+*}](?:[^()\\]|\\.)*\)\s*[+*{]/.test(pattern);
+	if (typeof pattern !== 'string' || pattern.trim() === '' || pattern.length > 200) return false;
+	try {
+		new RegExp(pattern, 'g');
+	} catch (e) {
+		return false;
+	}
+	return starHeightIsSafe(pattern);
+}
+
+function starHeightIsSafe(pattern: string) {
+	const frames: { quantifier: boolean, alternation: boolean }[] = [{ quantifier: false, alternation: false }];
+	const quantifierAt = (i: number) => {
+		if (pattern[i] === '*' || pattern[i] === '+') return true;
+		if (pattern[i] === '{') {
+			const match = /^\{\d+(,\d*)?\}/.exec(pattern.substring(i));
+			return match !== null && !(match[1] === undefined && /^\{(0|1)\}/.test(match[0]));
+		}
+		return false;
+	};
+	for (let i = 0; i < pattern.length; i++) {
+		const c = pattern[i];
+		if (c === '\\') { i++; continue; }
+		if (c === '[') {
+			i++;
+			if (pattern[i] === '^') i++;
+			if (pattern[i] === ']') i++;
+			while (i < pattern.length && pattern[i] !== ']') { if (pattern[i] === '\\') i++; i++; }
+			continue;
+		}
+		if (c === '(') { frames.push({ quantifier: false, alternation: false }); continue; }
+		if (c === ')') {
+			if (frames.length < 2) return false;
+			const frame = frames.pop()!, quantified = quantifierAt(i + 1);
+			if (quantified && (frame.quantifier || frame.alternation)) return false;
+			frames[frames.length - 1].quantifier = frames[frames.length - 1].quantifier || frame.quantifier || quantified;
+			frames[frames.length - 1].alternation = frames[frames.length - 1].alternation || frame.alternation;
+			continue;
+		}
+		if (c === '|') { frames[frames.length - 1].alternation = true; continue; }
+		if (quantifierAt(i)) frames[frames.length - 1].quantifier = true;
+	}
+	return frames.length === 1;
 }

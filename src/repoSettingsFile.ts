@@ -116,13 +116,21 @@ export function writeRepoSettingsFile(file: string, text: string) {
 	}
 }
 
-/** A short, readable list of what a settings file would change, for the confirmation prompt. */
+/**
+ * A short, readable list of what a settings file would change, for the confirmation prompt. The
+ * values come from a file in the repository, so control characters are removed and every value and
+ * the whole text are cut to a fixed length.
+ */
 export function describeRepoSettings(imported: ExportedRepoSettings): string {
 	const parts: string[] = [];
+	const clean = (value: string) => {
+		const text = value.replace(/[\x00-\x1f\x7f\u2028\u2029]/g, ' ');
+		return text.length > 80 ? text.substring(0, 77) + '...' : text;
+	};
 	const flag = (key: ExportedKey, label: string) => {
 		if (!Object.prototype.hasOwnProperty.call(imported, key)) return;
 		const value = imported[key];
-		parts.push(label + ': ' + (value === null ? 'default' : Array.isArray(value) ? (value.length > 0 ? value.join(', ') : 'none') : typeof value === 'object' ? JSON.stringify(value) : String(value)));
+		parts.push(label + ': ' + (value === null ? 'default' : Array.isArray(value) ? (value.length > 0 ? clean(value.join(', ')) : 'none') : typeof value === 'object' ? clean(JSON.stringify(value)) : String(value)));
 	};
 	flag('showTags', 'show tags');
 	flag('showStashes', 'show stashes');
@@ -131,11 +139,12 @@ export function describeRepoSettings(imported: ExportedRepoSettings): string {
 	flag('hideRemotes', 'hidden remotes');
 	if (Object.prototype.hasOwnProperty.call(imported, 'onLoad')) {
 		const onLoad = imported.onLoad;
-		parts.push('branches on load: ' + (onLoad === null || onLoad === undefined ? 'default' : (onLoad.showCheckedOutBranch ? 'checked-out branch' : '') + (onLoad.showSpecificBranches.length > 0 ? (onLoad.showCheckedOutBranch ? ' + ' : '') + onLoad.showSpecificBranches.join(', ') : '')));
+		parts.push('branches on load: ' + (onLoad === null || onLoad === undefined ? 'default' : (onLoad.showCheckedOutBranch ? 'checked-out branch' : '') + (onLoad.showSpecificBranches.length > 0 ? (onLoad.showCheckedOutBranch ? ' + ' : '') + clean(onLoad.showSpecificBranches.join(', ')) : '')));
 	}
 	if (Object.prototype.hasOwnProperty.call(imported, 'issueLinkingConfig')) {
 		const linking = imported.issueLinkingConfig;
-		parts.push('issue linking: ' + (linking === null || linking === undefined ? 'none' : linking.issue + ' -> ' + linking.url));
+		parts.push('issue linking: ' + (linking === null || linking === undefined ? 'none' : clean(linking.issue) + ' -> ' + clean(linking.url)));
 	}
-	return parts.join('; ');
+	const text = parts.join('; ');
+	return text.length > 400 ? text.substring(0, 397) + '...' : text;
 }

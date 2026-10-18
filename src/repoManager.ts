@@ -410,22 +410,56 @@ export function normaliseRepoState(state: Partial<GitRepoState> | null | undefin
 	return result;
 }
 
-const NESTED_QUANTIFIER = /\((?:[^()\\]|\\.)*[+*}](?:[^()\\]|\\.)*\)\s*[+*{]/;
-
 /**
- * An issue pattern is used as a regular expression on every commit message, so it must compile, stay
- * short, and avoid quantified groups that contain quantifiers (the classic catastrophic backtracking
- * shape such as `(a+)+`). Patterns can arrive from a shared file in a repository, not only from the user.
+ * True when a pattern cannot backtrack catastrophically in the common shapes: no quantifier (`*`,
+ * `+`, `{n,}`, `{n,m}`) applies to a group that itself contains a quantifier or an alternation at
+ * any depth (star height above one, or `(a|aa)+`), and the pattern is at most 200 characters.
+ * Character classes and escapes are skipped; `?` is bounded and does not count. Malformed input is
+ * unsafe.
  */
 export function isSafeIssuePattern(pattern: string) {
 	if (typeof pattern !== 'string' || pattern.trim() === '' || pattern.length > 200) return false;
-	if (NESTED_QUANTIFIER.test(pattern)) return false;
 	try {
 		new RegExp(pattern, 'g');
-		return true;
 	} catch (e) {
 		return false;
 	}
+	return starHeightIsSafe(pattern);
+}
+
+function starHeightIsSafe(pattern: string) {
+	const frames: { quantifier: boolean, alternation: boolean }[] = [{ quantifier: false, alternation: false }];
+	const quantifierAt = (i: number) => {
+		if (pattern[i] === '*' || pattern[i] === '+') return true;
+		if (pattern[i] === '{') {
+			const match = /^\{\d+(,\d*)?\}/.exec(pattern.substring(i));
+			return match !== null && !(match[1] === undefined && /^\{(0|1)\}/.test(match[0]));
+		}
+		return false;
+	};
+	for (let i = 0; i < pattern.length; i++) {
+		const c = pattern[i];
+		if (c === '\\') { i++; continue; }
+		if (c === '[') {
+			i++;
+			if (pattern[i] === '^') i++;
+			if (pattern[i] === ']') i++;
+			while (i < pattern.length && pattern[i] !== ']') { if (pattern[i] === '\\') i++; i++; }
+			continue;
+		}
+		if (c === '(') { frames.push({ quantifier: false, alternation: false }); continue; }
+		if (c === ')') {
+			if (frames.length < 2) return false;
+			const frame = frames.pop()!, quantified = quantifierAt(i + 1);
+			if (quantified && (frame.quantifier || frame.alternation)) return false;
+			frames[frames.length - 1].quantifier = frames[frames.length - 1].quantifier || frame.quantifier || quantified;
+			frames[frames.length - 1].alternation = frames[frames.length - 1].alternation || frame.alternation;
+			continue;
+		}
+		if (c === '|') { frames[frames.length - 1].alternation = true; continue; }
+		if (quantifierAt(i)) frames[frames.length - 1].quantifier = true;
+	}
+	return frames.length === 1;
 }
 
 /** A branch or glob pattern name for the on-load selection: not empty, no control characters, no leading dash. */
