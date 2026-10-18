@@ -17,7 +17,7 @@ Work is tracked in GitHub milestones. Each theme has a tracking issue labeled `t
 3. No account, no telemetry, no network calls except the ones the user enables (avatars, issue links).
 4. Each milestone ships as a Marketplace and Open VSX release. Small releases are preferred over large ones.
 
-## Where we stand (2.5.0)
+## Where we stand (2.6.0)
 
 Shipped in 2.0.x: the Git Graph 1.4.6 feature set, a current toolchain (TypeScript 5, ESLint, Node 20, VS Code 1.74 or later), CI, release pipeline, two bug fixes.
 
@@ -35,7 +35,7 @@ Shipped in 2.4.1: worktrees (list, add, open, remove, prune) and conflict help (
 
 Shipped in 2.4.2: interactive rebase editor (#30) with the "Fixup into Parent" shortcut; localisation with a Turkish sample (#32); CI status dot for GitHub and GitLab (#39); conflict prediction in the merge, rebase and cherry pick dialogs (#35); one uncommitted-changes row per worktree (#33); translation of the commit details view.
 
-Milestone 2.4 is complete with 2.4.2. Release 2.4.3 completes the Repository Settings widget (branches shown on load, export and import of `.vscode/git-graph.json`, git config includes). Release 2.5.0 adds the remaining parity settings and commands from the audit of `docs/UPSTREAM_GAP.md`: dialog defaults (push tag on add, fetch-remote pruning, squash pull message, on-load branches), file encoding, editor group for diffs, open circle position, inline Markdown, code review commands, and menus that survive a refresh. Open: emoji shortcodes (P3), Remote Development and network drive verification (need a reproduction), and the layout performance item.
+Milestone 2.4 is complete with 2.4.2. Release 2.4.3 completes the Repository Settings widget (branches shown on load, export and import of `.vscode/git-graph.json`, git config includes). Release 2.5.0 adds the remaining parity settings and commands from the audit of `docs/UPSTREAM_GAP.md`: dialog defaults (push tag on add, fetch-remote pruning, squash pull message, on-load branches), file encoding, editor group for diffs, open circle position, inline Markdown, code review commands, and menus that survive a refresh. Release 2.6.0 adds emoji shortcodes, the latest tag hint, branch name checks, the HEAD flash and tooltip, and both dates with the committer email in the details. Open: Remote Development and network drive verification (need a reproduction), narrow layouts, SVN remotes, and the layout performance item.
 
 Still missing versus Git Graph 1.30: export and import of repository settings, `git config` includes, initial branches per repository, pull request configuration stored per repository, and the smaller presentation items listed in `docs/UPSTREAM_GAP.md`. Missing versus the field: see the ranked table in `docs/COMPETITORS.md`, section 3 (milestone 2.4).
 

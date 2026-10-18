@@ -1,6 +1,8 @@
 # Change Log
 
-## Unreleased
+## 2.6.0 - 2026-10-18
+
+GPG signing from the graph without a terminal (passphrase prompt in Visual Studio Code), plus small polish items from the gap document.
 
 * GPG signing works without a terminal: with `git-graph.gpg.passphrasePrompt` (default on) the git processes Git Graph starts use a gpg wrapper that runs your gpg first and, when gpg cannot show its own passphrase prompt, asks for the passphrase in an input box and retries with a loopback pinentry. Applies to signed commits, tags, merges, cherry picks, reverts and the rebase editor. Signing errors now carry a hint. User Settings only.
 * Commit Details View: the committer's email is shown next to the name, and when the author date and the commit date differ both are listed ("Author Date" and "Commit Date").
