@@ -4,6 +4,7 @@
 
 * The rebase dialogs have a "Launch Interactive Rebase in new Terminal" option. It opens an integrated terminal in the repository and runs `git rebase --interactive` there, so the todo list can be edited. New settings `git-graph.dialog.rebase.launchInteractiveRebase` and `git-graph.integratedTerminalShell`.
 * Reference labels: a local branch and its remote branches on the same commit are shown as one label (`git-graph.referenceLabels.combineLocalAndRemoteBranchLabels`); right-click the remote name for the remote branch actions. `git-graph.referenceLabels.alignment` moves tag labels to the right end of the Description column and, optionally, branch labels next to the graph so the commit messages stay aligned. Labels show their full name and type as a tooltip.
+* Commit details view: `git-graph.commitDetailsView.location` docks the view to the bottom of the Git Graph view instead of opening it inline. In both places the height can be changed by dragging the edge of the view, and the height is kept while the view is open. Parent hashes in the details are links that open the parent commit. With the details open, the Up and Down arrow keys step to the previous or next commit and Escape closes the view.
 * Security: the command typed into the terminal accepts only letters, digits and `_ . / @ + -` in the rebase target. Other reference names are refused with a message instead of being passed to the shell.
 
 ## 2.2.0 - 2026-10-18

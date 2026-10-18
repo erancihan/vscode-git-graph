@@ -1,3 +1,5 @@
+const DETAILS_DEFAULT_HEIGHT = 250, DETAILS_MIN_HEIGHT = 120, DETAILS_WINDOW_MARGIN = 120;
+
 class GitGraphView {
 	private gitRepos: GG.GitRepoSet;
 	private gitBranches: string[] = [];
@@ -20,6 +22,7 @@ class GitGraphView {
 	private scrollToHeadPending: boolean;
 	private lastStashScrolledTo: number = -1;
 	private fileViewType: GG.FileViewType;
+	private commitDetailsHeight: number = DETAILS_DEFAULT_HEIGHT;
 
 	private tableElem: HTMLElement;
 	private footerElem: HTMLElement;
@@ -50,6 +53,17 @@ class GitGraphView {
 			}
 		});
 		document.addEventListener('keydown', (e) => {
+			if (!e.ctrlKey && !e.metaKey && !e.altKey && this.expandedCommit !== null && !isDialogOrContextMenuOpen() && !isTextInput(e.target)) {
+				// Navigation while the commit details view is open
+				if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+					e.preventDefault();
+					this.openAdjacentCommitDetails(e.key === 'ArrowUp' ? -1 : 1);
+				} else if (e.key === 'Escape') {
+					e.preventDefault();
+					this.hideCommitDetails();
+				}
+				return;
+			}
 			if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
 			const key = e.key.toLowerCase(), shortcuts = this.config.keyboardShortcuts;
 			if (key === shortcuts.find) {
@@ -71,7 +85,7 @@ class GitGraphView {
 			this.currentRepo = values[0];
 			this.maxCommits = this.config.initialLoadCommits;
 			this.scrollToHeadPending = this.config.scrollToHeadOnLoad;
-			this.expandedCommit = null;
+			this.discardExpandedCommit();
 			this.currentBranches = null;
 			this.saveState();
 			this.refresh(true);
@@ -79,7 +93,7 @@ class GitGraphView {
 		this.branchDropdown = new Dropdown('branchSelect', false, true, 'Branches', values => {
 			this.currentBranches = values;
 			this.maxCommits = this.config.initialLoadCommits;
-			this.expandedCommit = null;
+			this.discardExpandedCommit();
 			this.saveState();
 			this.renderShowLoading();
 			this.requestLoadCommits(true, () => { });
@@ -112,6 +126,7 @@ class GitGraphView {
 				this.maxCommits = prevState.maxCommits;
 				this.expandedCommit = prevState.expandedCommit;
 				this.avatars = prevState.avatars;
+				if (typeof prevState.commitDetailsHeight === 'number') this.commitDetailsHeight = this.clampDetailsHeight(prevState.commitDetailsHeight);
 				this.loadBranches(prevState.gitBranches, prevState.gitBranchHead, prevState.gitRemotes || [], true, true);
 				this.loadCommits(prevState.commits, prevState.commitHead, prevState.moreCommitsAvailable, true);
 			}
@@ -129,7 +144,7 @@ class GitGraphView {
 		if (typeof this.gitRepos[repo] === 'undefined' || repo === this.currentRepo) return;
 		this.currentRepo = repo;
 		this.maxCommits = this.config.initialLoadCommits;
-		this.expandedCommit = null;
+		this.discardExpandedCommit();
 		this.currentBranches = null;
 		this.scrollToHeadPending = this.config.scrollToHeadOnLoad;
 		this.saveState();
@@ -237,7 +252,7 @@ class GitGraphView {
 		this.graph.loadCommits(this.commits, this.commitHead, this.commitLookup);
 
 		if (this.expandedCommit !== null && !expandedCommitVisible) {
-			this.expandedCommit = null;
+			this.discardExpandedCommit();
 			this.saveState();
 		}
 		this.render();
@@ -271,7 +286,7 @@ class GitGraphView {
 	public refresh(hard: boolean) {
 		if (hard) {
 			if (this.expandedCommit !== null) {
-				this.expandedCommit = null;
+				this.discardExpandedCommit();
 				this.saveState();
 			}
 			this.renderShowLoading();
@@ -333,7 +348,8 @@ class GitGraphView {
 			maxCommits: this.maxCommits,
 			showRemoteBranches: this.showRemoteBranches,
 			expandedCommit: this.expandedCommit,
-			fileViewType: this.fileViewType
+			fileViewType: this.fileViewType,
+			commitDetailsHeight: this.commitDetailsHeight
 		});
 	}
 
@@ -345,11 +361,12 @@ class GitGraphView {
 	private renderGraph() {
 		const colHeadersElem = document.getElementById('tableColHeaders');
 		if (colHeadersElem === null) return;
-		const headerHeight = colHeadersElem.clientHeight + 1, expandedCommitElem = this.expandedCommit !== null ? document.getElementById('commitDetails') : null;
+		const headerHeight = colHeadersElem.clientHeight + 1, inlineExpandedCommit = this.expandedCommit !== null && !this.isDetailsDocked() ? this.expandedCommit : null;
+		const expandedCommitElem = inlineExpandedCommit !== null ? document.getElementById('commitDetails') : null;
 		this.config.grid.expandY = expandedCommitElem !== null ? expandedCommitElem.getBoundingClientRect().height : this.config.grid.expandY;
-		this.config.grid.y = this.commits.length > 0 ? (this.tableElem.children[0].clientHeight - headerHeight - (this.expandedCommit !== null ? this.config.grid.expandY : 0)) / this.commits.length : this.config.grid.y;
+		this.config.grid.y = this.commits.length > 0 ? (this.tableElem.children[0].clientHeight - headerHeight - (inlineExpandedCommit !== null ? this.config.grid.expandY : 0)) / this.commits.length : this.config.grid.y;
 		this.config.grid.offsetY = headerHeight + this.config.grid.y / 2;
-		this.graph.render(this.expandedCommit);
+		this.graph.render(inlineExpandedCommit);
 	}
 	private renderTable() {
 		let html = '<tr id="tableColHeaders"><th id="tableHeaderGraphCol" class="tableColHeader">Graph</th><th class="tableColHeader">Description</th><th class="tableColHeader colDate">Date</th><th class="tableColHeader colAuthor">Author</th><th class="tableColHeader colCommit">Commit</th></tr>', i, currentHash = this.commits.length > 0 && this.commits[0].hash === '*' ? '*' : this.commitHead;
@@ -385,7 +402,7 @@ class GitGraphView {
 				}
 			}
 			if (elem === null) {
-				this.expandedCommit = null;
+				this.discardExpandedCommit();
 				this.saveState();
 			} else {
 				this.expandedCommit.id = parseInt(elem.dataset.id!);
@@ -1198,9 +1215,35 @@ class GitGraphView {
 			if (typeof this.expandedCommit.srcElem === 'object' && this.expandedCommit.srcElem !== null) this.expandedCommit.srcElem.classList.remove('commitDetailsOpen');
 			if (this.expandedCommit.compareWithSrcElem !== null) this.expandedCommit.compareWithSrcElem.classList.remove('compareCommitOpen');
 			this.expandedCommit = null;
+			document.body.style.paddingBottom = '';
 			this.saveState();
 			this.renderGraph();
 		}
+	}
+	/** Open the details of the commit `delta` rows away from the expanded commit (keyboard navigation). */
+	private openAdjacentCommitDetails(delta: number) {
+		if (this.expandedCommit === null) return;
+		let id = this.expandedCommit.id + delta;
+		while (id >= 0 && id < this.commits.length && this.commits[id].hash === '*') id += delta;
+		if (id < 0 || id >= this.commits.length) return;
+		const row = <HTMLElement | null>this.tableElem.querySelector('tr.commit[data-id="' + id + '"]');
+		if (row === null) return;
+		this.loadCommitDetails(row);
+		if (this.isDetailsDocked()) this.scrollToRow(id);
+	}
+	/** Forget the expanded commit and remove its view from the document (also the docked one, which is not part of the table). */
+	private discardExpandedCommit() {
+		const elem = document.getElementById('commitDetails');
+		if (elem !== null) elem.remove();
+		document.body.style.paddingBottom = '';
+		this.expandedCommit = null;
+	}
+	private isDetailsDocked() {
+		return this.config.commitDetailsView.location === 'Docked to Bottom';
+	}
+	private clampDetailsHeight(height: number) {
+		const max = Math.max(DETAILS_MIN_HEIGHT, window.innerHeight - DETAILS_WINDOW_MARGIN);
+		return Math.min(Math.max(Math.round(height), DETAILS_MIN_HEIGHT), max);
 	}
 	/** Show the files that differ between the expanded commit and the commit it is compared with. */
 	public showCommitComparison(fromHash: string, toHash: string, fileChanges: GG.GitFileChange[], fileTree: GitFolder) {
@@ -1215,13 +1258,13 @@ class GitGraphView {
 		this.saveState();
 
 		const describe = (hash: string) => hash === '*' ? '<b>Uncommitted Changes</b>' : '<b>' + abbrevCommit(hash) + '</b>' + (typeof this.commitLookup[hash] === 'number' ? ': ' + escapeHtml(this.commits[this.commitLookup[hash]].message) : '');
-		let html = '<td></td><td colspan="4"><div id="commitDetailsSummary">';
+		let html = '<div id="commitDetailsSummary">';
 		html += '<span class="commitDetailsSummaryTop"><span class="commitDetailsSummaryTopRow"><span class="commitDetailsSummaryKeyValues">';
 		html += '<b>Comparing: </b>' + describe(fromHash) + '<br><b>With: </b>' + describe(toHash) + '<br><br>';
 		html += fileChanges.length + ' file' + (fileChanges.length !== 1 ? 's' : '') + ' differ' + (fileChanges.length === 1 ? 's' : '') + '. Click a file to view the diff between the two revisions. Ctrl/Cmd+click the compared commit again to return to its details.';
 		html += '</span></span></span></div>';
 		html += this.generateDetailsFilesHtml(fileTree, fileChanges);
-		html += '<div id="commitDetailsClose">' + svgIcons.close + '</div></td>';
+		html += '<div id="commitDetailsClose">' + svgIcons.close + '</div>';
 		this.renderDetailsElem(html, this.expandedCommit.srcElem);
 	}
 	public showCommitDetails(commitDetails: GG.GitCommitDetails, fileTree: GitFolder) {
@@ -1235,10 +1278,15 @@ class GitGraphView {
 		this.expandedCommit.srcElem.classList.add('commitDetailsOpen');
 		this.saveState();
 
-		let html = '<td></td><td colspan="4"><div id="commitDetailsSummary">';
+		let html = '<div id="commitDetailsSummary">';
 		html += '<span class="commitDetailsSummaryTop' + (typeof this.avatars[commitDetails.email] === 'string' ? ' withAvatar' : '') + '"><span class="commitDetailsSummaryTopRow"><span class="commitDetailsSummaryKeyValues">';
 		html += '<b>Commit: </b>' + escapeHtml(commitDetails.hash) + '<br>';
-		html += '<b>Parents: </b>' + commitDetails.parents.join(', ') + '<br>';
+		html += '<b>Parents: </b>' + commitDetails.parents.map((parent) => {
+			const loaded = typeof this.commitLookup[parent] === 'number';
+			return loaded
+				? '<span class="commitDetailsParent" data-hash="' + escapeHtml(parent) + '" title="Open the details of this commit">' + escapeHtml(parent) + '</span>'
+				: '<span title="This commit is not loaded on the graph">' + escapeHtml(parent) + '</span>';
+		}).join(', ') + '<br>';
 		html += '<b>Author: </b>' + escapeHtml(commitDetails.author) + ' &lt;<a href="mailto:' + encodeURIComponent(commitDetails.email) + '">' + escapeHtml(commitDetails.email) + '</a>&gt;<br>';
 		html += '<b>Date: </b>' + (new Date(commitDetails.date * 1000)).toString() + '<br>';
 		html += '<b>Committer: </b>' + escapeHtml(commitDetails.committer);
@@ -1252,8 +1300,43 @@ class GitGraphView {
 		html += escapeHtml(commitDetails.body).replace(/\n/g, '<br>') + '</div>';
 		html += this.generateDetailsFilesHtml(fileTree, commitDetails.fileChanges);
 		html += '<div id="commitDetailsClose">' + svgIcons.close + '</div>';
-		html += '</td>';
 		this.renderDetailsElem(html, this.expandedCommit.srcElem);
+	}
+	/** Let the user drag the edge of the details view to change its height. The height is kept in the view state. */
+	private makeDetailsResizable(detailsElem: HTMLElement, docked: boolean) {
+		const handle = document.getElementById('commitDetailsResize');
+		if (handle === null) return;
+		let startY = -1, startHeight = this.commitDetailsHeight;
+		const onMove = (e: MouseEvent) => {
+			if (startY < 0) return;
+			// Dragging the top edge of a docked view up makes it taller; dragging the bottom edge of an inline view down does
+			const height = this.clampDetailsHeight(startHeight + (docked ? startY - e.clientY : e.clientY - startY));
+			if (height === this.commitDetailsHeight) return;
+			this.commitDetailsHeight = height;
+			detailsElem.style.height = height + 'px';
+			if (docked) {
+				document.body.style.paddingBottom = height + 'px';
+			} else {
+				this.config.grid.expandY = height;
+				this.renderGraph();
+			}
+		};
+		const onUp = () => {
+			if (startY < 0) return;
+			startY = -1;
+			document.body.classList.remove('resizingDetails');
+			document.removeEventListener('mousemove', onMove);
+			document.removeEventListener('mouseup', onUp);
+			this.saveState();
+		};
+		handle.addEventListener('mousedown', (e) => {
+			e.preventDefault();
+			startY = e.clientY;
+			startHeight = this.commitDetailsHeight;
+			document.body.classList.add('resizingDetails');
+			document.addEventListener('mousemove', onMove);
+			document.addEventListener('mouseup', onUp);
+		});
 	}
 	private generateDetailsFilesHtml(fileTree: GitFolder, fileChanges: GG.GitFileChange[]) {
 		return '<div id="commitDetailsFiles"><div id="commitDetailsFileViewSwitch">'
@@ -1261,21 +1344,55 @@ class GitGraphView {
 			+ '<span class="fileViewTypeBtn' + (this.fileViewType === 'list' ? ' active' : '') + '" data-type="list" title="File List">' + svgIcons.fileList + '</span>'
 			+ '</div>' + (this.fileViewType === 'tree' ? generateGitFileTreeHtml(fileTree, fileChanges, this.config.commitDetailsView.compactFolders) : generateGitFileListHtml(fileChanges)) + '</div>';
 	}
-	/** Insert the details row below `srcElem`, scroll it into view and attach its listeners. */
+	/**
+	 * Show the details view: inline (a table row below `srcElem`) or docked to the bottom of the
+	 * view, depending on the configuration. Attaches the listeners of the view and the resize handle.
+	 */
 	private renderDetailsElem(html: string, srcElem: HTMLElement) {
-		const elem = document.getElementById('commitDetails');
+		const elem = document.getElementById('commitDetails'), docked = this.isDetailsDocked();
 		if (typeof elem === 'object' && elem !== null) elem.remove();
-		const newElem = document.createElement('tr');
-		newElem.id = 'commitDetails';
-		newElem.innerHTML = html;
-		insertAfter(newElem, srcElem);
+		this.commitDetailsHeight = this.clampDetailsHeight(this.commitDetailsHeight);
+		const handle = '<div id="commitDetailsResize" title="Drag to resize"></div>';
+		let newElem: HTMLElement;
+		if (docked) {
+			newElem = document.createElement('div');
+			newElem.id = 'commitDetails';
+			newElem.className = 'docked';
+			newElem.innerHTML = handle + html;
+			newElem.style.height = this.commitDetailsHeight + 'px';
+			document.body.appendChild(newElem);
+			document.body.style.paddingBottom = this.commitDetailsHeight + 'px';
+		} else {
+			newElem = document.createElement('tr');
+			newElem.id = 'commitDetails';
+			newElem.innerHTML = '<td></td><td colspan="4">' + html + handle + '</td>';
+			newElem.style.height = this.commitDetailsHeight + 'px';
+			insertAfter(newElem, srcElem);
+		}
+		this.config.grid.expandY = this.commitDetailsHeight;
 
 		this.renderGraph();
+		this.makeDetailsResizable(newElem, docked);
 
-		if (this.config.autoCenterCommitDetailsView) {
+		addListenerToClass('commitDetailsParent', 'click', (e) => {
+			const hash = (<HTMLElement>(<Element>e.target).closest('.commitDetailsParent')).dataset.hash!, row = this.getRowElemByHash(hash);
+			if (row === null) return;
+			this.loadCommitDetails(row);
+			if (this.isDetailsDocked()) this.scrollToRow(parseInt(row.dataset.id!));
+		});
+
+		if (docked) {
+			// The row stays where it is; make sure it is not hidden behind the docked view
+			const rowRect = srcElem.getBoundingClientRect();
+			if (rowRect.bottom > window.innerHeight - this.commitDetailsHeight) {
+				window.scrollTo(0, window.pageYOffset + rowRect.bottom - (window.innerHeight - this.commitDetailsHeight) + 8);
+			} else if (rowRect.top < 0) {
+				window.scrollTo(0, window.pageYOffset + rowRect.top - 8);
+			}
+		} else if (this.config.autoCenterCommitDetailsView) {
 			// Center Commit Detail View setting is enabled
-			// control menu height [40px] + newElem.y + (commit details view height [250px] + commit height [24px]) / 2 - (window height) / 2
-			window.scrollTo(0, newElem.offsetTop + 177 - window.innerHeight / 2);
+			// control menu height [40px] + newElem.y + (commit details view height + commit height [24px]) / 2 - (window height) / 2
+			window.scrollTo(0, newElem.offsetTop + 40 + (this.commitDetailsHeight + 24) / 2 - window.innerHeight / 2);
 		} else if (newElem.offsetTop + 8 < window.pageYOffset) {
 			// Commit Detail View is opening above what is visible on screen
 			// control menu height [40px] + newElem y - commit height [24px] - desired gap from top [8px] < pageYOffset
@@ -1819,6 +1936,12 @@ function hideDialog() {
 	}
 }
 
+function isDialogOrContextMenuOpen() {
+	return dialog.classList.contains('active') || contextMenu.classList.contains('active');
+}
+function isTextInput(target: EventTarget | null) {
+	return target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable);
+}
 function hideDialogAndContextMenu() {
 	if (dialog.classList.contains('active')) hideDialog();
 	if (contextMenu.classList.contains('active')) hideContextMenu();

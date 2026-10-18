@@ -127,12 +127,68 @@ body.unableToLoad h2, body.unableToLoad p{
 	height:250px;
 	vertical-align:top;
 }
-#commitDetails td{
+#commitDetails td, #commitDetails.docked{
 	background-color:rgba(128,128,128,0.1);
 	position:relative;
 	font-size:13px;
 	line-height:18px;
 	white-space:normal;
+}
+#commitDetails.docked{
+	position:fixed;
+	left:0;
+	right:0;
+	bottom:0;
+	z-index:150;
+	background-color:var(--vscode-editor-background);
+	border-top:1px solid rgba(128,128,128,0.5);
+	box-shadow:0 -4px 8px rgba(0,0,0,0.15);
+	cursor:default;
+}
+#commitDetails.docked::before{
+	content:'';
+	position:absolute;
+	left:0;
+	right:0;
+	top:0;
+	bottom:0;
+	background-color:rgba(128,128,128,0.1);
+	pointer-events:none;
+}
+#commitDetails.docked #commitDetailsSummary, #commitDetails.docked #commitDetailsFiles{
+	top:6px;
+	bottom:0;
+}
+#commitDetails.docked #commitDetailsClose, #commitDetails.docked #commitDetailsFileViewSwitch{
+	top:10px;
+}
+#commitDetailsResize{
+	position:absolute;
+	left:0;
+	right:0;
+	height:6px;
+	cursor:ns-resize;
+	z-index:10;
+}
+#commitDetails td > #commitDetailsResize{
+	bottom:0;
+}
+#commitDetails.docked > #commitDetailsResize{
+	top:0;
+}
+#commitDetailsResize:hover, body.resizingDetails #commitDetailsResize{
+	background-color:rgba(128,128,128,0.4);
+}
+body.resizingDetails{
+	cursor:ns-resize;
+	user-select:none;
+}
+.commitDetailsParent{
+	cursor:pointer;
+	text-decoration:underline dotted;
+}
+.commitDetailsParent:hover{
+	color:var(--vscode-textLink-foreground);
 }
 #commitDetails td:after{
 	content:'';
