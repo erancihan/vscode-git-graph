@@ -271,6 +271,11 @@ class Config {
 		return this.getBoolean('repository.showStashes', null, true);
 	}
 
+	/** Verify commit signatures while loading (slower: git runs gpg for every signed commit). */
+	public showSignatureStatus() {
+		return this.getBoolean('repository.commits.showSignatureStatus', null, false);
+	}
+
 	public showTags() {
 		return this.getBoolean('repository.showTags', 'showTags', true);
 	}

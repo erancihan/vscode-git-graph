@@ -9,6 +9,8 @@ export interface GitCommitNode {
 	message: string;
 	refs: GitRef[];
 	stash: GitStash | null;
+	/** Set when `git-graph.repository.commits.showSignatureStatus` is enabled and the commit is not the uncommitted changes row. */
+	signature: GitSignature | null;
 }
 
 /** A stash entry. The stash commit is shown as a row above `baseHash`, the commit it was created from. */
@@ -26,6 +28,19 @@ export interface GitCommit {
 	date: number;
 	message: string;
 	stash?: GitStash;
+	signature?: GitSignature;
+}
+
+/**
+ * Result of verifying the GPG signature of a commit, from the `%G?`, `%GS` and `%GK` placeholders:
+ * G good, B bad, U good but the key is untrusted, X good but the signature expired, Y good but the
+ * key expired, R good but the key was revoked, E the signature could not be checked, N unsigned.
+ */
+export type GitSignatureStatus = 'G' | 'B' | 'U' | 'X' | 'Y' | 'R' | 'E' | 'N';
+export interface GitSignature {
+	status: GitSignatureStatus;
+	signer: string;
+	key: string;
 }
 
 export interface GitCommitDetails {
@@ -37,6 +52,7 @@ export interface GitCommitDetails {
 	committer: string;
 	body: string;
 	fileChanges: GitFileChange[];
+	signature: GitSignature | null;
 }
 
 export interface GitRef {

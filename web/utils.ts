@@ -7,6 +7,7 @@ const svgIcons = {
 	info: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" viewBox="0 0 14 16"><path fill-rule="evenodd" d="M6.3 5.69a.942.942 0 0 1-.28-.7c0-.28.09-.52.28-.7.19-.18.42-.28.7-.28.28 0 .52.09.7.28.18.19.28.42.28.7 0 .28-.09.52-.28.7a1 1 0 0 1-.7.3c-.28 0-.52-.11-.7-.3zM8 7.99c-.02-.25-.11-.48-.31-.69-.2-.19-.42-.3-.69-.31H6c-.27.02-.48.13-.69.31-.2.2-.3.44-.31.69h1v3c.02.27.11.5.31.69.2.2.42.31.69.31h1c.27 0 .48-.11.69-.31.2-.19.3-.42.31-.69H8V7.98v.01zM7 2.3c-3.14 0-5.7 2.54-5.7 5.68 0 3.14 2.56 5.7 5.7 5.7s5.7-2.55 5.7-5.7c0-3.15-2.56-5.69-5.7-5.69v.01zM7 .98c3.86 0 7 3.14 7 7s-3.14 7-7 7-7-3.12-7-7 3.14-7 7-7z"/></svg>',
 	fileTree: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" viewBox="0 0 14 16"><path fill-rule="evenodd" d="M1 2h4v3H1V2zm2 4h1v7h1v1h4v-2H5v-2h4V8H5V6H3zm5-1h5v2H8V5zm0 4h5v2H8V9zm0 4h5v2H8v-2z"/></svg>',
 	fileList: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" viewBox="0 0 14 16"><path fill-rule="evenodd" d="M1 3h12v2H1V3zm0 4h12v2H1V7zm0 4h12v2H1v-2z"/></svg>',
+	shield: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 1L1 3.5v4c0 3.5 2.6 6.4 6 7.5 3.4-1.1 6-4 6-7.5v-4L7 1zm0 1.3l4.8 2V7.5c0 2.8-2 5.1-4.8 6.2-2.8-1.1-4.8-3.4-4.8-6.2V4.3L7 2.3zm-.7 7.9L4 7.9l.9-.9 1.4 1.4 3-3 .9.9-3.9 3.9z"/></svg>',
 	stash: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" viewBox="0 0 14 16"><path fill-rule="evenodd" d="M1 2h12v3H1V2zm1 4h10v8H2V6zm3 2v1.5h4V8H5z"/></svg>',
 	tag: '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="16" viewBox="0 0 15 16"><path fill-rule="evenodd" d="M7.73 1.73C7.26 1.26 6.62 1 5.96 1H3.5C2.13 1 1 2.13 1 3.5v2.47c0 .66.27 1.3.73 1.77l6.06 6.06c.39.39 1.02.39 1.41 0l4.59-4.59a.996.996 0 0 0 0-1.41L7.73 1.73zM2.38 7.09c-.31-.3-.47-.7-.47-1.13V3.5c0-.88.72-1.59 1.59-1.59h2.47c.42 0 .83.16 1.13.47l6.14 6.13-4.73 4.73-6.13-6.15zM3.01 3h2v2H3V3h.01z"/></svg>',
 	loading: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="32" viewBox="0 0 12 16"><path fill-rule="evenodd" d="M10.24 7.4a4.15 4.15 0 0 1-1.2 3.6 4.346 4.346 0 0 1-5.41.54L4.8 10.4.5 9.8l.6 4.2 1.31-1.26c2.36 1.74 5.7 1.57 7.84-.54a5.876 5.876 0 0 0 1.74-4.46l-1.75-.34zM2.96 5a4.346 4.346 0 0 1 5.41-.54L7.2 5.6l4.3.6-.6-4.2-1.31 1.26c-2.36-1.74-5.7-1.57-7.85.54C.5 5.03-.06 6.65.01 8.26l1.75.35A4.17 4.17 0 0 1 2.96 5z"/></svg>',
@@ -66,6 +67,26 @@ function addDelegatedListener(container: HTMLElement, className: string, event: 
 		}
 	});
 }
+/** Human readable description of a commit signature status, for tooltips and the details view. */
+function describeSignature(signature: GG.GitSignature) {
+	const by = signature.signer !== '' ? ' by ' + signature.signer : '', key = signature.key !== '' ? ' (key ' + signature.key + ')' : '';
+	switch (signature.status) {
+		case 'G': return 'Good signature' + by + key;
+		case 'U': return 'Good signature' + by + key + ', but the key is not trusted';
+		case 'X': return 'Good signature' + by + key + ', but the signature has expired';
+		case 'Y': return 'Good signature' + by + key + ', but the key has expired';
+		case 'R': return 'Good signature' + by + key + ', but the key was revoked';
+		case 'B': return 'Bad signature' + by + key;
+		case 'E': return 'The signature could not be checked' + key;
+		default: return 'Not signed';
+	}
+}
+/** Icon shown next to the commit hash when signature status is enabled. Unsigned commits get no icon. */
+function signatureIconHtml(signature: GG.GitSignature | null | undefined) {
+	if (!signature || signature.status === 'N') return ''; // undefined: state written by versions without signature status
+	return '<span class="signatureStatus ' + signature.status + '" title="' + escapeHtml(describeSignature(signature)) + '">' + svgIcons.shield + '</span>';
+}
+
 function insertAfter(newNode: HTMLElement, referenceNode: HTMLElement) {
 	referenceNode.parentNode!.insertBefore(newNode, referenceNode.nextSibling);
 }

@@ -2,7 +2,7 @@ import * as cp from 'child_process';
 import { getConfig } from './config';
 import { findGitExecutable } from './gitExecutable';
 import { Logger } from './logger';
-import { CherryPickOptions, GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChange, GitFileChangeType, GitPushBranchMode, GitRebaseType, GitRefData, GitResetMode, GitStash, GitUnsavedChanges, MergeOptions } from './types';
+import { CherryPickOptions, GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChange, GitFileChangeType, GitPushBranchMode, GitRebaseType, GitRefData, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitUnsavedChanges, MergeOptions } from './types';
 import { getPathFromStr } from './utils';
 
 const eolRegex = /\r\n|\r|\n/g;
@@ -64,9 +64,12 @@ export class DataSource {
 		const config = getConfig();
 		const dateType = config.dateType() === 'Author Date' ? '%at' : '%ct';
 		const [authorName, authorEmail, committerName] = config.useMailmap() ? ['%aN', '%aE', '%cN'] : ['%an', '%ae', '%cn'];
+		const signature = config.showSignatureStatus() ? ['%G?', '%GS', '%GK'] : [];
 		return {
-			log: ['%H', '%P', authorName, authorEmail, dateType, '%s'].join(gitLogSeparator),
-			commitDetails: ['%H', '%P', authorName, authorEmail, dateType, committerName].join(gitLogSeparator) + '%n%B'
+			log: ['%H', '%P', authorName, authorEmail, dateType].concat(signature, ['%s']).join(gitLogSeparator),
+			logFields: 6 + signature.length,
+			commitDetails: ['%H', '%P', authorName, authorEmail, dateType, committerName].concat(signature).join(gitLogSeparator) + '%n%B',
+			withSignature: signature.length > 0
 		};
 	}
 
@@ -134,7 +137,7 @@ export class DataSource {
 		for (let i = 0; i < commits.length; i++) {
 			commitLookup[commits[i].hash] = i;
 			const stash = commits[i].stash || null;
-			commitNodes.push({ hash: commits[i].hash, parentHashes: commits[i].parentHashes, author: commits[i].author, email: commits[i].email, date: commits[i].date, message: commits[i].message, refs: stash !== null ? [{ hash: commits[i].hash, name: stash.selector, type: 'stash' }] : [], stash: stash });
+			commitNodes.push({ hash: commits[i].hash, parentHashes: commits[i].parentHashes, author: commits[i].author, email: commits[i].email, date: commits[i].date, message: commits[i].message, refs: stash !== null ? [{ hash: commits[i].hash, name: stash.selector, type: 'stash' }] : [], stash: stash, signature: commits[i].signature || null });
 		}
 		for (let i = 0; i < refData.refs.length; i++) {
 			if (typeof commitLookup[refData.refs[i].hash] === 'number') {
@@ -147,8 +150,9 @@ export class DataSource {
 
 	public commitDetails(repo: string, commitHash: string): Promise<GitCommitDetails | null> {
 		if (!isCommitHash(commitHash)) return Promise.resolve(null);
+		const formats = this.getFormats();
 		return Promise.all([
-			this.spawnGit(['show', '--quiet', commitHash, '--format=' + this.getFormats().commitDetails], repo, (stdout): GitCommitDetails => {
+			this.spawnGit(['show', '--quiet', commitHash, '--format=' + formats.commitDetails], repo, (stdout): GitCommitDetails => {
 				const lines = stdout.split(eolRegex);
 				let lastLine = lines.length - 1;
 				while (lines.length > 0 && lines[lastLine] === '') lastLine--;
@@ -161,7 +165,8 @@ export class DataSource {
 					date: parseInt(commitInfo[4]),
 					committer: commitInfo[5],
 					body: lines.slice(1, lastLine + 1).join('\n'),
-					fileChanges: []
+					fileChanges: [],
+					signature: formats.withSignature && commitInfo.length >= 9 ? parseSignature(commitInfo[6], commitInfo[7], commitInfo[8]) : null
 				};
 			}),
 			this.getFileChangesOfCommit(repo, commitHash)
@@ -529,8 +534,8 @@ export class DataSource {
 	}
 
 	private getGitLog(repo: string, branches: string[], num: number, showRemoteBranches: boolean) {
-		const config = getConfig();
-		const args = ['log', '--max-count=' + num, '--format=' + this.getFormats().log, '--' + config.commitOrdering() + '-order'];
+		const config = getConfig(), formats = this.getFormats();
+		const args = ['log', '--max-count=' + num, '--format=' + formats.log, '--' + config.commitOrdering() + '-order'];
 		if (config.onlyFollowFirstParent()) args.push('--first-parent');
 		if (branches.length > 0) {
 			for (const branch of branches) {
@@ -556,8 +561,10 @@ export class DataSource {
 			const gitCommits: GitCommit[] = [];
 			for (let i = 0; i < lines.length - 1; i++) {
 				const line = lines[i].split(gitLogSeparator);
-				if (line.length !== 6) break;
-				gitCommits.push({ hash: line[0], parentHashes: line[1].split(' '), author: line[2], email: line[3], date: parseInt(line[4]), message: line[5] });
+				if (line.length !== formats.logFields) break;
+				const commit: GitCommit = { hash: line[0], parentHashes: line[1].split(' '), author: line[2], email: line[3], date: parseInt(line[4]), message: line[line.length - 1] };
+				if (formats.withSignature) commit.signature = parseSignature(line[5], line[6], line[7]);
+				gitCommits.push(commit);
 			}
 			return gitCommits;
 		}).catch((): GitCommit[] => []);
@@ -633,6 +640,17 @@ export class DataSource {
  * A reference name supplied by the user or read from the repository must never be mistaken for a
  * git option. Git itself rejects names that start with "-", so refusing them loses nothing.
  */
+const SIGNATURE_STATUSES: GitSignatureStatus[] = ['G', 'B', 'U', 'X', 'Y', 'R', 'E', 'N'];
+
+/** Builds the signature record from the `%G?`, `%GS` and `%GK` placeholders. Unknown status codes are treated as "could not be checked". */
+export function parseSignature(status: string, signer: string, key: string): GitSignature {
+	return {
+		status: SIGNATURE_STATUSES.indexOf(<GitSignatureStatus>status) > -1 ? <GitSignatureStatus>status : 'E',
+		signer: signer,
+		key: key
+	};
+}
+
 export function isSafeRefName(name: string) {
 	return name !== '' && name[0] !== '-' && !/[\x00-\x1f\x7f]/.test(name);
 }

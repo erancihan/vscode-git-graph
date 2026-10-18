@@ -2,7 +2,7 @@ import * as cp from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { DataSource, isSafeRelativePath } from '../src/dataSource';
+import { DataSource, isSafeRelativePath, parseSignature } from '../src/dataSource';
 import { Logger } from '../src/logger';
 import { configurationValues, outputChannelLines } from './mocks/vscode';
 
@@ -521,6 +521,20 @@ describe('DataSource commit loading options', () => {
 		fs.rmSync(repo, { recursive: true, force: true });
 	});
 
+	it('reports unsigned commits as "N" when signature status is enabled, and omits it otherwise', async () => {
+		let result = await dataSource.getCommits(repo, [], 10, false);
+		expect(result.commits.every((commit) => commit.signature === null)).toBe(true);
+
+		configurationValues['git-graph'] = { 'repository.commits.showSignatureStatus': true };
+		result = await dataSource.getCommits(repo, [], 10, false);
+		const commit = result.commits.find((c) => c.hash === detached)!;
+		expect(commit.signature).toEqual({ status: 'N', signer: '', key: '' });
+		expect(commit.message).toBe('Detached HEAD commit');
+		const details = await dataSource.commitDetails(repo, detached);
+		expect(details!.signature).toEqual({ status: 'N', signer: '', key: '' });
+		expect(details!.committer).toBe('Test Committer');
+	});
+
 	it('includes the detached HEAD commit when showing all branches', async () => {
 		const result = await dataSource.getCommits(repo, [], 10, false);
 		expect(result.head).toBe(detached);
@@ -598,5 +612,12 @@ describe('DataSource commit loading options', () => {
 		configurationValues['git-graph'] = { 'commitOrdering': 'author-date' };
 		await dataSource.getCommits(repo, [], 10, false);
 		expect(lines.slice(-4).some(l => l.includes('--author-date-order'))).toBe(true);
+	});
+});
+
+describe('parseSignature', () => {
+	it('keeps known status codes and maps unknown ones to "E"', () => {
+		expect(parseSignature('G', 'Alice <alice@example.com>', 'ABCDEF')).toEqual({ status: 'G', signer: 'Alice <alice@example.com>', key: 'ABCDEF' });
+		expect(parseSignature('?', '', '')).toEqual({ status: 'E', signer: '', key: '' });
 	});
 });
