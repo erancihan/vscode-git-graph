@@ -54,15 +54,22 @@ class Branch {
 			lines.push({ p1: { x: x1, y: y1 }, p2: { x: x2, y: y2 }, isCommitted: i >= this.numUncommitted, lockedFirst: this.lines[i].lockedFirst });
 		}
 
-		// Simplify consecutive lines that are straight by removing the 'middle' point 
-		i = 0;
-		while (i < lines.length - 1) {
-			if (lines[i].p1.x === lines[i].p2.x && lines[i].p2.x === lines[i + 1].p1.x && lines[i + 1].p1.x === lines[i + 1].p2.x && lines[i].p2.y === lines[i + 1].p1.y && lines[i].isCommitted === lines[i + 1].isCommitted) {
-				lines[i].p2.y = lines[i + 1].p2.y;
-				lines.splice(i + 1, 1);
-			} else {
-				i++;
+		// Simplify consecutive lines that are straight by removing the 'middle' point. This is a single
+		// pass that merges each line into the previous one when both are vertical, on the same column,
+		// contiguous and of the same colour. Branches that span thousands of rows produce one line per
+		// row, so removing elements from the array one at a time would be quadratic.
+		if (lines.length > 1) {
+			let last = 0;
+			for (i = 1; i < lines.length; i++) {
+				const prev = lines[last], cur = lines[i];
+				if (prev.p1.x === prev.p2.x && prev.p2.x === cur.p1.x && cur.p1.x === cur.p2.x && prev.p2.y === cur.p1.y && prev.isCommitted === cur.isCommitted) {
+					prev.p2.y = cur.p2.y;
+				} else {
+					last++;
+					lines[last] = cur;
+				}
 			}
+			lines.length = last + 1;
 		}
 
 		// Iterate through all lines, producing and adding the svg paths to the DOM
@@ -224,6 +231,7 @@ class Graph {
 	private vertices: Vertex[] = [];
 	private branches: Branch[] = [];
 	private availableColours: number[] = [];
+	private nextStart: number = 0;
 
 	constructor(id: string, config: Config) {
 		this.config = config;
@@ -254,6 +262,7 @@ class Graph {
 		this.vertices = [];
 		this.branches = [];
 		this.availableColours = [];
+		this.nextStart = 0;
 
 		let i: number, j: number;
 		for (i = 0; i < commits.length; i++) {
@@ -393,10 +402,20 @@ class Graph {
 		}
 	}
 
+	/**
+	 * Find the first vertex that still has an unprocessed parent, or is not on a branch yet. Git lists
+	 * every commit before its parents, so a path can only change vertices at or after its start, and
+	 * the first unfinished vertex never moves backwards. The scan therefore resumes where the previous
+	 * one stopped instead of starting from the top each time.
+	 */
 	private findStart() {
-		for (let i = 0; i < this.vertices.length; i++) {
-			if (this.vertices[i].getNextParent() !== null || this.vertices[i].isNotOnBranch()) return i;
+		for (let i = this.nextStart; i < this.vertices.length; i++) {
+			if (this.vertices[i].getNextParent() !== null || this.vertices[i].isNotOnBranch()) {
+				this.nextStart = i;
+				return i;
+			}
 		}
+		this.nextStart = this.vertices.length;
 		return -1;
 	}
 

@@ -44,10 +44,24 @@ function unescapeHtml(str: string) {
 
 /* DOM Helpers */
 function addListenerToClass(className: string, event: string, eventListener: EventListener) {
-	let elems = document.getElementsByClassName(className), i;
-	for (i = 0; i < elems.length; i++) {
+	const elems = document.getElementsByClassName(className);
+	for (let i = 0; i < elems.length; i++) {
 		elems[i].addEventListener(event, eventListener);
 	}
+}
+
+/**
+ * Listen for `event` on `container` and call `eventListener` when the event target is inside an
+ * element with `className`. One listener on the container replaces one listener per element, and it
+ * keeps working after the container's content is replaced.
+ */
+function addDelegatedListener(container: HTMLElement, className: string, event: string, eventListener: EventListener) {
+	container.addEventListener(event, (e: Event) => {
+		const target = e.target;
+		if (target instanceof Element && target.closest('.' + className) !== null) {
+			eventListener(e);
+		}
+	});
 }
 function insertAfter(newNode: HTMLElement, referenceNode: HTMLElement) {
 	referenceNode.parentNode!.insertBefore(newNode, referenceNode.nextSibling);

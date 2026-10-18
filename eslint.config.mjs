@@ -2,7 +2,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
 	{
-		ignores: ['out/**', 'media/**', 'node_modules/**', 'coverage/**', '**/*.d.ts']
+		ignores: ['out/**', 'media/**', 'node_modules/**', 'coverage/**', 'scripts/**', '**/*.d.ts']
 	},
 	...tseslint.configs.recommended,
 	{
