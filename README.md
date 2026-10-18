@@ -54,6 +54,7 @@ This extension contributes the following settings:
 * `git-graph.commitDetailsView.autoCenter`: Automatically center the commit details view when it is opened.
 * `git-graph.commitDetailsView.fileView.fileTree.compactFolders`: Show a folder that only contains one folder on one line. Default: true.
 * `git-graph.commitDetailsView.location`: Where the commit details open: `Inline` (below the commit) or `Docked to Bottom`. Default: `Inline`.
+* `git-graph.commitDetailsView.fileView.showChangeTypeLetters`: Show A / M / D / R letters before file names in the Commit Details View. Default: false.
 * `git-graph.commitDetailsView.fileView.type`: Default file view in the commit details: `File Tree` or `File List`. Default: `File Tree`.
 * `git-graph.contextMenuActionsVisibility`: Hide individual context menu actions, for example `{"commit": {"reset": false}}`. Menus: `branch`, `commit`, `remoteBranch`, `tag`.
 * `git-graph.customPullRequestProviders`: Pull request providers for hosts other than GitHub, GitLab and Bitbucket, for example `[{"name": "Gitea", "templateUrl": "https://gitea.example.com/$destinationOwner/$destinationRepo/compare/$destinationBranch...$sourceOwner:$sourceBranch"}]`.

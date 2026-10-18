@@ -128,6 +128,11 @@
 					"default": "Inline",
 					"description": "Where the commit details view opens. Drag the edge of the view to change its height."
 				},
+				"git-graph.commitDetailsView.fileView.showChangeTypeLetters": {
+					"type": "boolean",
+					"default": false,
+					"description": "Show the type of each change (A added, M modified, D deleted, R renamed) as a letter before the file name in the Commit Details View, so that colour is not the only indication."
+				},
 				"git-graph.commitDetailsView.fileView.type": {
 					"type": "string",
 					"enum": [

@@ -170,6 +170,8 @@ export interface CommitDetailsViewConfig {
 	fileViewType: FileViewType;
 	compactFolders: boolean;
 	location: CommitDetailsViewLocation;
+	/** Show the change type (A, M, D, R) as a letter before each file name, so colour is not the only cue. */
+	showChangeTypeLetters: boolean;
 }
 
 export type PullRequestProvider = 'GitHub' | 'GitLab' | 'Bitbucket' | string; // a string names a custom provider

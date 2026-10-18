@@ -69,7 +69,7 @@ body.unableToLoad h2, body.unableToLoad p{
 	overflow:hidden;
 }
 #commitTable tr.commit:hover td, #commitTable tr.commit.contextMenuActive td, #commitTable tr.commit.dialogActive td, #commitTable tr.commit.commitDetailsOpen td, #commitTable tr.compareCommitOpen td{
-	background-color:rgba(128,128,128,0.15);
+	background-color:var(--vscode-list-hoverBackground, rgba(128,128,128,0.15));
 }
 #commitTable tr.commit:hover td{
 	cursor:pointer;
@@ -289,10 +289,11 @@ body.resizingDetails{
 	background-color:rgba(128,128,128,0.2);
 }
 #commitTable tr.commit.commitDetailsOpen td, #commitTable tr.compareCommitOpen td{
-	background-color:rgba(128,128,128,0.25);
+	background-color:var(--vscode-list-inactiveSelectionBackground, rgba(128,128,128,0.25));
 }
 #commitTable tr.commit.commitDetailsOpen:hover td, #commitTable tr.compareCommitOpen:hover td{
-	background-color:rgba(128,128,128,0.35);
+	background-color:var(--vscode-list-activeSelectionBackground, rgba(128,128,128,0.35));
+	color:var(--vscode-list-activeSelectionForeground, inherit);
 }
 #commitDetailsSummary{
 	position:absolute;
@@ -440,6 +441,14 @@ svg.openFolderIcon, svg.closedFolderIcon, svg.fileIcon{
 }
 .gitFile.gitDiffPossible{
 	cursor:pointer;
+}
+.gitFileTypeLetter{
+	display:inline-block;
+	width:14px;
+	margin-right:4px;
+	font-weight:700;
+	text-align:center;
+	font-size:11px;
 }
 .gitFileAddDel, .gitFileRename{
 	color:var(--vscode-editor-foreground);
@@ -1031,4 +1040,44 @@ svg.openFolderIcon, svg.closedFolderIcon, svg.fileIcon{
 	height:24px;
 	line-height:24px;
 	border-radius:12px;
+}
+
+/* Theming: high contrast themes define --vscode-contrastBorder; other themes fall back to the subtle borders */
+#dialog.active, #contextMenu, #settingsWidget.active, #findWidget, .gitRef, .roundedBtn, #commitDetails.docked{
+	border-color:var(--vscode-contrastBorder, rgba(128,128,128,0.5));
+}
+#dialog input[type=text], #dialog select{
+	background-color:var(--vscode-input-background);
+	color:var(--vscode-input-foreground);
+	border:1px solid var(--vscode-input-border, var(--vscode-contrastBorder, rgba(128,128,128,0.4)));
+	border-radius:3px;
+	padding:3px 5px;
+	font-size:13px;
+}
+#dialog input[type=text]:focus, #dialog select:focus{
+	outline:1px solid var(--vscode-focusBorder);
+	outline-offset:-1px;
+}
+#dialog select{
+	background-color:var(--vscode-dropdown-background, var(--vscode-input-background));
+	color:var(--vscode-dropdown-foreground, var(--vscode-input-foreground));
+}
+#dialog input[type=checkbox], .settingsTable input[type=checkbox], #showRemoteBranchesCheckbox{
+	accent-color:var(--vscode-checkbox-background, var(--vscode-focusBorder));
+}
+.roundedBtn:focus-visible, .gitRef:focus-visible, .gitFile:focus-visible, .settingsBtn:focus-visible, .fileViewTypeBtn:focus-visible{
+	outline:1px solid var(--vscode-focusBorder);
+	outline-offset:1px;
+}
+.roundedBtn:hover, .settingsBtn:hover{
+	background-color:var(--vscode-list-hoverBackground, rgba(128,128,128,0.2));
+}
+::selection{
+	background-color:var(--vscode-editor-selectionBackground);
+	color:var(--vscode-editor-selectionForeground, inherit);
+}
+@media (forced-colors: active){
+	.gitRef, .roundedBtn, #dialog.active, #contextMenu, #settingsWidget.active, #findWidget{
+		border-color:CanvasText;
+	}
 }
