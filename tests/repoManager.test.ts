@@ -1,4 +1,4 @@
-import { defaultRepoState, normaliseRepoState, sortRepoPaths } from '../src/repoManager';
+import { defaultRepoState, isSafeIssuePattern, normaliseRepoState, sortRepoPaths } from '../src/repoManager';
 import { GitRepoState } from '../src/types';
 
 describe('sortRepoPaths', () => {
@@ -44,5 +44,19 @@ describe('normaliseRepoState', () => {
 		expect(normaliseRepoState({ issueLinkingConfig: { issue: '#(\\d+)', url: 'https://example.com/issues/$1' } }).issueLinkingConfig).toEqual({ issue: '#(\\d+)', url: 'https://example.com/issues/$1' });
 		expect(normaliseRepoState({ issueLinkingConfig: { issue: '#(\\d+)', url: 'javascript:alert(1)' } }).issueLinkingConfig).toBeNull();
 		expect(normaliseRepoState({ issueLinkingConfig: { issue: '', url: 'https://example.com' } }).issueLinkingConfig).toBeNull();
+	});
+});
+
+describe('isSafeIssuePattern', () => {
+	it('accepts ordinary patterns and rejects long, invalid or nested-quantifier ones', () => {
+		expect(isSafeIssuePattern('#(\\d+)')).toBe(true);
+		expect(isSafeIssuePattern('([A-Z]+-\\d+)')).toBe(true);
+		expect(isSafeIssuePattern('(a+)+')).toBe(false);
+		expect(isSafeIssuePattern('(\\d*)*')).toBe(false);
+		expect(isSafeIssuePattern('(x{1,3})+')).toBe(false);
+		expect(isSafeIssuePattern('(')).toBe(false);
+		expect(isSafeIssuePattern('a'.repeat(201))).toBe(false);
+		expect(isSafeIssuePattern('')).toBe(false);
+		expect(normaliseRepoState({ issueLinkingConfig: { issue: '(a+)+', url: 'https://example.com/$1' } }).issueLinkingConfig).toBeNull();
 	});
 });

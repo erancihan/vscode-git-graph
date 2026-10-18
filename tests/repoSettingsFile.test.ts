@@ -1,5 +1,8 @@
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { defaultRepoState } from '../src/repoManager';
-import { applyRepoSettings, exportRepoSettings, hashRepoSettings, parseRepoSettings, repoSettingsMatch, serializeRepoSettings } from '../src/repoSettingsFile';
+import { applyRepoSettings, describeRepoSettings, exportRepoSettings, hashRepoSettings, parseRepoSettings, repoSettingsFilePath, repoSettingsMatch, serializeRepoSettings, writeRepoSettingsFile } from '../src/repoSettingsFile';
 
 describe('repository settings file', () => {
 	const state = { ...defaultRepoState(), name: 'Mine', columnWidths: [1, 2, 3, 4], hideRemotes: ['upstream'], showTags: false, issueLinkingConfig: { issue: '#(\\d+)', url: 'https://example.com/$1' }, onLoad: { showCheckedOutBranch: true, showSpecificBranches: ['develop'] } };
@@ -43,5 +46,40 @@ describe('repository settings file', () => {
 	it('hashes the text', () => {
 		expect(hashRepoSettings('a')).toHaveLength(64);
 		expect(hashRepoSettings('a')).not.toBe(hashRepoSettings('b'));
+	});
+
+	it('describes the incoming values for the confirmation prompt', () => {
+		const parsed = parseRepoSettings(serializeRepoSettings(state))!;
+		const text = describeRepoSettings(parsed);
+		expect(text).toContain('issue linking: #(\\d+) -> https://example.com/$1');
+		expect(text).toContain('hidden remotes: upstream');
+		expect(text).toContain('branches on load: checked-out branch + develop');
+		expect(describeRepoSettings({ showTags: null })).toBe('show tags: default');
+	});
+
+	it('refuses symbolic links in the file path and writes atomically otherwise', () => {
+		const root = fs.mkdtempSync(path.join(os.tmpdir(), 'git-graph-settings-'));
+		try {
+			const repo = path.join(root, 'repo'), outside = path.join(root, 'outside');
+			fs.mkdirSync(repo);
+			fs.mkdirSync(outside);
+			const file = repoSettingsFilePath(repo)!;
+			expect(file).toBe(path.join(fs.realpathSync(repo), '.vscode', 'git-graph.json'));
+			writeRepoSettingsFile(file, '{}\n');
+			expect(fs.readFileSync(file, 'utf8')).toBe('{}\n');
+			expect(fs.readdirSync(path.dirname(file))).toEqual(['git-graph.json']);
+			// A symbolic link as the file
+			fs.unlinkSync(file);
+			fs.symlinkSync(path.join(outside, 'target.json'), file);
+			expect(repoSettingsFilePath(repo)).toBeNull();
+			fs.unlinkSync(file);
+			// A symbolic link as the .vscode folder
+			fs.rmdirSync(path.dirname(file));
+			fs.symlinkSync(outside, path.dirname(file));
+			expect(repoSettingsFilePath(repo)).toBeNull();
+			expect(repoSettingsFilePath(path.join(root, 'missing'))).toBeNull();
+		} finally {
+			fs.rmSync(root, { recursive: true, force: true });
+		}
 	});
 });

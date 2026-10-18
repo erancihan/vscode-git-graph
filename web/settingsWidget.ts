@@ -269,6 +269,10 @@ class SettingsWidget {
 				showErrorDialog(t('Unable to save the issue linking'), t('The issue pattern is not a valid regular expression: {0}', (e instanceof Error ? e.message : String(e))), null);
 				return;
 			}
+			if (!isSafeIssuePattern(issue)) {
+				showErrorDialog(t('Unable to save the issue linking'), t('The issue pattern is too long (200 characters at most) or contains a quantified group inside a quantified group, which can make matching very slow.'), null);
+				return;
+			}
 			const state = this.view.getRepoState(repo);
 			state.issueLinkingConfig = { issue: issue, url: url };
 			this.view.saveRepoState(repo, state);

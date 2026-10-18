@@ -11,7 +11,7 @@ import { Logger } from './logger';
 import { RepoFileWatcher } from './repoFileWatcher';
 import { buildPullRequestUrl, detectPullRequestProvider, parseRemoteUrl } from './remoteUrl';
 import { RepoManager, defaultRepoState } from './repoManager';
-import { REPO_SETTINGS_FILE, applyRepoSettings, hashRepoSettings, parseRepoSettings, repoSettingsMatch, serializeRepoSettings } from './repoSettingsFile';
+import { REPO_SETTINGS_FILE, applyRepoSettings, describeRepoSettings, hashRepoSettings, parseRepoSettings, repoSettingsFilePath, repoSettingsMatch, serializeRepoSettings, writeRepoSettingsFile } from './repoSettingsFile';
 import { runGitCommandInTerminal } from './terminal';
 import { GitArchiveType, GitCommandStatus, GitFileChangeType, GitGraphViewState, GitRebaseType, L10nBundle, GitRepoSet, GitRepoState, PullRequestProvider, RequestMessage, ResponseMessage } from './types';
 import { abbrevCommit, copyToClipboard } from './utils';
@@ -780,8 +780,10 @@ export class GitGraphView {
 
 	/** Read the settings file of a repository, or null when it does not exist or cannot be read. */
 	private readRepoSettingsFile(repo: string): Promise<string | null> {
+		const file = repoSettingsFilePath(repo);
+		if (file === null) return Promise.resolve(null); // a symbolic link in the way: never follow it
 		return new Promise((resolve) => {
-			fs.readFile(path.join(repo, REPO_SETTINGS_FILE), { encoding: 'utf8' }, (err, data) => resolve(err ? null : data));
+			fs.readFile(file, { encoding: 'utf8' }, (err, data) => resolve(err ? null : data));
 		});
 	}
 
@@ -807,7 +809,7 @@ export class GitGraphView {
 		}
 		const name = state.name !== null ? state.name : path.basename(repo);
 		const apply = vscode.l10n.t('Apply'), ignore = vscode.l10n.t('Ignore this version');
-		const choice = await vscode.window.showInformationMessage(vscode.l10n.t('Git Graph: The repository "{0}" contains {1} with shared Git Graph settings. Apply them to this repository?', name, REPO_SETTINGS_FILE), apply, ignore);
+		const choice = await vscode.window.showInformationMessage(vscode.l10n.t('Git Graph: The repository "{0}" contains {1} with shared Git Graph settings ({2}). Apply them to this repository?', name, REPO_SETTINGS_FILE, describeRepoSettings(imported)), apply, ignore);
 		if (choice === apply) {
 			await this.importRepoSettings(repo, false);
 		} else if (choice === ignore) {
@@ -831,7 +833,8 @@ export class GitGraphView {
 	/** Write the shareable settings of the repository to the settings file, asking before an existing file is replaced. */
 	private async exportRepoSettings(repo: string): Promise<GitCommandStatus> {
 		if (!this.isKnownRepo(repo)) return 'Unknown repository.';
-		const text = serializeRepoSettings(this.getRepoState(repo)), target = path.join(repo, REPO_SETTINGS_FILE);
+		const text = serializeRepoSettings(this.getRepoState(repo)), target = repoSettingsFilePath(repo);
+		if (target === null) return vscode.l10n.t('{0} or its folder is a symbolic link or not a regular file; the export is refused.', REPO_SETTINGS_FILE);
 		const existing = await this.readRepoSettingsFile(repo);
 		if (existing !== null && existing !== text) {
 			const replace = vscode.l10n.t('Replace');
@@ -839,8 +842,7 @@ export class GitGraphView {
 			if (choice !== replace) return vscode.l10n.t('The export was cancelled; the existing file was kept.');
 		}
 		try {
-			fs.mkdirSync(path.dirname(target), { recursive: true });
-			fs.writeFileSync(target, text);
+			writeRepoSettingsFile(target, text);
 		} catch (e) {
 			return vscode.l10n.t('Unable to write {0}: {1}', REPO_SETTINGS_FILE, e instanceof Error ? e.message : String(e));
 		}
