@@ -514,7 +514,7 @@ class GitGraphView {
 			const graphCell = branchesInGraph && labels.branches !== '' ? '<td><span class="gitRefsGraph">' + labels.branches + '</span></td>' : '<td></td>';
 			const refs = (branchesInGraph ? '' : labels.branches) + (tagsOnRight ? '' : labels.tags);
 			const bisectMark = this.commits[i].bisect || null;
-			const bisectBadge = bisectMark !== null ? '<span class="bisectBadge ' + bisectMark + '" title="Bisect: ' + bisectMark + '">' + (bisectMark === 'good' ? 'G' : bisectMark === 'bad' ? 'B' : 'S') + '</span>' : '';
+			const bisectBadge = bisectMark !== null ? '<span class="bisectBadge ' + bisectMark + '" title="' + t('Bisect: {0}', bisectMark) + '">' + (bisectMark === 'good' ? 'G' : bisectMark === 'bad' ? 'B' : 'S') + '</span>' : '';
 			const worktreeRow = this.commits[i].worktree || null;
 			const muted = this.commits[i].hash !== '*' && worktreeRow === null && (
 				(this.config.muteMergeCommits && this.commits[i].parentHashes.length > 1 && this.commits[i].stash === null) ||
@@ -1069,11 +1069,11 @@ class GitGraphView {
 					const remote = this.getRemoteOfBranch(refs[j].name);
 					if (remote !== null && refs[j].name === remote + '/' + refs[i].name) {
 						combined[refs[j].name] = true;
-						remotesHtml += '<span class="gitRefRemote" data-name="' + escapeHtml(refs[j].name) + '" title="Remote Branch: ' + escapeHtml(refs[j].name) + '">' + escapeHtml(remote) + '</span>';
+						remotesHtml += '<span class="gitRefRemote" data-name="' + escapeHtml(refs[j].name) + '" title="' + t('Remote Branch: {0}', escapeHtml(refs[j].name)) + '">' + escapeHtml(remote) + '</span>';
 					}
 				}
 			}
-			const html = '<span class="gitRef head' + (active ? ' active' : '') + (remotesHtml !== '' ? ' combined' : '') + '" data-name="' + name + '" title="Branch: ' + name + '" draggable="true">' + svgIcons.branch + name + remotesHtml + '</span>';
+			const html = '<span class="gitRef head' + (active ? ' active' : '') + (remotesHtml !== '' ? ' combined' : '') + '" data-name="' + name + '" title="' + t('Branch: {0}', name) + '" draggable="true">' + svgIcons.branch + name + remotesHtml + '</span>';
 			branches = active ? html + branches : branches + html;
 		}
 		for (i = 0; i < refs.length; i++) {
@@ -1177,12 +1177,12 @@ class GitGraphView {
 			showErrorDialog(t('Unable to read the commit message'), null, null);
 			return;
 		}
-		const warning = pushed ? '<br><span class="dialogWarning">' + svgIcons.alert + 'This commit is already on its upstream branch. Amending it rewrites history; the next push needs force-with-lease.</span>' : '';
+		const warning = pushed ? '<br><span class="dialogWarning">' + svgIcons.alert + t('This commit is already on its upstream branch. Amending it rewrites history; the next push needs force-with-lease.') + '</span>' : '';
 		const inputs: DialogInput[] = [{ type: 'textarea', name: t('Message: '), default: message, placeholder: t('Commit message') }];
 		if (purpose === 'amend') inputs.push({ type: 'checkbox', name: t('Also stage modified and deleted tracked files (git add -u)'), value: false });
 		const title = purpose === 'reword'
-			? 'Change the message of the checked-out commit <b><i>' + abbrevCommit(commitHash) + '</i></b>:'
-			: 'Amend the checked-out commit <b><i>' + abbrevCommit(commitHash) + '</i></b> with the staged changes. Untracked files are not added.';
+			? t('Change the message of the checked-out commit <b><i>{0}</i></b>:', abbrevCommit(commitHash))
+			: t('Amend the checked-out commit <b><i>{0}</i></b> with the staged changes. Untracked files are not added.', abbrevCommit(commitHash));
 		showFormDialog(title + warning, inputs, purpose === 'reword' ? t('Reword') : t('Amend'), (values) => {
 			if (values[0].trim() === '') {
 				showErrorDialog(t('The commit message cannot be empty'), null, null);
@@ -1786,7 +1786,7 @@ class GitGraphView {
 	private loadMoreCommits() {
 		const btn = document.getElementById('loadMoreCommitsBtn');
 		if (btn === null) return; // Already loading
-		(<HTMLElement>btn.parentNode!).innerHTML = '<h2 id="loadingHeader">' + svgIcons.loading + 'Loading ...</h2>';
+		(<HTMLElement>btn.parentNode!).innerHTML = '<h2 id="loadingHeader">' + svgIcons.loading + t('Loading ...') + '</h2>';
 		this.maxCommits += this.config.loadMoreCommits;
 		this.hideCommitDetails();
 		this.saveState();
@@ -1908,8 +1908,8 @@ class GitGraphView {
 		}
 		let html = this.codeReviewBannerHtml(review, fileChanges) + '<div id="commitDetailsSummary">';
 		html += '<span class="commitDetailsSummaryTop"><span class="commitDetailsSummaryTopRow"><span class="commitDetailsSummaryKeyValues">';
-		html += '<b>Comparing: </b>' + describe(fromHash) + '<br><b>With: </b>' + describe(toHash) + '<br><br>';
-		html += fileChanges.length + ' file' + (fileChanges.length !== 1 ? 's' : '') + ' differ' + (fileChanges.length === 1 ? 's' : '') + '. Click a file to view the diff between the two revisions. Ctrl/Cmd+click the compared commit again to return to its details.';
+		html += '<b>' + t('Comparing: ') + '</b>' + describe(fromHash) + '<br><b>' + t('With: ') + '</b>' + describe(toHash) + '<br><br>';
+		html += (fileChanges.length === 1 ? t('1 file differs. Click a file to view the diff between the two revisions. Ctrl/Cmd+click the compared commit again to return to its details.') : t('{0} files differ. Click a file to view the diff between the two revisions. Ctrl/Cmd+click the compared commit again to return to its details.', fileChanges.length));
 		html += '</span></span></span></div>';
 		html += this.generateDetailsFilesHtml(fileTree, fileChanges, review);
 		html += '<div id="commitDetailsClose">' + svgIcons.close + '</div>';
@@ -1935,15 +1935,15 @@ class GitGraphView {
 		let html = this.codeReviewBannerHtml(review, commitDetails.fileChanges) + '<div id="commitDetailsSummary">';
 		html += '<span class="commitDetailsSummaryTop' + (typeof this.avatars[commitDetails.email] === 'string' ? ' withAvatar' : '') + '"><span class="commitDetailsSummaryTopRow"><span class="commitDetailsSummaryKeyValues">';
 		html += '<b>Commit: </b>' + escapeHtml(commitDetails.hash) + '<br>';
-		html += '<b>Parents: </b>' + commitDetails.parents.map((parent) => {
+		html += '<b>' + t('Parents: ') + '</b>' + commitDetails.parents.map((parent) => {
 			const loaded = typeof this.commitLookup[parent] === 'number';
 			return loaded
-				? '<span class="commitDetailsParent" data-hash="' + escapeHtml(parent) + '" title="Open the details of this commit">' + escapeHtml(parent) + '</span>'
-				: '<span title="This commit is not loaded on the graph">' + escapeHtml(parent) + '</span>';
+				? '<span class="commitDetailsParent" data-hash="' + escapeHtml(parent) + '" title="' + t('Open the details of this commit') + '">' + escapeHtml(parent) + '</span>'
+				: '<span title="' + t('This commit is not loaded on the graph') + '">' + escapeHtml(parent) + '</span>';
 		}).join(', ') + '<br>';
-		html += '<b>Author: </b>' + escapeHtml(commitDetails.author) + ' &lt;<a href="mailto:' + encodeURIComponent(commitDetails.email) + '">' + escapeHtml(commitDetails.email) + '</a>&gt;<br>';
-		html += '<b>Date: </b>' + (new Date(commitDetails.date * 1000)).toString() + '<br>';
-		html += '<b>Committer: </b>' + escapeHtml(commitDetails.committer);
+		html += '<b>' + t('Author: ') + '</b>' + escapeHtml(commitDetails.author) + ' &lt;<a href="mailto:' + encodeURIComponent(commitDetails.email) + '">' + escapeHtml(commitDetails.email) + '</a>&gt;<br>';
+		html += '<b>' + t('Date: ') + '</b>' + (new Date(commitDetails.date * 1000)).toString() + '<br>';
+		html += '<b>' + t('Committer: ') + '</b>' + escapeHtml(commitDetails.committer);
 		if (commitDetails.signature) html += '<br><b>Signature: </b>' + signatureIconHtml(commitDetails.signature) + escapeHtml(describeSignature(commitDetails.signature));
 		const refs = typeof this.commitLookup[commitDetails.hash] === 'number' ? this.commits[this.commitLookup[commitDetails.hash]].refs : [];
 		const branches = refs.filter((ref) => ref.type === 'head' || ref.type === 'remote').map((ref) => escapeHtml(ref.name)), tags = refs.filter((ref) => ref.type === 'tag').map((ref) => escapeHtml(ref.name));
@@ -1997,8 +1997,8 @@ class GitGraphView {
 		const reviewed = review !== null ? fileChanges.map((change) => change.newFilePath).filter((file) => review.remainingFiles.indexOf(file) === -1) : null;
 		const reviewState: ReviewedFiles | null = reviewed !== null ? { reviewed: reviewed, lastViewed: review!.lastViewedFile } : null;
 		return '<div id="commitDetailsFiles"' + (review !== null ? ' class="codeReviewActive"' : '') + '><div id="commitDetailsFileViewSwitch">'
-			+ '<span class="fileViewTypeBtn' + (this.fileViewType === 'tree' ? ' active' : '') + '" data-type="tree" title="File Tree">' + svgIcons.fileTree + '</span>'
-			+ '<span class="fileViewTypeBtn' + (this.fileViewType === 'list' ? ' active' : '') + '" data-type="list" title="File List">' + svgIcons.fileList + '</span>'
+			+ '<span class="fileViewTypeBtn' + (this.fileViewType === 'tree' ? ' active' : '') + '" data-type="tree" title="' + t('File Tree') + '">' + svgIcons.fileTree + '</span>'
+			+ '<span class="fileViewTypeBtn' + (this.fileViewType === 'list' ? ' active' : '') + '" data-type="list" title="' + t('File List') + '">' + svgIcons.fileList + '</span>'
 			+ '</div>' + (this.fileViewType === 'tree' ? generateGitFileTreeHtml(fileTree, fileChanges, this.config.commitDetailsView.compactFolders, reviewState) : generateGitFileListHtml(fileChanges, reviewState)) + '</div>';
 	}
 	/**
@@ -2009,7 +2009,7 @@ class GitGraphView {
 		const elem = document.getElementById('commitDetails'), docked = this.isDetailsDocked();
 		if (typeof elem === 'object' && elem !== null) elem.remove();
 		this.commitDetailsHeight = this.clampDetailsHeight(this.commitDetailsHeight);
-		const handle = '<div id="commitDetailsResize" title="Drag to resize"></div>';
+		const handle = '<div id="commitDetailsResize" title="' + t('Drag to resize') + '"></div>';
 		let newElem: HTMLElement;
 		if (docked) {
 			newElem = document.createElement('div');
@@ -2507,7 +2507,7 @@ interface ReviewedFiles {
 }
 /** Set by the view from the configuration before the file lists are generated. */
 let showChangeTypeLetters = false;
-const CHANGE_TYPE_NAMES: { [type: string]: string } = { A: 'Added', M: 'Modified', D: 'Deleted', R: 'Renamed' };
+const CHANGE_TYPE_NAMES: { [type: string]: string } = { A: t('Added'), M: t('Modified'), D: t('Deleted'), R: t('Renamed') };
 function generateGitFileTreeHtml(folder: GitFolder, gitFiles: GG.GitFileChange[], compactFolders: boolean, review: ReviewedFiles | null = null) {
 	// With compact folders, a chain of folders that each only contain one folder is shown on one line
 	let displayName = folder.name, deepest = folder;
