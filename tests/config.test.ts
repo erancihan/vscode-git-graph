@@ -155,9 +155,11 @@ describe('Config.contextMenuActionsVisibility', () => {
 
 describe('Config.commitDetailsView', () => {
 	it('defaults to the file tree with compact folders and reads the flat fallbacks', () => {
-		expect(getConfig().commitDetailsView()).toEqual({ fileViewType: 'tree', compactFolders: true });
-		setConfig({ 'defaultFileViewType': 'File List', 'commitDetailsViewFileTreeCompactFolders': false });
-		expect(getConfig().commitDetailsView()).toEqual({ fileViewType: 'list', compactFolders: false });
+		expect(getConfig().commitDetailsView()).toEqual({ fileViewType: 'tree', compactFolders: true, location: 'Inline' });
+		setConfig({ 'defaultFileViewType': 'File List', 'commitDetailsViewFileTreeCompactFolders': false, 'commitDetailsView.location': 'Docked to Bottom' });
+		expect(getConfig().commitDetailsView()).toEqual({ fileViewType: 'list', compactFolders: false, location: 'Docked to Bottom' });
+		setConfig({ 'commitDetailsView.location': 'Floating' });
+		expect(getConfig().commitDetailsView().location).toBe('Inline');
 		setConfig({ 'commitDetailsView.fileView.type': 'File Tree', 'defaultFileViewType': 'File List' });
 		expect(getConfig().commitDetailsView().fileViewType).toBe('tree');
 	});

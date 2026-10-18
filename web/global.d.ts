@@ -142,6 +142,8 @@ declare global {
 		showRemoteBranches: boolean;
 		expandedCommit: ExpandedCommit | null;
 		fileViewType: GG.FileViewType;
+		/** Height of the commit details view in pixels. Missing in state written by versions before 2.2.1. */
+		commitDetailsHeight?: number;
 	}
 }
 

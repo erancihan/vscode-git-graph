@@ -25,6 +25,7 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
         * Right-click a file for more: view the file at that revision, diff with the working file, open the file, copy its path
         * Switch between the file tree and a flat file list
         * Compare two commits: Ctrl/Cmd+click a second commit (or the uncommitted changes) while the details are open
+        * Inline or docked to the bottom, with a draggable height; click a parent hash to jump to that commit; Up and Down arrows step through commits, Escape closes
     * Perform Git actions by right clicking on a commit, branch, tag, stash, or the uncommitted changes:
         * Create, checkout, rename, delete, merge, rebase on, and push branches
         * Delete remote branches, fetch a remote branch into a local branch, pull a remote branch into the current branch
@@ -49,6 +50,7 @@ This extension contributes the following settings:
 
 * `git-graph.commitDetailsView.autoCenter`: Automatically center the commit details view when it is opened.
 * `git-graph.commitDetailsView.fileView.fileTree.compactFolders`: Show a folder that only contains one folder on one line. Default: true.
+* `git-graph.commitDetailsView.location`: Where the commit details open: `Inline` (below the commit) or `Docked to Bottom`. Default: `Inline`.
 * `git-graph.commitDetailsView.fileView.type`: Default file view in the commit details: `File Tree` or `File List`. Default: `File Tree`.
 * `git-graph.contextMenuActionsVisibility`: Hide individual context menu actions, for example `{"commit": {"reset": false}}`. Menus: `branch`, `commit`, `remoteBranch`, `tag`.
 * `git-graph.customBranchGlobPatterns`: Named glob patterns offered in the Branch dropdown, for example `[{"name": "Features", "glob": "heads/feature/*"}]`.

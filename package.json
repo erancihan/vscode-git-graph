@@ -94,6 +94,19 @@
 					"default": true,
 					"description": "In the file tree, show a folder that only contains one other folder on one line, for example \"src/web/graph\"."
 				},
+				"git-graph.commitDetailsView.location": {
+					"type": "string",
+					"enum": [
+						"Inline",
+						"Docked to Bottom"
+					],
+					"enumDescriptions": [
+						"Open the commit details view below the commit, as a row of the graph.",
+						"Open the commit details view in a panel docked to the bottom of the Git Graph view."
+					],
+					"default": "Inline",
+					"description": "Where the commit details view opens. Drag the edge of the view to change its height."
+				},
 				"git-graph.commitDetailsView.fileView.type": {
 					"type": "string",
 					"enum": [

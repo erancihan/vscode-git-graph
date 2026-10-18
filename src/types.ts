@@ -103,9 +103,11 @@ export interface DialogDefaults {
 
 export type FileViewType = 'tree' | 'list';
 
+export type CommitDetailsViewLocation = 'Inline' | 'Docked to Bottom';
 export interface CommitDetailsViewConfig {
 	fileViewType: FileViewType;
 	compactFolders: boolean;
+	location: CommitDetailsViewLocation;
 }
 
 export interface CustomBranchGlobPattern {
