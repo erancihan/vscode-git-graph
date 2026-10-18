@@ -1,6 +1,8 @@
 # Change Log
 
-## Unreleased
+## 2.4.3 - 2026-10-18
+
+Completes the Repository Settings widget (issue #18) and hardens the shared settings file after the security reviews.
 
 * Repository Settings: the user details follow `include` and `includeIf` directives of the git configuration (`git config --includes`); no global `.gitconfig` is required.
 * Security: the repository settings file is read and written only when `.vscode` and `.vscode/git-graph.json` are not symbolic links and stay inside the repository, the file is written atomically, the confirmation prompt lists the incoming values (including the issue pattern and URL), and issue patterns, wherever they come from, must be at most 200 characters, compile, and contain no quantified group inside a quantified group.
