@@ -477,6 +477,13 @@ svg.openFolderIcon, svg.closedFolderIcon, svg.fileIcon{
 	margin-right:4px;
 }
 
+@keyframes gitGraphFlash{
+	0%{background-color:var(--vscode-editor-findMatchHighlightBackground, rgba(234,92,0,0.33));}
+	100%{background-color:transparent;}
+}
+tr.flash td{
+	animation:gitGraphFlash 1.5s ease-out;
+}
 .commitHeadDot{
 	width:6px;
 	height:6px;

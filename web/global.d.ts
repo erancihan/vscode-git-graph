@@ -25,6 +25,7 @@ declare global {
 		graphStyle: 'rounded' | 'angular';
 		graphUncommittedChanges: 'uncommitted' | 'head';
 		markdown: boolean;
+		emojiShortcodes: { [shortcode: string]: string };
 		grid: { x: number, y: number, offsetX: number, offsetY: number, expandY: number };
 		initialLoadCommits: number;
 		keyboardShortcuts: GG.KeyboardShortcuts;
@@ -59,6 +60,7 @@ declare global {
 		type: 'text-ref';
 		name: string;
 		default: string;
+		placeholder?: string;
 	}
 	interface DialogSelectInput {
 		type: 'select';

@@ -105,8 +105,12 @@ const URL_IN_TEXT = /https?:\/\/[^\s<>"'`]+[^\s<>"'`.,;:!?)]/g;
  * http(s) URLs into clickable links. Links carry the target in data-url; a delegated click handler
  * asks the extension to open it.
  */
-function linkifyMessage(message: string, issueLinking: { regex: RegExp, url: string } | null, linkUrls: boolean, markdown: boolean = false) {
-	const text = (part: string) => markdown ? formatInlineMarkdown(escapeHtml(part)) : escapeHtml(part);
+function linkifyMessage(message: string, issueLinking: { regex: RegExp, url: string } | null, linkUrls: boolean, markdown: boolean = false, emoji: { [shortcode: string]: string } | null = null) {
+	const text = (part: string) => {
+		let escaped = escapeHtml(part);
+		if (emoji !== null) escaped = replaceEmojiShortcodes(escaped, emoji);
+		return markdown ? formatInlineMarkdown(escaped) : escaped;
+	};
 	type Link = { start: number, end: number, url: string };
 	const links: Link[] = [];
 	if (issueLinking !== null) {
@@ -137,6 +141,28 @@ function linkifyMessage(message: string, issueLinking: { regex: RegExp, url: str
 		position = link.end;
 	}
 	return html + text(message.substring(position));
+}
+
+/** Common shortcodes (gitmoji and GitHub names); `git-graph.customEmojiShortcodeMappings` adds or overrides entries. */
+const BUILT_IN_EMOJI: { [shortcode: string]: string } = {
+	tada: '\ud83c\udf89', sparkles: '\u2728', bug: '\ud83d\udc1b', ambulance: '\ud83d\ude91', memo: '\ud83d\udcdd', rocket: '\ud83d\ude80', lipstick: '\ud83d\udc84', art: '\ud83c\udfa8', zap: '\u26a1', fire: '\ud83d\udd25',
+	white_check_mark: '\u2705', heavy_check_mark: '\u2714\ufe0f', lock: '\ud83d\udd12', bookmark: '\ud83d\udd16', rotating_light: '\ud83d\udea8', construction: '\ud83d\udea7', green_heart: '\ud83d\udc9a', arrow_down: '\u2b07\ufe0f', arrow_up: '\u2b06\ufe0f', pushpin: '\ud83d\udccc',
+	construction_worker: '\ud83d\udc77', chart_with_upwards_trend: '\ud83d\udcc8', recycle: '\u267b\ufe0f', heavy_plus_sign: '\u2795', heavy_minus_sign: '\u2796', wrench: '\ud83d\udd27', hammer: '\ud83d\udd28', globe_with_meridians: '\ud83c\udf10', pencil2: '\u270f\ufe0f', pencil: '\ud83d\udcdd',
+	rewind: '\u23ea', twisted_rightwards_arrows: '\ud83d\udd00', package: '\ud83d\udce6', alien: '\ud83d\udc7d', truck: '\ud83d\ude9a', page_facing_up: '\ud83d\udcc4', boom: '\ud83d\udca5', bento: '\ud83c\udf71', wheelchair: '\u267f', bulb: '\ud83d\udca1',
+	beers: '\ud83c\udf7b', speech_balloon: '\ud83d\udcac', card_file_box: '\ud83d\uddc3\ufe0f', loud_sound: '\ud83d\udd0a', mute: '\ud83d\udd07', busts_in_silhouette: '\ud83d\udc65', children_crossing: '\ud83d\udeb8', building_construction: '\ud83c\udfd7\ufe0f', iphone: '\ud83d\udcf1', see_no_evil: '\ud83d\ude48',
+	camera_flash: '\ud83d\udcf8', label: '\ud83c\udff7\ufe0f', seedling: '\ud83c\udf31', triangular_flag_on_post: '\ud83d\udea9', goal_net: '\ud83e\udd45', dizzy: '\ud83d\udcab', wastebasket: '\ud83d\uddd1\ufe0f', coffin: '\u26b0\ufe0f', test_tube: '\ud83e\uddea', necktie: '\ud83d\udc54',
+	stethoscope: '\ud83e\ude7a', bricks: '\ud83e\uddf1', technologist: '\ud83e\uddd1\u200d\ud83d\udcbb', thumbsup: '\ud83d\udc4d', '+1': '\ud83d\udc4d', '-1': '\ud83d\udc4e', heart: '\u2764\ufe0f', warning: '\u26a0\ufe0f', smile: '\ud83d\ude04', eyes: '\ud83d\udc40',
+	clap: '\ud83d\udc4f', '100': '\ud83d\udcaf', question: '\u2753', exclamation: '\u2757', x: '\u274c', star: '\u2b50', mag: '\ud83d\udd0d', books: '\ud83d\udcda', gear: '\u2699\ufe0f', shield: '\ud83d\udee1\ufe0f'
+};
+
+/** Replace `:shortcode:` with the emoji from the built-in list or the custom mappings; unknown codes stay as text. */
+function replaceEmojiShortcodes(escaped: string, custom: { [shortcode: string]: string }) {
+	return escaped.replace(/:([a-z0-9_+-]{1,40}):/gi, (match, code: string) => {
+		const key = code.toLowerCase();
+		if (Object.prototype.hasOwnProperty.call(custom, key)) return custom[key];
+		if (Object.prototype.hasOwnProperty.call(BUILT_IN_EMOJI, key)) return BUILT_IN_EMOJI[key];
+		return match;
+	});
 }
 
 /**

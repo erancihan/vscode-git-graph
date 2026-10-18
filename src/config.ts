@@ -216,6 +216,20 @@ class Config {
 		return this.getEnum('graph.uncommittedChanges', null, ['Open Circle at the Uncommitted Changes', 'Open Circle at the Checked Out Commit'], 'Open Circle at the Uncommitted Changes') === 'Open Circle at the Checked Out Commit' ? 'head' : 'uncommitted';
 	}
 
+	/** Extra `:shortcode:` to emoji pairs for commit messages, validated: lower-case codes, short emoji strings. */
+	public customEmojiShortcodeMappings(): { [shortcode: string]: string } {
+		const value = this.get<unknown>('customEmojiShortcodeMappings', null, []), result: { [shortcode: string]: string } = {};
+		if (!Array.isArray(value)) return result;
+		for (const entry of value.slice(0, 200)) {
+			if (typeof entry !== 'object' || entry === null) continue;
+			const shortcode = (<{ shortcode?: unknown }>entry).shortcode, emoji = (<{ emoji?: unknown }>entry).emoji;
+			if (typeof shortcode === 'string' && /^:?[a-z0-9_+-]{1,40}:?$/i.test(shortcode) && typeof emoji === 'string' && emoji.length > 0 && emoji.length <= 16 && !/[<>&"'\x00-\x1f]/.test(emoji)) {
+				result[shortcode.replace(/^:|:$/g, '').toLowerCase()] = emoji;
+			}
+		}
+		return result;
+	}
+
 	/** Render inline Markdown (bold, italic, code, strikethrough) in commit messages. */
 	public markdown() {
 		return this.getBoolean('markdown', null, true);

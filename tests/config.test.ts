@@ -253,3 +253,13 @@ describe('Config.customPullRequestProviders', () => {
 		expect(getConfig().customPullRequestProviders()).toEqual([{ name: 'Gitea', templateUrl: 'https://gitea.example.com/$sourceOwner' }]);
 	});
 });
+
+describe('Config.customEmojiShortcodeMappings', () => {
+	afterEach(() => { delete configurationValues['git-graph']; });
+	it('keeps valid pairs and normalises the shortcode', () => {
+		configurationValues['git-graph'] = { customEmojiShortcodeMappings: [{ shortcode: ':release:', emoji: '\ud83d\ude80' }, { shortcode: 'Ship_It', emoji: '\u2705' }, { shortcode: 'bad code', emoji: 'x' }, { shortcode: 'html', emoji: '<b>' }, 'nope', { shortcode: 'long', emoji: 'x'.repeat(17) }] };
+		expect(getConfig().customEmojiShortcodeMappings()).toEqual({ release: '\ud83d\ude80', ship_it: '\u2705' });
+		configurationValues['git-graph'] = { customEmojiShortcodeMappings: 'nope' };
+		expect(getConfig().customEmojiShortcodeMappings()).toEqual({});
+	});
+});
