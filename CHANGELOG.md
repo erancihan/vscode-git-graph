@@ -1,5 +1,9 @@
 # Change Log
 
+## Unreleased
+
+* Repository Settings: "Branches shown on load" chooses what the Branch dropdown selects when the repository opens without a remembered selection: the default from the extension settings, the checked-out branch, specific branches (names separated by commas, custom glob pattern names accepted), or both. Stored per repository.
+
 ## 2.4.2 - 2026-10-18
 
 Milestone "2.4 Beyond upstream", third release. Designed from the descriptions on the tracking issues; nothing is taken from other extensions.

@@ -286,7 +286,8 @@ class GitGraphView {
 		const known = options.map((option) => option.value);
 		const valid = this.currentBranches !== null ? this.currentBranches.filter((branch) => known.indexOf(branch) > -1) : [];
 		if (valid.length === 0) {
-			this.currentBranches = [this.config.showCurrentBranchByDefault && this.gitBranchHead !== null ? this.gitBranchHead : ''];
+			const onLoad = this.getOnLoadBranches(known);
+			this.currentBranches = onLoad.length > 0 ? onLoad : [this.config.showCurrentBranchByDefault && this.gitBranchHead !== null ? this.gitBranchHead : ''];
 		} else {
 			this.currentBranches = valid;
 		}
@@ -294,6 +295,19 @@ class GitGraphView {
 		this.branchDropdown.setOptions(options, this.currentBranches);
 
 		this.triggerLoadBranchesCallback(true, isRepo);
+	}
+	/** The repository's "branches shown on load" selection, limited to entries the dropdown knows. Empty when none is configured. */
+	private getOnLoadBranches(known: string[]): string[] {
+		const state = this.currentRepo !== null && typeof this.gitRepos[this.currentRepo] !== 'undefined' ? this.gitRepos[this.currentRepo] : null;
+		if (state === null || state.onLoad === null) return [];
+		const selection: string[] = [];
+		if (state.onLoad.showCheckedOutBranch && this.gitBranchHead !== null) selection.push(this.gitBranchHead);
+		for (const name of state.onLoad.showSpecificBranches) {
+			const glob = this.config.customBranchGlobPatterns.find((pattern) => pattern.name === name);
+			const value = glob !== undefined ? '--glob=' + glob.glob : known.indexOf(name) > -1 ? name : known.indexOf('remotes/' + name) > -1 ? 'remotes/' + name : null;
+			if (value !== null && selection.indexOf(value) === -1) selection.push(value);
+		}
+		return selection;
 	}
 	private triggerLoadBranchesCallback(changes: boolean, isRepo: boolean) {
 		if (this.loadBranchesCallback !== null) {

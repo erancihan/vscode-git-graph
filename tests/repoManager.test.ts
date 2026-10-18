@@ -38,6 +38,9 @@ describe('normaliseRepoState', () => {
 		expect(state.showStashes).toBeNull();
 		expect(state.onlyFollowFirstParent).toBe(true);
 		expect(normaliseRepoState({ name: '   ' }).name).toBeNull();
+		expect(normaliseRepoState(<Partial<GitRepoState>><unknown>{ onLoad: { showCheckedOutBranch: true, showSpecificBranches: ['develop', '-x', 7, 'bad\u0000name'] } }).onLoad).toEqual({ showCheckedOutBranch: true, showSpecificBranches: ['develop'] });
+		expect(normaliseRepoState(<Partial<GitRepoState>><unknown>{ onLoad: { showCheckedOutBranch: false, showSpecificBranches: [] } }).onLoad).toBeNull();
+		expect(normaliseRepoState(<Partial<GitRepoState>><unknown>{ onLoad: 'develop' }).onLoad).toBeNull();
 		expect(normaliseRepoState({ issueLinkingConfig: { issue: '#(\\d+)', url: 'https://example.com/issues/$1' } }).issueLinkingConfig).toEqual({ issue: '#(\\d+)', url: 'https://example.com/issues/$1' });
 		expect(normaliseRepoState({ issueLinkingConfig: { issue: '#(\\d+)', url: 'javascript:alert(1)' } }).issueLinkingConfig).toBeNull();
 		expect(normaliseRepoState({ issueLinkingConfig: { issue: '', url: 'https://example.com' } }).issueLinkingConfig).toBeNull();

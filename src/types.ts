@@ -105,6 +105,14 @@ export interface GitRepoState {
 	onlyFollowFirstParent: boolean | null;
 	/** Turns issue references in commit messages into links. null => no issue linking. */
 	issueLinkingConfig: IssueLinkingConfig | null;
+	/** Branches selected when the repository opens without a remembered selection. null => the extension settings decide. */
+	onLoad: GitRepoOnLoad | null;
+}
+
+export interface GitRepoOnLoad {
+	showCheckedOutBranch: boolean;
+	/** Branch names, or names of `git-graph.customBranchGlobPatterns` entries. Names that do not exist are skipped. */
+	showSpecificBranches: string[];
 }
 
 export interface IssueLinkingConfig {
