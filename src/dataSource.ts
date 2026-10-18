@@ -163,13 +163,22 @@ export class DataSource {
 			}
 		}
 
+		// One row per other worktree with uncommitted changes, directly above the commit it has checked out
+		if (getConfig().showUncommittedChanges()) {
+			const rows = await this.getWorktreeChangesRows(repo, commits.map((commit) => commit.hash));
+			for (let i = rows.length - 1; i >= 0; i--) {
+				const index = commits.findIndex((commit) => commit.hash === rows[i].head);
+				if (index !== -1) commits.splice(index, 0, rows[i].row);
+			}
+		}
+
 		const commitNodes: GitCommitNode[] = [];
 		const commitLookup: { [hash: string]: number } = {};
 
 		for (let i = 0; i < commits.length; i++) {
 			commitLookup[commits[i].hash] = i;
 			const stash = commits[i].stash || null;
-			commitNodes.push({ hash: commits[i].hash, parentHashes: commits[i].parentHashes, author: commits[i].author, email: commits[i].email, date: commits[i].date, message: commits[i].message, refs: stash !== null ? [{ hash: commits[i].hash, name: stash.selector, type: 'stash' }] : [], stash: stash, signature: commits[i].signature || null, bisect: refData.bisect[commits[i].hash] || null });
+			commitNodes.push({ hash: commits[i].hash, parentHashes: commits[i].parentHashes, author: commits[i].author, email: commits[i].email, date: commits[i].date, message: commits[i].message, refs: stash !== null ? [{ hash: commits[i].hash, name: stash.selector, type: 'stash' }] : [], stash: stash, signature: commits[i].signature || null, bisect: refData.bisect[commits[i].hash] || null , worktree: commits[i].worktree || null });
 		}
 		for (let i = 0; i < refData.refs.length; i++) {
 			if (typeof commitLookup[refData.refs[i].hash] === 'number') {
@@ -756,6 +765,35 @@ export class DataSource {
 		return this.runGitCommand(args, repo);
 	}
 
+	/* Uncommitted changes of other worktrees */
+
+	/**
+	 * For every other worktree of the repository whose checked-out commit is among `hashes` and whose
+	 * working tree has changes, a pseudo-row to insert above that commit. Costs one `git status` per
+	 * worktree, and nothing at all when the repository has no linked worktrees.
+	 */
+	private async getWorktreeChangesRows(repo: string, hashes: string[]): Promise<{ head: string, row: GitCommit }[]> {
+		const gitDir = resolveGitDir(repo);
+		if (gitDir === null) return [];
+		if (!fs.existsSync(path.join(gitDir, 'worktrees')) && !/[\\/]worktrees[\\/][^\\/]+$/.test(gitDir)) return [];
+		const realRepo = realPathOrSame(repo), known: { [hash: string]: boolean } = {};
+		for (const hash of hashes) known[hash] = true;
+		const rows: { head: string, row: GitCommit }[] = [];
+		const worktrees = await this.getWorktrees(repo);
+		for (let i = 0; i < worktrees.length; i++) {
+			const worktree = worktrees[i];
+			if (worktree.head === null || !known[worktree.head] || realPathOrSame(worktree.path) === realRepo) continue;
+			const changes = await this.getGitUnsavedChanges(worktree.path).catch((): GitUnsavedChanges | null => null);
+			if (changes === null || changes.changes === 0) continue;
+			const name = path.basename(worktree.path);
+			rows.push({
+				head: worktree.head,
+				row: { hash: '*worktree:' + i, parentHashes: [worktree.head], author: '*', email: '', date: Math.round((new Date()).getTime() / 1000), message: 'Uncommitted Changes in ' + name + ' (' + changes.changes + ')', worktree: { path: worktree.path, name: name } }
+			});
+		}
+		return rows;
+	}
+
 	/* Conflict prediction */
 
 	/**
@@ -1243,6 +1281,15 @@ export function parseRebaseRange(stdout: string): { hash: string, parents: numbe
 		const parts = line.split('\x1f');
 		return { hash: parts[0], parents: parts[1] === '' || parts[1] === undefined ? 0 : parts[1].split(' ').length, subject: parts.slice(2).join('\x1f') };
 	});
+}
+
+/** The real path of a folder (symbolic links resolved), or the path itself when it cannot be resolved. */
+function realPathOrSame(folder: string) {
+	try {
+		return fs.realpathSync(folder);
+	} catch (e) {
+		return folder;
+	}
 }
 
 /** Delete a temporary folder and its files. Errors are ignored (the folder is in the temp directory). */

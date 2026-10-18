@@ -369,7 +369,7 @@ class GitGraphView {
 		if (!this.config.ciStatus.enabled || this.currentRepo === null) return;
 		const hashes: string[] = [];
 		for (let i = 0; i < this.commits.length && hashes.length < this.config.ciStatus.maxCommits; i++) {
-			if (this.commits[i].hash !== '*') hashes.push(this.commits[i].hash);
+			if (this.commits[i].hash.charAt(0) !== '*') hashes.push(this.commits[i].hash);
 		}
 		if (hashes.length > 0) sendMessage({ command: 'fetchCiStatus', repo: this.currentRepo, commits: hashes });
 	}
@@ -515,11 +515,12 @@ class GitGraphView {
 			const refs = (branchesInGraph ? '' : labels.branches) + (tagsOnRight ? '' : labels.tags);
 			const bisectMark = this.commits[i].bisect || null;
 			const bisectBadge = bisectMark !== null ? '<span class="bisectBadge ' + bisectMark + '" title="Bisect: ' + bisectMark + '">' + (bisectMark === 'good' ? 'G' : bisectMark === 'bad' ? 'B' : 'S') + '</span>' : '';
-			const muted = this.commits[i].hash !== '*' && (
+			const worktreeRow = this.commits[i].worktree || null;
+			const muted = this.commits[i].hash !== '*' && worktreeRow === null && (
 				(this.config.muteMergeCommits && this.commits[i].parentHashes.length > 1 && this.commits[i].stash === null) ||
 				(ancestorsOfHead !== null && !ancestorsOfHead[this.commits[i].hash])
 			);
-			html += '<tr ' + (this.commits[i].hash !== '*' ? 'class="commit' + (muted ? ' mute' : '') + (bisectMark !== null ? ' bisect' + bisectMark : '') + '" data-hash="' + this.commits[i].hash + '" draggable="true"' : 'class="unsavedChanges"') + ' data-id="' + i + '" data-color="' + this.graph.getVertexColour(i) + '"">' + graphCell + '<td>' + (tagsOnRight && labels.tags !== '' ? '<div class="descriptionCell"><span class="descriptionMain">' : '') + (this.commits[i].hash === this.commitHead ? '<span class="commitHeadDot"></span>' : '') + refs + (this.commits[i].hash === currentHash ? '<b>' + message + '</b>' : message) + (tagsOnRight && labels.tags !== '' ? '</span><span class="gitRefsRight">' + labels.tags + '</span></div>' : '') + '</td><td class="colDate" title="' + date.title + '">' + date.value + '</td><td class="colAuthor" title="' + escapeHtml(this.commits[i].author + ' <' + this.commits[i].email + '>') + '">' + (this.config.fetchAvatars ? '<span class="avatar" data-email="' + escapeHtml(this.commits[i].email) + '">' + (typeof this.avatars[this.commits[i].email] === 'string' ? '<img class="avatarImg" src="' + this.avatars[this.commits[i].email] + '">' : '') + '</span>' : '') + escapeHtml(this.commits[i].author) + '</td><td class="colCommit" title="' + escapeHtml(this.commits[i].hash) + '">' + this.ciStatusHtml(this.commits[i].hash) + bisectBadge + signatureIconHtml(this.commits[i].signature) + abbrevCommit(this.commits[i].hash) + '</td></tr>';
+			html += '<tr ' + (worktreeRow !== null ? 'class="worktreeChanges" data-worktree="' + escapeHtml(worktreeRow.path) + '" title="' + escapeHtml(worktreeRow.path) + '"' : this.commits[i].hash !== '*' ? 'class="commit' + (muted ? ' mute' : '') + (bisectMark !== null ? ' bisect' + bisectMark : '') + '" data-hash="' + this.commits[i].hash + '" draggable="true"' : 'class="unsavedChanges"') + ' data-id="' + i + '" data-color="' + this.graph.getVertexColour(i) + '"">' + graphCell + '<td>' + (tagsOnRight && labels.tags !== '' ? '<div class="descriptionCell"><span class="descriptionMain">' : '') + (this.commits[i].hash === this.commitHead ? '<span class="commitHeadDot"></span>' : '') + refs + (this.commits[i].hash === currentHash ? '<b>' + message + '</b>' : message) + (tagsOnRight && labels.tags !== '' ? '</span><span class="gitRefsRight">' + labels.tags + '</span></div>' : '') + '</td><td class="colDate" title="' + date.title + '">' + date.value + '</td><td class="colAuthor" title="' + escapeHtml(this.commits[i].author + ' <' + this.commits[i].email + '>') + '">' + (this.config.fetchAvatars ? '<span class="avatar" data-email="' + escapeHtml(this.commits[i].email) + '">' + (typeof this.avatars[this.commits[i].email] === 'string' ? '<img class="avatarImg" src="' + this.avatars[this.commits[i].email] + '">' : '') + '</span>' : '') + escapeHtml(this.commits[i].author) + '</td><td class="colCommit" title="' + escapeHtml(this.commits[i].hash) + '">' + this.ciStatusHtml(this.commits[i].hash) + bisectBadge + signatureIconHtml(this.commits[i].signature) + abbrevCommit(this.commits[i].hash) + '</td></tr>';
 		}
 		this.tableElem.innerHTML = '<table>' + html + '</table>';
 		this.footerElem.innerHTML = this.moreCommitsAvailable ? '<div id="loadMoreCommitsBtn" class="roundedBtn">' + t('Load More Commits') + '</div>' : '';
@@ -787,6 +788,22 @@ class GitGraphView {
 			if (this.expandedCommit !== null && (mouseEvent.ctrlKey || mouseEvent.metaKey)) {
 				this.loadCommitComparison(<HTMLElement>(<Element>e.target).closest('.unsavedChanges')!);
 			}
+		});
+		addDelegatedListener(this.tableElem, 'worktreeChanges', 'contextmenu', (e: Event) => {
+			e.stopPropagation();
+			const sourceElem = <HTMLElement>(<Element>e.target).closest('.worktreeChanges')!, worktreePath = sourceElem.dataset.worktree!;
+			showContextMenu(<MouseEvent>e, [
+				{
+					title: t('Open Worktree in New Window'),
+					visible: true,
+					onClick: () => sendMessage({ command: 'openWorktree', repo: this.currentRepo!, path: worktreePath, newWindow: true })
+				},
+				{
+					title: t('Add to Git Graph'),
+					visible: true,
+					onClick: () => sendMessage({ command: 'openWorktree', repo: this.currentRepo!, path: worktreePath, newWindow: false })
+				}
+			], sourceElem);
 		});
 		addDelegatedListener(this.tableElem, 'unsavedChanges', 'contextmenu', (e: Event) => {
 			e.stopPropagation();
@@ -1849,7 +1866,7 @@ class GitGraphView {
 	private openAdjacentCommitDetails(delta: number) {
 		if (this.expandedCommit === null) return;
 		let id = this.expandedCommit.id + delta;
-		while (id >= 0 && id < this.commits.length && this.commits[id].hash === '*') id += delta;
+		while (id >= 0 && id < this.commits.length && this.commits[id].hash.charAt(0) === '*') id += delta;
 		if (id < 0 || id >= this.commits.length) return;
 		const row = <HTMLElement | null>this.tableElem.querySelector('tr.commit[data-id="' + id + '"]');
 		if (row === null) return;

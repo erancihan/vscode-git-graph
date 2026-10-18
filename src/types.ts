@@ -13,6 +13,8 @@ export interface GitCommitNode {
 	signature: GitSignature | null;
 	/** Mark given during a running bisection (from refs/bisect/*), or null. */
 	bisect: GitBisectMark | null;
+	/** Set on the "Uncommitted Changes in <worktree>" rows of other worktrees; their hash starts with "*". */
+	worktree: GitWorktreeChanges | null;
 }
 
 export type GitOperationType = 'merge' | 'rebase' | 'cherry-pick' | 'revert';
@@ -42,6 +44,13 @@ export interface GitCommit {
 	message: string;
 	stash?: GitStash;
 	signature?: GitSignature;
+	worktree?: GitWorktreeChanges;
+}
+
+/** The other worktree whose uncommitted changes a pseudo-row stands for. */
+export interface GitWorktreeChanges {
+	path: string;
+	name: string; // folder name, shown in the row
 }
 
 /**
