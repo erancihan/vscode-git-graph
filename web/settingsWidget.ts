@@ -5,6 +5,7 @@ interface SettingsWidgetView {
 	getRemotes(): string[];
 	/** Reload branches and commits after a change that affects the graph. */
 	refresh(): void;
+	getDialogDefaults(): GG.DialogDefaults;
 }
 
 type OverrideKey = 'showTags' | 'showStashes' | 'includeCommitsMentionedByReflogs' | 'onlyFollowFirstParent';
@@ -212,9 +213,14 @@ class SettingsWidget {
 			this.view.refresh();
 		});
 		addListenerToClass('settingsRemoteFetch', 'click', (e) => {
-			const remote = this.remoteOf(<HTMLElement>e.target);
-			showActionRunningDialog(t('Fetching from {0}', escapeHtml(remote)));
-			sendMessage({ command: 'fetch', repo: repo, remote: remote, prune: false, pruneTags: false });
+			const remote = this.remoteOf(<HTMLElement>e.target), defaults = this.view.getDialogDefaults().fetchRemote;
+			showFormDialog(t('Fetch from the remote <b><i>{0}</i></b>:', escapeHtml(remote)), [
+				{ type: 'checkbox', name: t('Prune remote-tracking branches that no longer exist on the remote'), value: defaults.prune },
+				{ type: 'checkbox', name: t('Prune tags that no longer exist on the remote (needs prune)'), value: defaults.pruneTags }
+			], t('Yes, fetch'), (values) => {
+				showActionRunningDialog(t('Fetching from {0}', escapeHtml(remote)));
+				sendMessage({ command: 'fetch', repo: repo, remote: remote, prune: values[0] === 'checked', pruneTags: values[0] === 'checked' && values[1] === 'checked' });
+			}, null);
 		});
 		addListenerToClass('settingsRemotePrune', 'click', (e) => {
 			const remote = this.remoteOf(<HTMLElement>e.target);

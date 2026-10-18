@@ -69,15 +69,16 @@ describe('Config', () => {
 describe('Config.dialogDefaults', () => {
 	it('returns the documented defaults', () => {
 		expect(getConfig().dialogDefaults()).toEqual({
-			addTag: { type: 'annotated' },
+			addTag: { type: 'annotated', pushToRemote: false },
 			applyStash: { reinstateIndex: false },
 			cherryPick: { noCommit: false, recordOrigin: false },
 			createBranch: { checkOut: false },
 			deleteBranch: { forceDelete: false },
 			fetchIntoLocalBranch: { forceFetch: false },
+			fetchRemote: { prune: false, pruneTags: false },
 			merge: { noFastForward: true, noCommit: false, squashCommits: false },
 			popStash: { reinstateIndex: false },
-			pullBranch: { noFastForward: false, squashCommits: false },
+			pullBranch: { noFastForward: false, squashCommits: false, squashMessageFormat: 'Default' },
 			rebase: { ignoreDate: true, launchInteractiveRebase: false },
 			resetCurrentBranchToCommit: { mode: 'mixed' },
 			resetUncommittedChanges: { mode: 'mixed' },
@@ -100,15 +101,16 @@ describe('Config.dialogDefaults', () => {
 			'dialog.general.referenceInputSpaceSubstitution': 'Underscore'
 		});
 		expect(getConfig().dialogDefaults()).toEqual({
-			addTag: { type: 'lightweight' },
+			addTag: { type: 'lightweight', pushToRemote: false },
 			applyStash: { reinstateIndex: false },
 			cherryPick: { noCommit: false, recordOrigin: true },
 			createBranch: { checkOut: true },
 			deleteBranch: { forceDelete: true },
 			fetchIntoLocalBranch: { forceFetch: false },
+			fetchRemote: { prune: false, pruneTags: false },
 			merge: { noFastForward: false, noCommit: false, squashCommits: true },
 			popStash: { reinstateIndex: false },
-			pullBranch: { noFastForward: false, squashCommits: false },
+			pullBranch: { noFastForward: false, squashCommits: false, squashMessageFormat: 'Default' },
 			rebase: { ignoreDate: true, launchInteractiveRebase: true },
 			resetCurrentBranchToCommit: { mode: 'hard' },
 			resetUncommittedChanges: { mode: 'hard' },

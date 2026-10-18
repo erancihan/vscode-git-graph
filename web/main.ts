@@ -77,7 +77,8 @@ class GitGraphView {
 				if (repo === this.currentRepo) this.updateRepoDropdownNames();
 			},
 			getRemotes: () => this.gitRemotes,
-			refresh: () => this.refresh(true)
+			refresh: () => this.refresh(true),
+			getDialogDefaults: () => this.config.dialogDefaults
 		});
 		this.rebaseEditor = new RebaseEditor({ refresh: () => this.refresh(true) });
 		document.addEventListener('keydown', (e) => {
@@ -299,10 +300,12 @@ class GitGraphView {
 	/** The repository's "branches shown on load" selection, limited to entries the dropdown knows. Empty when none is configured. */
 	private getOnLoadBranches(known: string[]): string[] {
 		const state = this.currentRepo !== null && typeof this.gitRepos[this.currentRepo] !== 'undefined' ? this.gitRepos[this.currentRepo] : null;
-		if (state === null || state.onLoad === null) return [];
+		// The repository's own setting wins; otherwise the extension settings apply
+		const onLoad = state !== null && state.onLoad !== null ? state.onLoad : { showCheckedOutBranch: this.config.showCurrentBranchByDefault, showSpecificBranches: this.config.onLoadBranches };
+		if (!onLoad.showCheckedOutBranch && onLoad.showSpecificBranches.length === 0) return [];
 		const selection: string[] = [];
-		if (state.onLoad.showCheckedOutBranch && this.gitBranchHead !== null) selection.push(this.gitBranchHead);
-		for (const name of state.onLoad.showSpecificBranches) {
+		if (onLoad.showCheckedOutBranch && this.gitBranchHead !== null) selection.push(this.gitBranchHead);
+		for (const name of onLoad.showSpecificBranches) {
 			const glob = this.config.customBranchGlobPatterns.find((pattern) => pattern.name === name);
 			const value = glob !== undefined ? '--glob=' + glob.glob : known.indexOf(name) > -1 ? name : known.indexOf('remotes/' + name) > -1 ? 'remotes/' + name : null;
 			if (value !== null && selection.indexOf(value) === -1) selection.push(value);
@@ -608,12 +611,21 @@ class GitGraphView {
 					title: t('Add Tag') + ELLIPSIS,
 					visible: visibility.addTag,
 					onClick: () => {
-						showFormDialog(t('Add tag to commit <b><i>{0}</i></b>:', abbrevCommit(hash)), [
-							{ type: 'text-ref' as const, name: t('Name: '), default: '' },
-							{ type: 'select' as const, name: t('Type: '), default: this.config.dialogDefaults.addTag.type, options: [{ name: t('Annotated'), value: 'annotated' }, { name: t('Lightweight'), value: 'lightweight' }] },
-							{ type: 'text' as const, name: t('Message: '), default: '', placeholder: t('Optional') }
-						], t('Add Tag'), values => {
-							sendMessage({ command: 'addTag', repo: this.currentRepo!, tagName: values[0], commitHash: hash, lightweight: values[1] === 'lightweight', message: values[2] });
+						const inputs: DialogInput[] = [
+							{ type: 'text-ref', name: t('Name: '), default: '' },
+							{ type: 'select', name: t('Type: '), default: this.config.dialogDefaults.addTag.type, options: [{ name: t('Annotated'), value: 'annotated' }, { name: t('Lightweight'), value: 'lightweight' }] },
+							{ type: 'text', name: t('Message: '), default: '', placeholder: t('Optional') }
+						];
+						const remotes = this.gitRemotes, pushByDefault = this.config.dialogDefaults.addTag.pushToRemote;
+						if (remotes.length === 1) {
+							inputs.push({ type: 'checkbox', name: t('Push to {0}', escapeHtml(remotes[0])), value: pushByDefault });
+						} else if (remotes.length > 1) {
+							inputs.push({ type: 'select', name: t('Push to: '), default: pushByDefault ? remotes[0] : '', options: [{ name: t('Do not push'), value: '' }].concat(remotes.map((remote) => ({ name: remote, value: remote }))) });
+						}
+						showFormDialog(t('Add tag to commit <b><i>{0}</i></b>:', abbrevCommit(hash)), inputs, t('Add Tag'), values => {
+							const pushToRemote = remotes.length === 1 ? (values[3] === 'checked' ? remotes[0] : null) : remotes.length > 1 ? (values[3] !== '' ? values[3] : null) : null;
+							if (pushToRemote !== null) showActionRunningDialog(t('Adding and Pushing Tag'));
+							sendMessage({ command: 'addTag', repo: this.currentRepo!, tagName: values[0], commitHash: hash, lightweight: values[1] === 'lightweight', message: values[2], pushToRemote: pushToRemote });
 						}, sourceElem);
 					}
 				},
@@ -2210,6 +2222,7 @@ const gitGraph = new GitGraphView(viewState.repos, viewState.lastActiveRepo, {
 	referenceLabels: viewState.referenceLabels,
 	scrollToHeadOnLoad: viewState.scrollToHeadOnLoad,
 	showCurrentBranchByDefault: viewState.showCurrentBranchByDefault,
+	onLoadBranches: viewState.onLoadBranches,
 	showRemoteBranches: viewState.showRemoteBranches,
 	stickyHeader: viewState.stickyHeader
 }, viewState.codeReviews, vscode.getState());

@@ -64,6 +64,10 @@ This extension contributes the following settings:
 * `git-graph.ciStatus.enabled`: Show the CI status of commits as a dot before the commit hash. github.com uses the built-in GitHub sign-in; every other host (GitHub Enterprise, GitLab) asks once for a personal access token that is stored in the secret storage for that host only. User Settings only. Default: false.
 * `git-graph.ciStatus.maxCommits`: How many of the newest loaded commits get their CI status fetched (1 to 100). Default: 30.
 * `git-graph.ciStatus.hosts`: Self-hosted instances, host name to `GitHub` or `GitLab`, for example `{"git.example.com": "GitLab"}`. User Settings only, so a repository cannot redirect the feature to another host. Default: `{}`.
+* `git-graph.dialog.addTag.pushToRemote`: Default state of "Push to remote" in the Add Tag dialog. Default: false.
+* `git-graph.dialog.fetchRemote.prune` / `pruneTags`: Defaults of the prune checkboxes when fetching one remote from the Repository Settings widget. Default: false.
+* `git-graph.dialog.pullBranch.squashMessageFormat`: Message of the commit created by a squash pull: `Default` or `Git SQUASH_MSG`. Default: `Default`.
+* `git-graph.repository.onLoad.showSpecificBranches`: Branches selected when a repository opens without a remembered selection and without its own on-load setting. Default: `[]`.
 * `git-graph.commitDetailsView.fileView.fileTree.compactFolders`: Show a folder that only contains one folder on one line. Default: true.
 * `git-graph.commitDetailsView.location`: Where the commit details open: `Inline` (below the commit) or `Docked to Bottom`. Default: `Inline`.
 * `git-graph.commitDetailsView.fileView.showChangeTypeLetters`: Show A / M / D / R letters before file names in the Commit Details View. Default: false.

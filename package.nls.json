@@ -198,5 +198,12 @@
 	"config.showUncommittedChanges.description": "Show uncommitted changes (set to false to decrease load time on large repositories).",
 	"config.ciStatus.enabled.description": "Show the CI status of commits (GitHub check runs and commit statuses, GitLab pipeline statuses) as a dot before the commit hash. github.com uses the built-in GitHub sign-in; every other host asks once for a personal access token that is stored in the secret storage for that host only. Off by default because it calls the provider API. User Settings only.",
 	"config.ciStatus.maxCommits.description": "How many of the newest loaded commits get their CI status fetched (1 to 100). Lower values use fewer API requests.",
-	"config.ciStatus.hosts.markdownDescription": "Self-hosted instances: host name to provider type, for example `{\"git.example.com\": \"GitLab\", \"github.example.com\": \"GitHub\"}`. github.com and gitlab.com are recognised without this setting. User Settings only: workspace settings are ignored, so a repository cannot point the extension at another host."
+	"config.ciStatus.hosts.markdownDescription": "Self-hosted instances: host name to provider type, for example `{\"git.example.com\": \"GitLab\", \"github.example.com\": \"GitHub\"}`. github.com and gitlab.com are recognised without this setting. User Settings only: workspace settings are ignored, so a repository cannot point the extension at another host.",
+	"config.dialog.addTag.pushToRemote.description": "Default state of the \"Push to remote\" option in the \"Add Tag\" dialog (shown when the repository has remotes).",
+	"config.dialog.fetchRemote.prune.description": "Default state of the \"Prune remote-tracking branches\" checkbox when fetching one remote from the Repository Settings widget.",
+	"config.dialog.fetchRemote.pruneTags.description": "Default state of the \"Prune tags\" checkbox when fetching one remote from the Repository Settings widget (git fetch --prune --prune-tags).",
+	"config.dialog.pullBranch.squashMessageFormat.description": "Message of the commit created after \"Pull into current branch\" with \"Squash Commits\".",
+	"config.dialog.pullBranch.squashMessageFormat.enumDescriptions.0": "\"Merge remote-tracking branch '<remote>/<branch>'\"",
+	"config.dialog.pullBranch.squashMessageFormat.enumDescriptions.1": "The message git prepares in .git/SQUASH_MSG, which lists the squashed commits.",
+	"config.repository.onLoad.showSpecificBranches.markdownDescription": "Branch names (or names of `git-graph.customBranchGlobPatterns` entries) selected in the Branch dropdown when a repository opens without a remembered selection and without its own \"Branches shown on load\" setting. Combined with `git-graph.repository.onLoad.showCheckedOutBranch`."
 }

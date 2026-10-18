@@ -33,6 +33,7 @@ declare global {
 		referenceLabels: GG.ReferenceLabelsConfig;
 		scrollToHeadOnLoad: boolean;
 		showCurrentBranchByDefault: boolean;
+		onLoadBranches: string[];
 		showRemoteBranches: boolean;
 		stickyHeader: boolean;
 	}
