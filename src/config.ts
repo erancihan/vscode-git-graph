@@ -96,6 +96,14 @@ class Config {
 		return this.getBoolean('repository.showUncommittedChanges', 'showUncommittedChanges', true);
 	}
 
+	public showUntrackedFiles() {
+		return this.getBoolean('repository.showUntrackedFiles', 'showUntrackedFiles', true);
+	}
+
+	public useMailmap() {
+		return this.getBoolean('repository.useMailmap', 'useMailmap', false);
+	}
+
 	/* General */
 
 	public maxDepthOfRepoSearch() {

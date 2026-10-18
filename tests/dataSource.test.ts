@@ -186,6 +186,37 @@ describe('DataSource commit loading options', () => {
 		expect(result.commits.every(c => c.refs.every(r => r.type !== 'tag'))).toBe(true);
 	});
 
+	it('applies the mailmap when enabled', async () => {
+		fs.writeFileSync(path.join(repo, '.mailmap'), 'Mapped Name <mapped@example.com> <author@example.com>\n');
+		try {
+			let result = await dataSource.getCommits(repo, '', 10, false);
+			expect(result.commits.find(c => c.hash === base)!.author).toBe('Test Author');
+			configurationValues['git-graph'] = { 'repository.useMailmap': true };
+			result = await dataSource.getCommits(repo, '', 10, false);
+			expect(result.commits.find(c => c.hash === base)!.author).toBe('Mapped Name');
+			expect(result.commits.find(c => c.hash === base)!.email).toBe('mapped@example.com');
+			const details = await dataSource.commitDetails(repo, base);
+			expect(details!.author).toBe('Mapped Name');
+			expect(details!.committer).toBe('Test Committer');
+		} finally {
+			fs.unlinkSync(path.join(repo, '.mailmap'));
+		}
+	});
+
+	it('counts untracked files only when the setting is on', async () => {
+		fs.writeFileSync(path.join(repo, 'untracked.txt'), 'new\n');
+		try {
+			let result = await dataSource.getCommits(repo, '', 10, false);
+			expect(result.commits[0].hash).toBe('*');
+			expect(result.commits[0].message).toBe('Uncommitted Changes (1)');
+			configurationValues['git-graph'] = { 'repository.showUntrackedFiles': false };
+			result = await dataSource.getCommits(repo, '', 10, false);
+			expect(result.commits[0].hash).not.toBe('*');
+		} finally {
+			fs.unlinkSync(path.join(repo, 'untracked.txt'));
+		}
+	});
+
 	it('passes the configured ordering to git log', async () => {
 		configurationValues['git-graph'] = { 'repository.commits.order': 'topo' };
 		await dataSource.getCommits(repo, '', 10, false);

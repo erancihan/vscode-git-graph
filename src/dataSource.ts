@@ -26,13 +26,10 @@ const INVALID_ARGUMENT = 'The value is not a valid reference name or commit hash
 export class DataSource {
 	private readonly logger: Logger;
 	private gitPath: string = 'git';
-	private gitLogFormat!: string;
-	private gitCommitDetailsFormat!: string;
 
 	constructor(logger: Logger) {
 		this.logger = logger;
 		this.registerGitPath();
-		this.generateGitCommandFormats();
 	}
 
 	/**
@@ -52,10 +49,19 @@ export class DataSource {
 		});
 	}
 
-	public generateGitCommandFormats() {
-		const dateType = getConfig().dateType() === 'Author Date' ? '%at' : '%ct';
-		this.gitLogFormat = ['%H', '%P', '%an', '%ae', dateType, '%s'].join(gitLogSeparator);
-		this.gitCommitDetailsFormat = ['%H', '%P', '%an', '%ae', dateType, '%cn'].join(gitLogSeparator) + '%n%B';
+	/**
+	 * Format placeholders for git log and git show, built from the current settings. The date type
+	 * selects author or committer timestamps. With useMailmap the capitalised placeholders (%aN, %aE,
+	 * %cN) are used: git applies .mailmap to those, and never to %an, %ae and %cn.
+	 */
+	private getFormats() {
+		const config = getConfig();
+		const dateType = config.dateType() === 'Author Date' ? '%at' : '%ct';
+		const [authorName, authorEmail, committerName] = config.useMailmap() ? ['%aN', '%aE', '%cN'] : ['%an', '%ae', '%cn'];
+		return {
+			log: ['%H', '%P', authorName, authorEmail, dateType, '%s'].join(gitLogSeparator),
+			commitDetails: ['%H', '%P', authorName, authorEmail, dateType, committerName].join(gitLogSeparator) + '%n%B'
+		};
 	}
 
 	public getBranches(repo: string, showRemoteBranches: boolean) {
@@ -118,7 +124,7 @@ export class DataSource {
 	public commitDetails(repo: string, commitHash: string): Promise<GitCommitDetails | null> {
 		if (!isCommitHash(commitHash)) return Promise.resolve(null);
 		return Promise.all([
-			this.spawnGit(['show', '--quiet', commitHash, '--format=' + this.gitCommitDetailsFormat], repo, (stdout): GitCommitDetails => {
+			this.spawnGit(['show', '--quiet', commitHash, '--format=' + this.getFormats().commitDetails], repo, (stdout): GitCommitDetails => {
 				const lines = stdout.split(eolRegex);
 				let lastLine = lines.length - 1;
 				while (lines.length > 0 && lines[lastLine] === '') lastLine--;
@@ -304,7 +310,7 @@ export class DataSource {
 
 	private getGitLog(repo: string, branch: string, num: number, showRemoteBranches: boolean) {
 		const config = getConfig();
-		const args = ['log', '--max-count=' + num, '--format=' + this.gitLogFormat, '--' + config.commitOrdering() + '-order'];
+		const args = ['log', '--max-count=' + num, '--format=' + this.getFormats().log, '--' + config.commitOrdering() + '-order'];
 		if (branch !== '') {
 			if (!isSafeRefName(branch)) return Promise.resolve(<GitCommit[]>[]);
 			args.push(branch);
@@ -329,7 +335,8 @@ export class DataSource {
 	}
 
 	private getGitUnsavedChanges(repo: string) {
-		return this.spawnGit(['status', '-s', '--branch', '--untracked-files', '--porcelain'], repo, (stdout): GitUnsavedChanges | null => {
+		const untracked = getConfig().showUntrackedFiles() ? '--untracked-files' : '--untracked-files=no';
+		return this.spawnGit(['status', '-s', '--branch', untracked, '--porcelain'], repo, (stdout): GitUnsavedChanges | null => {
 			const lines = stdout.split(eolRegex);
 			return lines.length > 2 ? { branch: lines[0].substring(3).split('...')[0], changes: lines.length - 2 } : null;
 		}).catch(() => null);
