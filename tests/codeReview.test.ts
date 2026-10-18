@@ -1,4 +1,4 @@
-import { CODE_REVIEW_EXPIRY_MS, codeReviewId, isSafeObjectKey, isValidCodeReview, isValidCodeReviewId, markFileReviewed, markFileUnreviewed, pruneCodeReviews } from '../src/codeReview';
+import { describeCodeReview, parseCodeReviewId, CODE_REVIEW_EXPIRY_MS, codeReviewId, isSafeObjectKey, isValidCodeReview, isValidCodeReviewId, markFileReviewed, markFileUnreviewed, pruneCodeReviews } from '../src/codeReview';
 
 describe('codeReviewId', () => {
 	it('uses the hash for a commit and from-to for a comparison', () => {
@@ -59,5 +59,21 @@ describe('validation', () => {
 		const now = 1_000_000_000_000, fresh = { id: 'a1b2c3d4', lastActive: now, lastViewedFile: null, remainingFiles: [] };
 		const polluted = JSON.parse('{"__proto__": {"a1b2c3d4": {"id": "a1b2c3d4", "lastActive": ' + now + ', "lastViewedFile": null, "remainingFiles": []}}, "/repo": {"a1b2c3d4": {"id": "a1b2c3d4", "lastActive": ' + now + ', "lastViewedFile": null, "remainingFiles": []}, "bad": {"id": "a1b2c3d4"}}}');
 		expect(pruneCodeReviews(polluted, now)).toEqual({ '/repo': { a1b2c3d4: fresh } });
+	});
+});
+
+describe('code review quick pick helpers', () => {
+	const a = 'a'.repeat(40), b = 'b'.repeat(40);
+	it('parses review ids', () => {
+		expect(parseCodeReviewId(a)).toEqual({ commitHash: a, compareWithHash: null });
+		expect(parseCodeReviewId(a + '-' + b)).toEqual({ commitHash: b, compareWithHash: a });
+		expect(parseCodeReviewId('nope')).toBeNull();
+		expect(parseCodeReviewId(a + '-x')).toBeNull();
+	});
+	it('describes reviews for the quick pick', () => {
+		const now = 10 * 60 * 60 * 1000;
+		expect(describeCodeReview('/w/repo', { id: a, lastActive: now - 5 * 60000, lastViewedFile: null, remainingFiles: ['x', 'y'] }, now)).toEqual({ label: 'repo: aaaaaaaa', description: '2 files left', detail: '/w/repo \u00b7 last active 5 min ago' });
+		expect(describeCodeReview('/w/repo', { id: a + '-' + b, lastActive: now - 3 * 3600000, lastViewedFile: null, remainingFiles: ['x'] }, now)).toEqual({ label: 'repo: aaaaaaaa \u2194 bbbbbbbb', description: '1 file left', detail: '/w/repo \u00b7 last active 3 h ago' });
+		expect(describeCodeReview('/w/repo', { id: a, lastActive: now - 3 * 86400000, lastViewedFile: null, remainingFiles: [] }, now).detail).toBe('/w/repo \u00b7 last active 3 days ago');
 	});
 });

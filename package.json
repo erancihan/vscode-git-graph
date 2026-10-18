@@ -97,6 +97,16 @@
 			},
 			{
 				"category": "Git Graph",
+				"command": "git-graph.endSpecificWorkspaceCodeReview",
+				"title": "%command.endSpecificWorkspaceCodeReview.title%"
+			},
+			{
+				"category": "Git Graph",
+				"command": "git-graph.resumeWorkspaceCodeReview",
+				"title": "%command.resumeWorkspaceCodeReview.title%"
+			},
+			{
+				"category": "Git Graph",
 				"command": "git-graph.openFile",
 				"title": "%command.openFile.title%",
 				"icon": "$(go-to-file)"

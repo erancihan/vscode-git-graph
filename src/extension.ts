@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { AskpassManager } from './askpassManager';
 import { AvatarManager } from './avatarManager';
+import { describeCodeReview, parseCodeReviewId } from './codeReview';
 import { CiStatusManager } from './ciStatus';
 import { getConfig } from './config';
 import { DataSource } from './dataSource';
@@ -73,6 +74,18 @@ export function activate(context: vscode.ExtensionContext) {
 			GitGraphView.notifyCodeReviewsEnded();
 			vscode.window.showInformationMessage(count === 1 ? vscode.l10n.t('Git Graph: Ended 1 code review in this workspace.') : vscode.l10n.t('Git Graph: Ended {0} code reviews in this workspace.', count));
 		}),
+		vscode.commands.registerCommand('git-graph.endSpecificWorkspaceCodeReview', async () => {
+			const picked = await pickCodeReview(extensionState, vscode.l10n.t('Select the code review to end'));
+			if (picked === null) return;
+			const reviews = extensionState.removeCodeReview(picked.repo, picked.id);
+			GitGraphView.notifyCodeReviewsChanged(picked.repo, reviews);
+			vscode.window.showInformationMessage(vscode.l10n.t('Git Graph: Ended the code review {0}.', picked.label));
+		}),
+		vscode.commands.registerCommand('git-graph.resumeWorkspaceCodeReview', async () => {
+			const picked = await pickCodeReview(extensionState, vscode.l10n.t('Select the code review to resume'));
+			if (picked === null) return;
+			GitGraphView.createOrShow(context.extensionPath, dataSource, extensionState, avatarManager, ciStatusManager, repoManager, logger, picked.repo, parseCodeReviewId(picked.id));
+		}),
 		vscode.commands.registerCommand('git-graph.fetch', async () => {
 			const repo = await pickRepo(repoManager, vscode.l10n.t('Select the repository to fetch'));
 			if (repo === null) return;
@@ -132,6 +145,25 @@ export function activate(context: vscode.ExtensionContext) {
 		logger
 	);
 	logger.log('Started Git Graph - Ready to use!');
+}
+
+/** A code review of this workspace picked by the user, or null when there is none or the pick was cancelled. */
+async function pickCodeReview(extensionState: ExtensionState, placeHolder: string): Promise<{ repo: string, id: string, label: string } | null> {
+	const reviews = extensionState.getCodeReviews(), now = Date.now();
+	const items: (vscode.QuickPickItem & { repo: string, id: string })[] = [];
+	for (const repo of Object.keys(reviews)) {
+		for (const id of Object.keys(reviews[repo])) {
+			const texts = describeCodeReview(repo, reviews[repo][id], now);
+			items.push({ label: texts.label, description: texts.description, detail: texts.detail, repo: repo, id: id });
+		}
+	}
+	if (items.length === 0) {
+		vscode.window.showInformationMessage(vscode.l10n.t('Git Graph: There are no code reviews in this workspace.'));
+		return null;
+	}
+	items.sort((a, b) => reviews[b.repo][b.id].lastActive - reviews[a.repo][a.id].lastActive);
+	const picked = await vscode.window.showQuickPick(items, { placeHolder: placeHolder, matchOnDescription: true, matchOnDetail: true });
+	return picked ? { repo: picked.repo, id: picked.id, label: picked.label } : null;
 }
 
 /** The repository a command applies to: the only one, or the one the user picks. */

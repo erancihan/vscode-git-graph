@@ -211,5 +211,7 @@
 	"config.graph.uncommittedChanges.description": "Where the open circle of the graph sits when there are uncommitted changes.",
 	"config.graph.uncommittedChanges.enumDescriptions.0": "The uncommitted changes row has the open circle; the checked-out commit a filled one.",
 	"config.graph.uncommittedChanges.enumDescriptions.1": "The checked-out commit keeps the open circle; the uncommitted changes row is drawn in grey.",
-	"config.markdown.description": "Render inline Markdown in commit messages: **bold**, *italic*, `code` and ~~strikethrough~~."
+	"config.markdown.description": "Render inline Markdown in commit messages: **bold**, *italic*, `code` and ~~strikethrough~~.",
+	"command.endSpecificWorkspaceCodeReview.title": "End a Specific Code Review in Workspace...",
+	"command.resumeWorkspaceCodeReview.title": "Resume a Specific Code Review in Workspace..."
 }

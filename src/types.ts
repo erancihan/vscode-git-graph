@@ -266,6 +266,7 @@ export interface GitGraphViewState {
 	repos: GitRepoSet;
 	scrollToHeadOnLoad: boolean;
 	showCurrentBranchByDefault: boolean;
+	loadViewTo: LoadViewTo | null;
 	graphUncommittedChanges: 'uncommitted' | 'head';
 	markdown: boolean;
 	/** `git-graph.repository.onLoad.showSpecificBranches`: selected when a repository opens without its own on-load setting. */
@@ -561,6 +562,13 @@ export interface ResponsePushTag {
 export interface ResponseSelectRepo {
 	command: 'selectRepo';
 	repo: string;
+	loadViewTo?: LoadViewTo | null;
+}
+
+/** A commit to open in the Commit Details View once the repository is loaded (for example when a code review is resumed). */
+export interface LoadViewTo {
+	commitHash: string;
+	compareWithHash: string | null;
 }
 
 export interface ResponseRefresh {

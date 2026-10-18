@@ -29,6 +29,7 @@ class GitGraphView {
 	private expandedCommit: ExpandedCommit | null = null;
 	private maxCommits: number;
 	private scrollToHeadPending: boolean;
+	private pendingViewTo: GG.LoadViewTo | null = null;
 	private lastStashScrolledTo: number = -1;
 	private fileViewType: GG.FileViewType;
 	private commitDetailsHeight: number = DETAILS_DEFAULT_HEIGHT;
@@ -55,6 +56,7 @@ class GitGraphView {
 		this.maxCommits = config.initialLoadCommits;
 		this.showRemoteBranches = config.showRemoteBranches;
 		this.scrollToHeadPending = config.scrollToHeadOnLoad && prevState === null;
+		this.pendingViewTo = viewState.loadViewTo || null;
 		this.fileViewType = prevState !== null && prevState.fileViewType ? prevState.fileViewType : config.commitDetailsView.fileViewType;
 		this.graph = new Graph('commitGraph', this.config);
 		this.tableElem = document.getElementById('commitTable')!;
@@ -120,6 +122,7 @@ class GitGraphView {
 		this.footerElem = document.getElementById('footer')!;
 		this.repoDropdown = new Dropdown('repoSelect', true, false, 'Repos', values => {
 			this.currentRepo = values[0];
+			this.pendingViewTo = null;
 			this.maxCommits = this.config.initialLoadCommits;
 			this.scrollToHeadPending = this.config.scrollToHeadOnLoad;
 			this.discardExpandedCommit();
@@ -226,8 +229,13 @@ class GitGraphView {
 	}
 
 	/** Switch to a repository (for example the one of the active editor). Ignored when it is unknown or already shown. */
-	public selectRepo(repo: string) {
-		if (typeof this.gitRepos[repo] === 'undefined' || repo === this.currentRepo) return;
+	public selectRepo(repo: string, loadViewTo: GG.LoadViewTo | null = null) {
+		if (typeof this.gitRepos[repo] === 'undefined') return;
+		this.pendingViewTo = loadViewTo;
+		if (repo === this.currentRepo) {
+			this.applyPendingViewTo();
+			return;
+		}
 		this.currentRepo = repo;
 		this.ciStatuses = {};
 		this.maxCommits = this.config.initialLoadCommits;
@@ -239,6 +247,18 @@ class GitGraphView {
 		this.saveState();
 		this.repoDropdown.setOptions(this.repoDropdown.getOptions(), [this.currentRepo]);
 		this.refresh(true);
+	}
+
+	/** Open the Commit Details View on the commit a command asked for, once that commit is on the graph. */
+	private applyPendingViewTo() {
+		if (this.pendingViewTo === null) return;
+		const row = this.getRowElemByHash(this.pendingViewTo.commitHash);
+		if (row === null) return; // not loaded (yet): kept until the next load of this repository
+		const other = this.pendingViewTo.compareWithHash !== null ? this.getRowElemByHash(this.pendingViewTo.compareWithHash) : null;
+		this.pendingViewTo = null;
+		this.loadCommitDetails(row);
+		if (other !== null) this.loadCommitComparison(other);
+		row.scrollIntoView({ block: 'center' });
 	}
 
 	/* Loading Data */
@@ -367,6 +387,7 @@ class GitGraphView {
 			this.scrollToHeadPending = false;
 			this.scrollToHead();
 		}
+		this.applyPendingViewTo();
 
 		this.triggerLoadCommitsCallback(true);
 		this.fetchAvatars(avatarsNeeded);
@@ -2371,7 +2392,7 @@ window.addEventListener('message', event => {
 			gitGraph.refresh(false);
 			break;
 		case 'selectRepo':
-			gitGraph.selectRepo(msg.repo);
+			gitGraph.selectRepo(msg.repo, msg.loadViewTo || null);
 			break;
 		case 'resetToCommit':
 			refreshGraphOrDisplayError(msg.status, t('Unable to Reset to Commit'));
