@@ -330,6 +330,19 @@ class Config {
 
 	/* General */
 
+	/** Encoding used to decode file content read from git history. */
+	public fileEncoding(): string {
+		const value = this.get<unknown>('fileEncoding', null, 'utf8');
+		return typeof value === 'string' && /^[A-Za-z0-9_.:-]{1,40}$/.test(value) ? value : 'utf8';
+	}
+
+	/** Editor group where diffs and files from the graph open. */
+	public openNewTabEditorGroup(): vscode.ViewColumn {
+		const value = this.getEnum('openNewTabEditorGroup', 'openDiffTabLocation', ['Active', 'Beside', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'], 'Active');
+		const columns: { [key: string]: vscode.ViewColumn } = { Active: vscode.ViewColumn.Active, Beside: vscode.ViewColumn.Beside, One: vscode.ViewColumn.One, Two: vscode.ViewColumn.Two, Three: vscode.ViewColumn.Three, Four: vscode.ViewColumn.Four, Five: vscode.ViewColumn.Five, Six: vscode.ViewColumn.Six, Seven: vscode.ViewColumn.Seven, Eight: vscode.ViewColumn.Eight, Nine: vscode.ViewColumn.Nine };
+		return columns[value];
+	}
+
 	public openToTheRepoOfTheActiveTextEditorDocument() {
 		return this.getBoolean('openToTheRepoOfTheActiveTextEditorDocument', null, false);
 	}

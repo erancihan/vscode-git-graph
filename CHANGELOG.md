@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* `git-graph.fileEncoding` decodes files read from git history (diffs, "View File at this Revision") with the given encoding, per folder when needed; `git-graph.openNewTabEditorGroup` chooses the editor group (active, beside, or a numbered group) where diffs and files open.
 * Dialog defaults from upstream: the Add Tag dialog can push the new tag to a remote (`git-graph.dialog.addTag.pushToRemote`), fetching one remote from the Repository Settings widget asks about pruning branches and tags (`git-graph.dialog.fetchRemote.prune`, `pruneTags`), a squash pull is committed with a default message or git's SQUASH_MSG (`git-graph.dialog.pullBranch.squashMessageFormat`), and `git-graph.repository.onLoad.showSpecificBranches` selects branches on load for every repository without its own setting.
 * Repository Settings: the user details follow `include` and `includeIf` directives of the git configuration (`git config --includes`); no global `.gitconfig` is required.
 * Security: the repository settings file is read and written only when `.vscode` and `.vscode/git-graph.json` are not symbolic links and stay inside the repository, the file is written atomically, the confirmation prompt lists the incoming values (including the issue pattern and URL), and issue patterns, wherever they come from, must be at most 200 characters, compile, and contain no quantified group inside a quantified group.

@@ -766,6 +766,30 @@
 					"default": 0,
 					"description": "%config.maxDepthOfRepoSearch.description%"
 				},
+				"git-graph.fileEncoding": {
+					"type": "string",
+					"default": "utf8",
+					"scope": "resource",
+					"markdownDescription": "%config.fileEncoding.markdownDescription%"
+				},
+				"git-graph.openNewTabEditorGroup": {
+					"type": "string",
+					"enum": [
+						"Active",
+						"Beside",
+						"One",
+						"Two",
+						"Three",
+						"Four",
+						"Five",
+						"Six",
+						"Seven",
+						"Eight",
+						"Nine"
+					],
+					"default": "Active",
+					"description": "%config.openNewTabEditorGroup.description%"
+				},
 				"git-graph.openToTheRepoOfTheActiveTextEditorDocument": {
 					"type": "boolean",
 					"default": false,
