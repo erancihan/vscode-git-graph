@@ -40,6 +40,7 @@ This extension contributes the following settings:
 * `git-graph.date.format`: Specifies the date format used in the date column of the graph.
 * `git-graph.date.type`: Specifies whether the author date or the commit date is displayed.
 * `git-graph.dialog.addTag.type`: Default tag type in the "Add Tag" dialog: `Annotated` or `Lightweight`.
+* `git-graph.dialog.applyStash.reinstateIndex`: Default state of "Reinstate Index" in the "Apply Stash" dialog. Default: false.
 * `git-graph.dialog.cherryPick.noCommit`: Default state of "No Commit" in the "Cherry Pick" dialog. Default: false.
 * `git-graph.dialog.cherryPick.recordOrigin`: Default state of "Record Origin" in the "Cherry Pick" dialog. Default: false.
 * `git-graph.dialog.createBranch.checkOut`: Default state of "Check out" in the "Create Branch" dialog. Default: false.
@@ -50,11 +51,13 @@ This extension contributes the following settings:
 * `git-graph.dialog.merge.noFastForward`: Default state of "Create a new commit even if fast-forward is possible" in the merge dialogs. Default: true.
 * `git-graph.dialog.merge.squashCommits`: Default state of "Squash Commits" in the merge dialogs. Default: false.
 * `git-graph.dialog.merge.squashMessageFormat`: Message of the squash commit: `Default` ("Merge branch 'name'") or `Git SQUASH_MSG`. Default: `Default`.
+* `git-graph.dialog.popStash.reinstateIndex`: Default state of "Reinstate Index" in the "Pop Stash" dialog. Default: false.
 * `git-graph.dialog.pullBranch.noFastForward`: Default state of "Create a new commit even if fast-forward is possible" in the "Pull into current branch" dialog. Default: false.
 * `git-graph.dialog.pullBranch.squashCommits`: Default state of "Squash Commits" in the "Pull into current branch" dialog. Default: false.
 * `git-graph.dialog.rebase.ignoreDate`: Default state of "Ignore Date" in the rebase dialogs. Default: true.
 * `git-graph.dialog.resetCurrentBranchToCommit.mode`: Default reset mode: `Soft`, `Mixed` or `Hard`. Default: `Mixed`.
 * `git-graph.dialog.resetUncommittedChanges.mode`: Default reset mode in the "Reset uncommitted changes" dialog: `Mixed` or `Hard`. Default: `Mixed`.
+* `git-graph.dialog.stashUncommittedChanges.includeUntracked`: Default state of "Include Untracked" in the "Stash uncommitted changes" dialog. Default: false.
 * `git-graph.graph.colours`: Specifies the colours used on the graph.
 * `git-graph.graph.style`: Specifies the style of the graph.
 * `git-graph.maxDepthOfRepoSearch`: Specifies the maximum depth of subfolders to search when discovering repositories in the workspace. Default: 0.
@@ -71,6 +74,7 @@ This extension contributes the following settings:
 * `git-graph.repository.showCommitsOnlyReferencedByTags`: Show commits that are only reachable from tags when "Show All" is selected. Default: true.
 * `git-graph.repository.showRemoteBranches`: Default state of the "Show Remote Branches" checkbox. Default: true.
 * `git-graph.repository.showRemoteHeads`: Show remote HEAD references such as `origin/HEAD`. Default: true.
+* `git-graph.repository.showStashes`: Show stashes on the graph. Default: true.
 * `git-graph.repository.showTags`: Show tags on the graph. Default: true.
 * `git-graph.repository.showUncommittedChanges`: Show uncommitted changes. Set to false to decrease load time on large repositories.
 * `git-graph.repository.showUntrackedFiles`: Count untracked files in the "Uncommitted Changes" row. Default: true.

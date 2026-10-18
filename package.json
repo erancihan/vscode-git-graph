@@ -246,6 +246,48 @@
 									"type": "boolean",
 									"default": true,
 									"description": "Clean untracked files"
+								},
+								"stash": {
+									"type": "boolean",
+									"default": true,
+									"description": "Stash uncommitted changes"
+								}
+							},
+							"additionalProperties": false
+						},
+						"stash": {
+							"type": "object",
+							"description": "Actions in the context menu of a stash.",
+							"properties": {
+								"apply": {
+									"type": "boolean",
+									"default": true,
+									"description": "Apply Stash"
+								},
+								"createBranch": {
+									"type": "boolean",
+									"default": true,
+									"description": "Create Branch from Stash"
+								},
+								"pop": {
+									"type": "boolean",
+									"default": true,
+									"description": "Pop Stash"
+								},
+								"drop": {
+									"type": "boolean",
+									"default": true,
+									"description": "Drop Stash"
+								},
+								"copyName": {
+									"type": "boolean",
+									"default": true,
+									"description": "Copy Stash Name to Clipboard"
+								},
+								"copyHash": {
+									"type": "boolean",
+									"default": true,
+									"description": "Copy Stash Hash to Clipboard"
 								}
 							},
 							"additionalProperties": false
@@ -289,6 +331,11 @@
 					],
 					"default": "Annotated",
 					"description": "Default tag type in the \"Add Tag\" dialog."
+				},
+				"git-graph.dialog.applyStash.reinstateIndex": {
+					"type": "boolean",
+					"default": false,
+					"description": "Default state of the \"Reinstate Index\" checkbox in the \"Apply Stash\" dialog."
 				},
 				"git-graph.dialog.cherryPick.noCommit": {
 					"type": "boolean",
@@ -358,6 +405,11 @@
 					"default": "Default",
 					"description": "Message of the commit that a squash merge creates."
 				},
+				"git-graph.dialog.popStash.reinstateIndex": {
+					"type": "boolean",
+					"default": false,
+					"description": "Default state of the \"Reinstate Index\" checkbox in the \"Pop Stash\" dialog."
+				},
 				"git-graph.dialog.pullBranch.noFastForward": {
 					"type": "boolean",
 					"default": false,
@@ -400,6 +452,11 @@
 					],
 					"default": "Mixed",
 					"description": "Default reset mode in the \"Reset uncommitted changes\" dialog."
+				},
+				"git-graph.dialog.stashUncommittedChanges.includeUntracked": {
+					"type": "boolean",
+					"default": false,
+					"description": "Default state of the \"Include Untracked\" checkbox in the \"Stash uncommitted changes\" dialog."
 				},
 				"git-graph.graph.colours": {
 					"type": "array",
@@ -506,6 +563,11 @@
 					"type": "boolean",
 					"default": true,
 					"description": "Show remote HEAD symbolic references, for example \"origin/HEAD\", on the graph."
+				},
+				"git-graph.repository.showStashes": {
+					"type": "boolean",
+					"default": true,
+					"description": "Show stashes on the graph. Each stash appears as a row above the commit it was created from."
 				},
 				"git-graph.repository.showTags": {
 					"type": "boolean",

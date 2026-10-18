@@ -70,15 +70,18 @@ describe('Config.dialogDefaults', () => {
 	it('returns the documented defaults', () => {
 		expect(getConfig().dialogDefaults()).toEqual({
 			addTag: { type: 'annotated' },
+			applyStash: { reinstateIndex: false },
 			cherryPick: { noCommit: false, recordOrigin: false },
 			createBranch: { checkOut: false },
 			deleteBranch: { forceDelete: false },
 			fetchIntoLocalBranch: { forceFetch: false },
 			merge: { noFastForward: true, noCommit: false, squashCommits: false },
+			popStash: { reinstateIndex: false },
 			pullBranch: { noFastForward: false, squashCommits: false },
 			rebase: { ignoreDate: true },
 			resetCurrentBranchToCommit: { mode: 'mixed' },
 			resetUncommittedChanges: { mode: 'mixed' },
+			stashUncommittedChanges: { includeUntracked: false },
 			general: { referenceInputSpaceSubstitution: null }
 		});
 	});
@@ -97,15 +100,18 @@ describe('Config.dialogDefaults', () => {
 		});
 		expect(getConfig().dialogDefaults()).toEqual({
 			addTag: { type: 'lightweight' },
+			applyStash: { reinstateIndex: false },
 			cherryPick: { noCommit: false, recordOrigin: true },
 			createBranch: { checkOut: true },
 			deleteBranch: { forceDelete: true },
 			fetchIntoLocalBranch: { forceFetch: false },
 			merge: { noFastForward: false, noCommit: false, squashCommits: true },
+			popStash: { reinstateIndex: false },
 			pullBranch: { noFastForward: false, squashCommits: false },
 			rebase: { ignoreDate: true },
 			resetCurrentBranchToCommit: { mode: 'hard' },
 			resetUncommittedChanges: { mode: 'hard' },
+			stashUncommittedChanges: { includeUntracked: false },
 			general: { referenceInputSpaceSubstitution: '_' }
 		});
 	});
@@ -123,7 +129,8 @@ describe('Config.contextMenuActionsVisibility', () => {
 		const visibility = getConfig().contextMenuActionsVisibility();
 		expect(Object.values(visibility.commit).every(v => v === true)).toBe(true);
 		expect(Object.keys(visibility.commit).sort()).toEqual(['addTag', 'checkout', 'cherrypick', 'copyHash', 'createBranch', 'drop', 'merge', 'rebase', 'reset', 'revert']);
-		expect(visibility.uncommittedChanges).toEqual({ reset: true, clean: true });
+		expect(visibility.uncommittedChanges).toEqual({ reset: true, clean: true, stash: true });
+		expect(Object.keys(visibility.stash).sort()).toEqual(['apply', 'copyHash', 'copyName', 'createBranch', 'drop', 'pop']);
 		expect(visibility.tag).toEqual({ delete: true, push: true, copyName: true });
 	});
 
