@@ -383,7 +383,7 @@ function doesPathExist(path: string) {
 	});
 }
 export function defaultRepoState(): GitRepoState {
-	return { columnWidths: null, columnVisibility: null, name: null, hideRemotes: [], showTags: null, showStashes: null, includeCommitsMentionedByReflogs: null, onlyFollowFirstParent: null, issueLinkingConfig: null, onLoad: null };
+	return { columnWidths: null, columnVisibility: null, name: null, hideRemotes: [], showTags: null, showStashes: null, includeCommitsMentionedByReflogs: null, onlyFollowFirstParent: null, issueLinkingConfig: null, onLoad: null, settingsFileHash: null };
 }
 
 /** Fills the fields that older versions did not store, and drops values of the wrong type. */
@@ -401,6 +401,7 @@ export function normaliseRepoState(state: Partial<GitRepoState> | null | undefin
 	if (linking && typeof linking === 'object' && typeof linking.issue === 'string' && typeof linking.url === 'string' && linking.issue !== '' && /^https?:\/\//i.test(linking.url)) {
 		result.issueLinkingConfig = { issue: linking.issue, url: linking.url };
 	}
+	if (typeof state.settingsFileHash === 'string' && /^[0-9a-f]{64}$/.test(state.settingsFileHash)) result.settingsFileHash = state.settingsFileHash;
 	const onLoad = state.onLoad;
 	if (onLoad && typeof onLoad === 'object' && typeof onLoad.showCheckedOutBranch === 'boolean' && Array.isArray(onLoad.showSpecificBranches)) {
 		const branches = onLoad.showSpecificBranches.filter((branch): branch is string => typeof branch === 'string' && isSafeBranchSelection(branch)).slice(0, 100);
