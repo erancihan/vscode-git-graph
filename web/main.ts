@@ -83,6 +83,10 @@ class GitGraphView {
 		this.requestLoadBranchesAndCommits(false);
 	}
 
+	public getDialogDefaults() {
+		return this.config.dialogDefaults;
+	}
+
 	/* Loading Data */
 	public loadRepos(repos: GG.GitRepoSet, lastActiveRepo: string | null) {
 		this.gitRepos = repos;
@@ -343,7 +347,7 @@ class GitGraphView {
 					onClick: () => {
 						showFormDialog('Add tag to commit <b><i>' + abbrevCommit(hash) + '</i></b>:', [
 							{ type: 'text-ref' as const, name: 'Name: ', default: '' },
-							{ type: 'select' as const, name: 'Type: ', default: 'annotated', options: [{ name: 'Annotated', value: 'annotated' }, { name: 'Lightweight', value: 'lightweight' }] },
+							{ type: 'select' as const, name: 'Type: ', default: this.config.dialogDefaults.addTag.type, options: [{ name: 'Annotated', value: 'annotated' }, { name: 'Lightweight', value: 'lightweight' }] },
 							{ type: 'text' as const, name: 'Message: ', default: '', placeholder: 'Optional' }
 						], 'Add Tag', values => {
 							sendMessage({ command: 'addTag', repo: this.currentRepo!, tagName: values[0], commitHash: hash, lightweight: values[1] === 'lightweight', message: values[2] });
@@ -407,7 +411,7 @@ class GitGraphView {
 				{
 					title: 'Merge into current branch' + ELLIPSIS,
 					onClick: () => {
-						showCheckboxDialog('Are you sure you want to merge commit <b><i>' + abbrevCommit(hash) + '</i></b> into the current branch?', 'Create a new commit even if fast-forward is possible', true, 'Yes, merge', (createNewCommit) => {
+						showCheckboxDialog('Are you sure you want to merge commit <b><i>' + abbrevCommit(hash) + '</i></b> into the current branch?', 'Create a new commit even if fast-forward is possible', this.config.dialogDefaults.merge.noFastForward, 'Yes, merge', (createNewCommit) => {
 							sendMessage({ command: 'mergeCommit', repo: this.currentRepo!, commitHash: hash, createNewCommit: createNewCommit });
 						}, null);
 					}
@@ -415,7 +419,7 @@ class GitGraphView {
 				{
 					title: 'Reset current branch to this Commit' + ELLIPSIS,
 					onClick: () => {
-						showSelectDialog('Are you sure you want to reset the <b>current branch</b> to commit <b><i>' + abbrevCommit(hash) + '</i></b>?', 'mixed', [
+						showSelectDialog('Are you sure you want to reset the <b>current branch</b> to commit <b><i>' + abbrevCommit(hash) + '</i></b>?', this.config.dialogDefaults.resetCurrentBranchToCommit.mode, [
 							{ name: 'Soft - Keep all changes, but reset head', value: 'soft' },
 							{ name: 'Mixed - Keep working tree, but reset index', value: 'mixed' },
 							{ name: 'Hard - Discard all changes', value: 'hard' }
@@ -486,14 +490,14 @@ class GitGraphView {
 							{
 								title: 'Delete Branch' + ELLIPSIS,
 								onClick: () => {
-									showCheckboxDialog('Are you sure you want to delete the branch <b><i>' + escapeHtml(refName) + '</i></b>?', 'Force Delete', false, 'Delete Branch', (forceDelete) => {
+									showCheckboxDialog('Are you sure you want to delete the branch <b><i>' + escapeHtml(refName) + '</i></b>?', 'Force Delete', this.config.dialogDefaults.deleteBranch.forceDelete, 'Delete Branch', (forceDelete) => {
 										sendMessage({ command: 'deleteBranch', repo: this.currentRepo!, branchName: refName, forceDelete: forceDelete });
 									}, null);
 								}
 							}, {
 								title: 'Merge into current branch' + ELLIPSIS,
 								onClick: () => {
-									showCheckboxDialog('Are you sure you want to merge branch <b><i>' + escapeHtml(refName) + '</i></b> into the current branch?', 'Create a new commit even if fast-forward is possible', true, 'Yes, merge', (createNewCommit) => {
+									showCheckboxDialog('Are you sure you want to merge branch <b><i>' + escapeHtml(refName) + '</i></b> into the current branch?', 'Create a new commit even if fast-forward is possible', this.config.dialogDefaults.merge.noFastForward, 'Yes, merge', (createNewCommit) => {
 										sendMessage({ command: 'mergeBranch', repo: this.currentRepo!, branchName: refName, createNewCommit: createNewCommit });
 									}, null);
 								}
@@ -760,6 +764,7 @@ let contextMenu = document.getElementById('contextMenu')!, contextMenuSource: HT
 let dialog = document.getElementById('dialog')!, dialogBacking = document.getElementById('dialogBacking')!, dialogMenuSource: HTMLElement | null = null;
 const gitGraph = new GitGraphView(viewState.repos, viewState.lastActiveRepo, {
 	autoCenterCommitDetailsView: viewState.autoCenterCommitDetailsView,
+	dialogDefaults: viewState.dialogDefaults,
 	fetchAvatars: viewState.fetchAvatars,
 	graphColours: viewState.graphColours,
 	graphStyle: viewState.graphStyle,
@@ -1050,6 +1055,12 @@ function showFormDialog(message: string, inputs: DialogInput[], actionName: stri
 		if (dialogInput.value === '') dialog.className = 'active noInput';
 		dialogInput.focus();
 		dialogInput.addEventListener('keyup', () => {
+			const substitution = gitGraph.getDialogDefaults().general.referenceInputSpaceSubstitution;
+			if (substitution !== null && dialogInput.value.indexOf(' ') > -1) {
+				const caret = dialogInput.selectionStart;
+				dialogInput.value = dialogInput.value.split(' ').join(substitution);
+				if (caret !== null) dialogInput.setSelectionRange(caret, caret);
+			}
 			const noInput = dialogInput.value === '', invalidInput = dialogInput.value.match(refInvalid) !== null;
 			const newClassName = 'active' + (noInput ? ' noInput' : invalidInput ? ' inputInvalid' : '');
 			if (dialog.className !== newClassName) {

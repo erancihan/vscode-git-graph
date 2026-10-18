@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { CommitOrdering, DateFormat, DateType, GraphStyle, TabIconColourTheme } from './types';
+import { CommitOrdering, DateFormat, DateType, DialogDefaults, GitResetMode, GraphStyle, TabIconColourTheme } from './types';
 
 const DEFAULT_GRAPH_COLOURS = ['#0085d9', '#d9008f', '#00d90a', '#d98500', '#a300d9', '#ff0000', '#00d9cc', '#e138e8', '#85d900', '#dc5b23', '#6f24d6', '#ffcc00'];
 const GRAPH_COLOUR_REGEX = /^\s*(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|rgb[a]?\s*\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\))\s*$/;
@@ -34,6 +34,30 @@ class Config {
 
 	public dateType(): DateType {
 		return this.getEnum<DateType>('date.type', 'dateType', ['Author Date', 'Commit Date'], 'Author Date');
+	}
+
+	/* Dialogs */
+
+	/** Default values of the inputs in the action dialogs. */
+	public dialogDefaults(): DialogDefaults {
+		const substitution = this.getEnum('dialog.general.referenceInputSpaceSubstitution', null, ['None', 'Hyphen', 'Underscore'], 'None');
+		return {
+			addTag: {
+				type: this.getEnum('dialog.addTag.type', null, ['Annotated', 'Lightweight'], 'Annotated') === 'Lightweight' ? 'lightweight' : 'annotated'
+			},
+			deleteBranch: {
+				forceDelete: this.getBoolean('dialog.deleteBranch.forceDelete', null, false)
+			},
+			merge: {
+				noFastForward: this.getBoolean('dialog.merge.noFastForward', null, true)
+			},
+			resetCurrentBranchToCommit: {
+				mode: <GitResetMode>this.getEnum('dialog.resetCurrentBranchToCommit.mode', null, ['Soft', 'Mixed', 'Hard'], 'Mixed').toLowerCase()
+			},
+			general: {
+				referenceInputSpaceSubstitution: substitution === 'Hyphen' ? '-' : substitution === 'Underscore' ? '_' : null
+			}
+		};
 	}
 
 	/* Graph */
