@@ -6,6 +6,7 @@ import { AvatarManager } from './avatarManager';
 import { describeCodeReview, parseCodeReviewId } from './codeReview';
 import { CiStatusManager } from './ciStatus';
 import { getConfig } from './config';
+import { ensureGpgWrapperExecutable, gpgWrapperArgs, gpgWrapperEnvironment } from './gpgSigning';
 import { DataSource } from './dataSource';
 import { DiffDocProvider, decodeDiffDocUri } from './diffDocProvider';
 import { ExtensionState } from './extensionState';
@@ -25,9 +26,16 @@ export function activate(context: vscode.ExtensionContext) {
 	const askpass = new AskpassManager(context.extensionPath, (prompt, isPassword) => {
 		return Promise.resolve(vscode.window.showInputBox({ prompt: vscode.l10n.t('Git Graph: {0}', prompt), password: isPassword, ignoreFocusOut: true })).then((value) => typeof value === 'string' ? value : null);
 	}, logger);
-	dataSource.setEnvironmentProvider(() => getConfig().integratedAskpass() ? askpass.getEnvironment() : {});
+	dataSource.setEnvironmentProvider(() => {
+		const config = getConfig();
+		return Object.assign({},
+			config.integratedAskpass() ? askpass.getEnvironment() : {},
+			config.gpgPassphrasePrompt() ? Object.assign(askpass.getPipeEnvironment(), gpgWrapperEnvironment(context.extensionPath, dataSource.getGitPath())) : {});
+	});
+	dataSource.setGitArgsProvider(() => getConfig().gpgPassphrasePrompt() ? gpgWrapperArgs(context.extensionPath) : []);
 	dataSource.setExtensionPath(context.extensionPath);
-	if (getConfig().integratedAskpass()) askpass.start();
+	if (getConfig().gpgPassphrasePrompt()) ensureGpgWrapperExecutable(context.extensionPath);
+	if (getConfig().integratedAskpass() || getConfig().gpgPassphrasePrompt()) askpass.start();
 	const avatarManager = new AvatarManager(dataSource, extensionState, logger);
 	const ciStatusManager = new CiStatusManager(dataSource, context.secrets, logger);
 	const statusBarItem = new StatusBarItem(context);
@@ -135,8 +143,9 @@ export function activate(context: vscode.ExtensionContext) {
 			if (e.affectsConfiguration('git.path')) {
 				dataSource.registerGitPath();
 			}
-			if (e.affectsConfiguration('git-graph.integratedAskpass') && getConfig().integratedAskpass()) {
+			if ((e.affectsConfiguration('git-graph.integratedAskpass') || e.affectsConfiguration('git-graph.gpg.passphrasePrompt')) && (getConfig().integratedAskpass() || getConfig().gpgPassphrasePrompt())) {
 				askpass.start();
+				if (getConfig().gpgPassphrasePrompt()) ensureGpgWrapperExecutable(context.extensionPath);
 			}
 		}),
 		repoManager,

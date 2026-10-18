@@ -58,6 +58,12 @@ export class AskpassManager {
 		});
 	}
 
+	/** Just the pipe and the nonce, for helpers other than askpass (the gpg wrapper). Empty when not running. */
+	public getPipeEnvironment(): AskpassEnvironment {
+		if (this.server === null || this.pipePath === null) return {};
+		return { GIT_GRAPH_ASKPASS_PIPE: this.pipePath, GIT_GRAPH_ASKPASS_NONCE: this.nonce };
+	}
+
 	/** Environment for git processes, or an empty object when the helper is not running. */
 	public getEnvironment(): AskpassEnvironment {
 		if (this.server === null || this.pipePath === null) return {};

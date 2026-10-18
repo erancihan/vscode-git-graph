@@ -4,6 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { TextDecoder } from 'util';
 import { getConfig } from './config';
+import { withSigningHint } from './gpgSigning';
 import { applyAutosquash, serializeTodo, validateTodo } from './rebaseTodo';
 import { findGitExecutable } from './gitExecutable';
 import { Logger } from './logger';
@@ -34,6 +35,7 @@ export class DataSource {
 	private gitPath: string = 'git';
 	private gitVersion: string | null = null;
 	private environmentProvider: () => { [key: string]: string } = () => ({});
+	private gitArgsProvider: () => string[] = () => [];
 	private extensionPath: string | null = null;
 	/** Temporary folders of interactive rebases that git stopped (edit, conflicts); removed once the rebase is over. */
 	private rebaseTempDirs: { repo: string, dir: string }[] = [];
@@ -41,6 +43,11 @@ export class DataSource {
 	/** Extra environment variables for every git process (used for the askpass helper). */
 	public setEnvironmentProvider(provider: () => { [key: string]: string }) {
 		this.environmentProvider = provider;
+	}
+
+	/** Extra leading arguments for every git process (used for the gpg wrapper's `-c gpg.program=...`). */
+	public setGitArgsProvider(provider: () => string[]) {
+		this.gitArgsProvider = provider;
 	}
 
 	/** Folder of the extension, needed to find the sequence editor helper of the interactive rebase editor. */
@@ -1068,7 +1075,7 @@ export class DataSource {
 	/** Like `spawnGit`, but hands the raw stdout bytes to `onSuccess` (for file content that may not be UTF-8). */
 	private spawnGitBuffer<T>(args: string[], repo: string, onSuccess: (stdout: Buffer) => T, logFailure: boolean = true, extraEnvForCommand: { [key: string]: string } = {}, successCodes: number[] = [0]) {
 		return new Promise<T>((resolve, reject) => {
-			const fullArgs = gitConfigOverrides.concat(args);
+			const fullArgs = this.gitArgsProvider().concat(gitConfigOverrides, args);
 			this.logger.logCmd(this.gitPath, fullArgs);
 			const stdout: Buffer[] = [], stderr: Buffer[] = [];
 			let settled = false;
@@ -1103,7 +1110,7 @@ export class DataSource {
 					const out = Buffer.concat(stdout).toString(), err = Buffer.concat(stderr).toString();
 					const text = err !== '' ? err : out;
 					const lines = text.split(eolRegex).filter((line, i, all) => !(i === all.length - 1 && line === ''));
-					fail(lines.length > 0 ? lines.join('\n') : 'git exited with code ' + code);
+					fail(withSigningHint(lines.length > 0 ? lines.join('\n') : 'git exited with code ' + code, getConfig().gpgPassphrasePrompt()));
 				}
 			});
 		});

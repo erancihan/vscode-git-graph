@@ -35,3 +35,7 @@ The CI status feature (`git-graph.ciStatus.enabled`, off by default) reads check
 ## Shared repository settings file
 
 `.vscode/git-graph.json` can carry Git Graph settings for a team. Because it is part of a repository, the extension treats it as untrusted input: it is read and written only when `.vscode` and the file itself are not symbolic links and resolve inside the repository, it is parsed field by field with the same validation as the stored state (unknown fields are ignored), the issue linking pattern must be short, compile and contain no nested quantifiers, and nothing is applied before the user confirms a prompt that lists the incoming values. The display name and column layout are never exported.
+
+## GPG passphrase prompt
+
+With `git-graph.gpg.passphrasePrompt`, the git processes Git Graph starts use `resources/gpg-wrapper.sh` as `gpg.program`. The wrapper runs the configured gpg unchanged first. Only when that fails does it ask the extension for the passphrase over the askpass pipe (random pipe name, per-session nonce, same channel as the credential prompts) and run gpg again with `--pinentry-mode loopback --passphrase-fd 3`. The passphrase stays in memory, is never written to disk, never appears on a command line, and is not stored by the extension; gpg-agent may cache it according to its own configuration. The setting has application scope, so a workspace cannot switch the wrapper on or off.

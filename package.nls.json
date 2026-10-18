@@ -216,5 +216,6 @@
 	"command.resumeWorkspaceCodeReview.title": "Resume a Specific Code Review in Workspace...",
 	"config.customEmojiShortcodeMappings.markdownDescription": "Extra emoji shortcodes for commit messages, added to the built-in list (gitmoji and common GitHub names), for example `[{\"shortcode\": \":release:\", \"emoji\": \"🚀\"}]`.",
 	"config.customEmojiShortcodeMappings.items.shortcode.description": "The shortcode, with or without the surrounding colons.",
-	"config.customEmojiShortcodeMappings.items.emoji.description": "The emoji that replaces the shortcode."
+	"config.customEmojiShortcodeMappings.items.emoji.description": "The emoji that replaces the shortcode.",
+	"config.gpg.passphrasePrompt.markdownDescription": "Ask for the GPG passphrase in an input box when gpg cannot show its own prompt (Git Graph runs git without a terminal, so a text-mode pinentry fails with \"gpg failed to sign the data\"). Git Graph sets `gpg.program` to a small wrapper for the git processes it starts: the wrapper runs your gpg first and only asks when that fails, then retries with a loopback pinentry. The passphrase is passed over a private pipe and a file descriptor, never stored. User Settings only."
 }
