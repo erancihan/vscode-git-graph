@@ -7,9 +7,9 @@ import { encodeDiffDocUri } from './diffDocProvider';
 import { ExtensionState } from './extensionState';
 import { Logger } from './logger';
 import { RepoFileWatcher } from './repoFileWatcher';
-import { RepoManager } from './repoManager';
+import { RepoManager, defaultRepoState } from './repoManager';
 import { runGitCommandInTerminal } from './terminal';
-import { GitArchiveType, GitCommandStatus, GitFileChangeType, GitGraphViewState, GitRebaseType, GitRepoSet, RequestMessage, ResponseMessage } from './types';
+import { GitArchiveType, GitCommandStatus, GitFileChangeType, GitGraphViewState, GitRebaseType, GitRepoSet, GitRepoState, RequestMessage, ResponseMessage } from './types';
 import { abbrevCommit, copyToClipboard } from './utils';
 
 export class GitGraphView {
@@ -228,7 +228,7 @@ export class GitGraphView {
 					});
 					break;
 				case 'loadBranches':
-					let branchData = await this.dataSource.getBranches(msg.repo, msg.showRemoteBranches), isRepo = true;
+					let branchData = await this.dataSource.getBranches(msg.repo, msg.showRemoteBranches, this.getRepoState(msg.repo).hideRemotes), isRepo = true;
 					if (branchData.error) {
 						// If an error occurred, check to make sure the repo still exists
 						isRepo = await this.dataSource.isGitRepository(msg.repo);
@@ -250,7 +250,7 @@ export class GitGraphView {
 				case 'loadCommits':
 					this.sendMessage({
 						command: 'loadCommits',
-						... await this.dataSource.getCommits(msg.repo, msg.branches, msg.maxCommits, msg.showRemoteBranches),
+						... await this.dataSource.getCommits(msg.repo, msg.branches, msg.maxCommits, msg.showRemoteBranches, this.getRepoState(msg.repo)),
 						hard: msg.hard
 					});
 					break;
@@ -283,6 +283,45 @@ export class GitGraphView {
 						command: 'pushBranch',
 						status: await this.dataSource.pushBranchToRemotes(msg.repo, msg.branchName, msg.remotes, msg.setUpstream, msg.mode)
 					});
+					break;
+				case 'getRepoSettings':
+					this.sendMessage({
+						command: 'getRepoSettings',
+						settings: await this.dataSource.getRepoSettings(msg.repo)
+					});
+					break;
+				case 'addRemote':
+					this.sendMessage({
+						command: 'addRemote',
+						status: await this.dataSource.addRemote(msg.repo, msg.name, msg.url, msg.pushUrl, msg.fetch)
+					});
+					break;
+				case 'editRemote':
+					this.sendMessage({
+						command: 'editRemote',
+						status: await this.dataSource.editRemote(msg.repo, msg.nameOld, msg.nameNew, msg.url, msg.pushUrl)
+					});
+					break;
+				case 'deleteRemote':
+					this.sendMessage({
+						command: 'deleteRemote',
+						status: await this.dataSource.deleteRemote(msg.repo, msg.name)
+					});
+					break;
+				case 'pruneRemote':
+					this.sendMessage({
+						command: 'pruneRemote',
+						status: await this.dataSource.pruneRemote(msg.repo, msg.name)
+					});
+					break;
+				case 'setUserDetails':
+					this.sendMessage({
+						command: 'setUserDetails',
+						status: await this.dataSource.setUserDetails(msg.repo, msg.name, msg.email, msg.useGlobally)
+					});
+					break;
+				case 'openExtensionSettings':
+					vscode.commands.executeCommand('workbench.action.openSettings', '@ext:erancihan.vscode-git-graph');
 					break;
 				case 'archive':
 					this.sendMessage({
@@ -412,6 +451,12 @@ export class GitGraphView {
 			vscode.window.showInformationMessage('Git Graph: Archive of "' + ref + '" saved to ' + outputPath);
 		}
 		return status;
+	}
+
+	/** The stored state of a repository (defaults when the repository is unknown). */
+	private getRepoState(repo: string): GitRepoState {
+		const repos = this.repoManager.getRepos();
+		return typeof repos[repo] !== 'undefined' ? repos[repo] : defaultRepoState();
 	}
 
 	private getHtmlForWebview() {

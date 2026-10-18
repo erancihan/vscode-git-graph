@@ -468,6 +468,68 @@ describe('DataSource remote actions', () => {
 		git(repo, ['checkout', '-q', 'master']);
 	});
 
+	it('lists, adds, edits, prunes and deletes remotes', async () => {
+		const second = fs.mkdtempSync(path.join(os.tmpdir(), 'git-graph-remote3-'));
+		git(second, ['init', '-q', '--bare']);
+		try {
+			expect(await dataSource.addRemote(repo, 'mirror', second, null, false)).toBeNull();
+			let remotes = await dataSource.getRemoteDetails(repo);
+			expect(remotes.map((r) => r.name).sort()).toEqual(['mirror', 'origin']);
+			expect(remotes.find((r) => r.name === 'mirror')).toEqual({ name: 'mirror', url: second, pushUrl: null });
+
+			expect(await dataSource.editRemote(repo, 'mirror', 'backup', second, second + '-push')).toBeNull();
+			remotes = await dataSource.getRemoteDetails(repo);
+			expect(remotes.find((r) => r.name === 'backup')).toEqual({ name: 'backup', url: second, pushUrl: second + '-push' });
+			expect(await dataSource.editRemote(repo, 'backup', 'backup', second, null)).toBeNull();
+			expect((await dataSource.getRemoteDetails(repo)).find((r) => r.name === 'backup')!.pushUrl).toBeNull();
+
+			expect(await dataSource.pruneRemote(repo, 'origin')).toBeNull();
+			expect(await dataSource.addRemote(repo, 'bad', '--upload-pack=evil', null, false)).toMatch(/not a valid/i);
+			expect(await dataSource.addRemote(repo, '-x', second, null, false)).toMatch(/not a valid/i);
+			expect(await dataSource.deleteRemote(repo, 'backup')).toBeNull();
+			expect((await dataSource.getRemotes(repo))).toEqual(['origin']);
+		} finally {
+			if ((await dataSource.getRemotes(repo)).indexOf('backup') > -1) git(repo, ['remote', 'remove', 'backup']);
+			fs.rmSync(second, { recursive: true, force: true });
+		}
+	});
+
+	it('reads and writes the local user details', async () => {
+		const before = await dataSource.getUserDetails(repo);
+		expect(before.localName).toBe('Test Committer');
+		expect(before.localEmail).toBe('committer@example.com');
+		expect(await dataSource.setUserDetails(repo, 'Other Person', 'other@example.com', false)).toBeNull();
+		expect(git(repo, ['config', '--local', 'user.name'])).toBe('Other Person');
+		expect(await dataSource.setUserDetails(repo, '', '', false)).toBeNull(); // unset the local values
+		expect((await dataSource.getUserDetails(repo)).localName).toBeNull();
+		expect(await dataSource.setUserDetails(repo, '--evil', 'x', false)).toMatch(/not a valid/i);
+		expect(await dataSource.setUserDetails(repo, '', 'x', true)).toMatch(/cannot be empty/);
+		git(repo, ['config', 'user.name', 'Test Committer']);
+		git(repo, ['config', 'user.email', 'committer@example.com']);
+	});
+
+	it('hides the branches of remotes listed in the repository state', async () => {
+		const state = { columnWidths: null, columnVisibility: null, name: null, hideRemotes: ['origin'], showTags: null, showStashes: null, includeCommitsMentionedByReflogs: null, onlyFollowFirstParent: null };
+		const shown = await dataSource.getCommits(repo, [], 50, true);
+		expect(shown.commits.some((c) => c.refs.some((r) => r.type === 'remote'))).toBe(true);
+		const hidden = await dataSource.getCommits(repo, [], 50, true, state);
+		expect(hidden.commits.some((c) => c.refs.some((r) => r.type === 'remote'))).toBe(false);
+		const branches = await dataSource.getBranches(repo, true, ['origin']);
+		expect(branches.branches.some((b) => b.startsWith('remotes/origin/'))).toBe(false);
+		expect((await dataSource.getBranches(repo, true)).branches.some((b) => b.startsWith('remotes/origin/'))).toBe(true);
+	});
+
+	it('applies the per-repository tag override', async () => {
+		git(repo, ['tag', 'override-tag']);
+		try {
+			const state = { columnWidths: null, columnVisibility: null, name: null, hideRemotes: [], showTags: false, showStashes: null, includeCommitsMentionedByReflogs: null, onlyFollowFirstParent: null };
+			expect((await dataSource.getCommits(repo, [], 50, false)).commits.some((c) => c.refs.some((r) => r.name === 'override-tag'))).toBe(true);
+			expect((await dataSource.getCommits(repo, [], 50, false, state)).commits.some((c) => c.refs.some((r) => r.name === 'override-tag'))).toBe(false);
+		} finally {
+			git(repo, ['tag', '-d', 'override-tag']);
+		}
+	});
+
 	it('pushes a branch to several remotes and reports the failing one', async () => {
 		const second = fs.mkdtempSync(path.join(os.tmpdir(), 'git-graph-remote2-'));
 		git(second, ['init', '-q', '--bare']);

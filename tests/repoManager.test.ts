@@ -1,4 +1,5 @@
-import { sortRepoPaths } from '../src/repoManager';
+import { defaultRepoState, normaliseRepoState, sortRepoPaths } from '../src/repoManager';
+import { GitRepoState } from '../src/types';
 
 describe('sortRepoPaths', () => {
 	const repos = ['/w/b/repo-z', '/w/a/repo-y', '/other/repo-a', '/w/a'];
@@ -20,5 +21,22 @@ describe('sortRepoPaths', () => {
 		const copy = repos.slice();
 		sortRepoPaths(repos, 'Name', workspace);
 		expect(repos).toEqual(copy);
+	});
+});
+
+describe('normaliseRepoState', () => {
+	it('fills the fields that older versions did not store', () => {
+		expect(normaliseRepoState({ columnWidths: [40, 100, 100, 80], columnVisibility: null })).toEqual({ ...defaultRepoState(), columnWidths: [40, 100, 100, 80] });
+		expect(normaliseRepoState(null)).toEqual(defaultRepoState());
+	});
+
+	it('keeps valid values and drops the rest', () => {
+		const state = normaliseRepoState(<Partial<GitRepoState>><unknown>{ name: '  My Repo ', hideRemotes: ['origin', 3], showTags: false, showStashes: 'yes', onlyFollowFirstParent: true });
+		expect(state.name).toBe('My Repo');
+		expect(state.hideRemotes).toEqual(['origin']);
+		expect(state.showTags).toBe(false);
+		expect(state.showStashes).toBeNull();
+		expect(state.onlyFollowFirstParent).toBe(true);
+		expect(normaliseRepoState({ name: '   ' }).name).toBeNull();
 	});
 });
