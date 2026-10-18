@@ -43,6 +43,7 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
     * Show or hide the Date, Author and Commit columns (right-click a column header), mute merge commits or commits outside the ancestry of HEAD
     * Sticky controls bar and column headers while scrolling (`git-graph.stickyHeader`)
     * Conflict help: a bar shows the merge, rebase, cherry pick or revert in progress with the conflicted files and Continue / Skip / Abort buttons
+    * Conflict prediction: the merge, rebase and cherry pick dialogs say which files would conflict before you confirm (`git merge-tree`, git 2.38 or later; for rebase and cherry pick an approximation based on the two tips)
     * Worktrees: list, add (from a branch or commit), open, remove and prune from the Repository Settings widget
     * Translated user interface: follows the VS Code display language; translations live in `l10n/` and `package.nls.*.json` and are community contributions (see `CONTRIBUTING.md`). Turkish ships as the first sample
     * CI status: a dot before the commit hash shows the GitHub check runs and commit statuses or the GitLab pipeline statuses of the newest commits (`git-graph.ciStatus.enabled`, off by default); the tooltip lists the checks and a click opens the run

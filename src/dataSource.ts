@@ -756,6 +756,20 @@ export class DataSource {
 		return this.runGitCommand(args, repo);
 	}
 
+	/* Conflict prediction */
+
+	/**
+	 * The files that would conflict when `obj` is merged into HEAD, found with `git merge-tree
+	 * --write-tree` (git 2.38 or later), which merges in memory and leaves the working tree and the
+	 * index alone. Resolves with null when git is older or the merge could not be simulated.
+	 */
+	public predictConflicts(repo: string, obj: string, type: GitRebaseType): Promise<string[] | null> {
+		if (type === 'Commit' ? !isCommitHash(obj) : !isSafeRefName(obj)) return Promise.resolve(null);
+		if (!isGitAtLeast(this.gitVersion, 2, 38)) return Promise.resolve(null);
+		// Exit code 1 means "conflicts" and is a valid answer, not an error
+		return this.spawnGit(['merge-tree', '--write-tree', '--name-only', '--no-messages', 'HEAD', obj], repo, (stdout) => parseMergeTreeOutput(stdout), false, {}, [0, 1]).catch(() => null);
+	}
+
 	/* Interactive rebase editor */
 
 	/**
@@ -987,7 +1001,7 @@ export class DataSource {
 	 * decoded once the process has closed, so multi-byte characters split across chunks stay intact.
 	 * Set `logFailure` to false for probes where a non-zero exit code is an expected answer.
 	 */
-	private spawnGit<T>(args: string[], repo: string, onSuccess: (stdout: string) => T, logFailure: boolean = true, extraEnvForCommand: { [key: string]: string } = {}) {
+	private spawnGit<T>(args: string[], repo: string, onSuccess: (stdout: string) => T, logFailure: boolean = true, extraEnvForCommand: { [key: string]: string } = {}, successCodes: number[] = [0]) {
 		return new Promise<T>((resolve, reject) => {
 			const fullArgs = gitConfigOverrides.concat(args);
 			this.logger.logCmd(this.gitPath, fullArgs);
@@ -1017,7 +1031,7 @@ export class DataSource {
 			});
 			cmd.on('close', (code) => {
 				if (settled) return;
-				if (code === 0) {
+				if (code !== null && successCodes.indexOf(code) !== -1) {
 					settled = true;
 					resolve(onSuccess(Buffer.concat(stdout).toString()));
 				} else {
@@ -1203,6 +1217,24 @@ interface GitStashEntry extends GitStash {
 /** Commit hashes are hexadecimal (SHA-1 or SHA-256), abbreviated to at least 4 characters. */
 export function isCommitHash(hash: string) {
 	return /^[0-9a-f]{4,64}$/i.test(hash);
+}
+
+/** True when the `git --version` output is at least major.minor. Unknown versions count as too old. */
+export function isGitAtLeast(versionOutput: string | null, major: number, minor: number) {
+	const match = versionOutput !== null ? /(\d+)\.(\d+)(?:\.(\d+))?/.exec(versionOutput) : null;
+	if (match === null) return false;
+	const actualMajor = parseInt(match[1]), actualMinor = parseInt(match[2]);
+	return actualMajor > major || (actualMajor === major && actualMinor >= minor);
+}
+
+/**
+ * The conflicted files from `git merge-tree --write-tree --name-only`: the tree id on the first line,
+ * then one file per line. Null when the output does not start with an object id (no merge was done).
+ */
+export function parseMergeTreeOutput(stdout: string): string[] | null {
+	const lines = stdout.split(eolRegex);
+	if (!/^[0-9a-f]{40}([0-9a-f]{24})?$/.test(lines[0])) return null;
+	return lines.slice(1).filter((line) => line !== '');
 }
 
 /** Parse `git log --format=%H%x1f%P%x1f%s` into hash, number of parents and subject per line. */

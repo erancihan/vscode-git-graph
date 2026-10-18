@@ -692,6 +692,19 @@ export interface ResponseFixupCommit {
 	status: GitCommandStatus;
 }
 
+export interface RequestPredictConflicts {
+	command: 'predictConflicts';
+	repo: string;
+	id: number; // echoed back so the webview matches the answer to the open dialog
+	obj: string;
+	type: GitRebaseType;
+}
+export interface ResponsePredictConflicts {
+	command: 'predictConflicts';
+	id: number;
+	conflicts: string[] | null; // null => no prediction (git too old, or the merge could not be simulated)
+}
+
 export interface RequestDropCommit {
 	command: 'dropCommit';
 	repo: string;
@@ -1103,6 +1116,7 @@ export type RequestMessage =
 	| RequestPushStash
 	| RequestPushTag
 	| RequestRebase
+	| RequestPredictConflicts
 	| RequestGetRebaseTodo
 	| RequestInteractiveRebase
 	| RequestFixupCommit
@@ -1171,6 +1185,7 @@ export type ResponseMessage =
 	| ResponsePushStash
 	| ResponsePushTag
 	| ResponseRebase
+	| ResponsePredictConflicts
 	| ResponseGetRebaseTodo
 	| ResponseInteractiveRebase
 	| ResponseFixupCommit

@@ -10,6 +10,8 @@ class GitGraphView {
 	private commitLookup: { [hash: string]: number } = {};
 	private avatars: AvatarImageCollection = {};
 	private ciStatuses: { [hash: string]: GG.CommitCiStatus } = {};
+	private conflictPredictionId = 0;
+	private conflictPredictionApproximate = false;
 	private currentBranches: string[] | null = null;
 	private filters: GG.GraphFilters = { authors: [], paths: [] };
 	private bisecting: boolean = false;
@@ -661,7 +663,7 @@ class GitGraphView {
 					title: t('Merge into current branch') + ELLIPSIS,
 					visible: visibility.merge,
 					onClick: () => {
-						this.showMergeDialog(t('Are you sure you want to merge commit <b><i>{0}</i></b> into the current branch?', abbrevCommit(hash)), (options) => {
+						this.showMergeDialog(t('Are you sure you want to merge commit <b><i>{0}</i></b> into the current branch?', abbrevCommit(hash)), { obj: hash, type: 'Commit' }, (options) => {
 							sendMessage({ command: 'mergeCommit', repo: this.currentRepo!, commitHash: hash, ...options });
 						});
 					}
@@ -893,7 +895,7 @@ class GitGraphView {
 								title: t('Merge into current branch') + ELLIPSIS,
 								visible: this.config.contextMenuActionsVisibility.branch.merge,
 								onClick: () => {
-									this.showMergeDialog(t('Are you sure you want to merge branch <b><i>{0}</i></b> into the current branch?', escapeHtml(refName)), (options) => {
+									this.showMergeDialog(t('Are you sure you want to merge branch <b><i>{0}</i></b> into the current branch?', escapeHtml(refName)), { obj: refName, type: 'Branch' }, (options) => {
 										sendMessage({ command: 'mergeBranch', repo: this.currentRepo!, branchName: refName, ...options });
 									});
 								}
@@ -1322,7 +1324,7 @@ class GitGraphView {
 			{ name: t('Rebase the current branch on {0}', value), value: 'rebase' }
 		], t('Continue'), (choice) => {
 			if (choice === 'merge') {
-				this.showMergeDialog(t('Are you sure you want to merge {0} into the current branch?', what), (options) => {
+				this.showMergeDialog(t('Are you sure you want to merge {0} into the current branch?', what), { obj: value, type: kind === 'tag' ? 'Commit' : 'Branch' }, (options) => {
 					sendMessage(kind === 'tag'
 						? { command: 'mergeCommit', repo: this.currentRepo!, commitHash: value, ...options }
 						: { command: 'mergeBranch', repo: this.currentRepo!, branchName: value, ...options });
@@ -1351,6 +1353,7 @@ class GitGraphView {
 			const parentIndex = isMerge ? parseInt(values.shift()!) : 0;
 			sendMessage({ command: 'cherrypickCommit', repo: this.currentRepo!, commitHash: hash, parentIndex: parentIndex, recordOrigin: values[0] === 'checked', noCommit: values[1] === 'checked' });
 		}, sourceElem);
+		if (!isMerge) this.requestConflictPrediction(hash, 'Commit', true);
 	}
 
 	/* Filters */
@@ -1484,6 +1487,7 @@ class GitGraphView {
 			if (!interactive) showActionRunningDialog(t('Rebasing'));
 			sendMessage({ command: 'rebase', repo: this.currentRepo!, obj: obj, type: type, ignoreDate: values[1] === 'checked', interactive: interactive });
 		}, sourceElem);
+		this.requestConflictPrediction(obj, type, true);
 	}
 	/**
 	 * Dialog for opening the provider's "new pull request" page: provider (detected from the
@@ -1507,7 +1511,7 @@ class GitGraphView {
 			sendMessage({ command: 'createPullRequest', repo: this.currentRepo!, provider: values[0] !== '' ? values[0] : null, sourceRemote: values[1], sourceBranch: sourceBranch, destinationRemote: values[2], destinationBranch: values[3] });
 		}, null);
 	}
-	private showMergeDialog(message: string, actioned: (options: GG.MergeOptions) => void) {
+	private showMergeDialog(message: string, prediction: { obj: string, type: GG.GitRebaseType } | null, actioned: (options: GG.MergeOptions) => void) {
 		showFormDialog(message, [
 			{ type: 'checkbox', name: t('Create a new commit even if fast-forward is possible'), value: this.config.dialogDefaults.merge.noFastForward },
 			{ type: 'checkbox', name: t('Squash Commits'), value: this.config.dialogDefaults.merge.squashCommits },
@@ -1515,6 +1519,44 @@ class GitGraphView {
 		], t('Yes, merge'), (values) => {
 			actioned({ createNewCommit: values[0] === 'checked', squash: values[1] === 'checked', noCommit: values[2] === 'checked' });
 		}, null);
+		if (prediction !== null) this.requestConflictPrediction(prediction.obj, prediction.type, false);
+	}
+
+	/* Conflict prediction */
+
+	/**
+	 * Ask the extension which files would conflict and show the answer in the open dialog. The id
+	 * ties the answer to this dialog; a stale answer (another dialog opened since) is ignored.
+	 */
+	private requestConflictPrediction(obj: string, type: GG.GitRebaseType, approximate: boolean) {
+		if (this.currentRepo === null) return;
+		const action = document.getElementById('dialogAction');
+		if (action === null) return;
+		this.conflictPredictionId++;
+		this.conflictPredictionApproximate = approximate;
+		const elem = document.createElement('div');
+		elem.id = 'dialogPrediction';
+		elem.className = 'dialogPrediction';
+		elem.textContent = t('Checking for conflicts ...');
+		action.parentNode!.insertBefore(elem, action);
+		sendMessage({ command: 'predictConflicts', repo: this.currentRepo, id: this.conflictPredictionId, obj: obj, type: type });
+	}
+
+	public loadConflictPrediction(msg: GG.ResponsePredictConflicts) {
+		const elem = document.getElementById('dialogPrediction');
+		if (elem === null || msg.id !== this.conflictPredictionId) return;
+		if (msg.conflicts === null) {
+			elem.parentNode!.removeChild(elem); // no prediction available: say nothing rather than something misleading
+			return;
+		}
+		const note = this.conflictPredictionApproximate ? ' ' + t('(based on a three-way merge of the two tips)') : '';
+		if (msg.conflicts.length === 0) {
+			elem.textContent = t('No conflicts expected.') + note;
+			return;
+		}
+		const shown = msg.conflicts.slice(0, 5).join(', '), more = msg.conflicts.length - 5;
+		elem.className = 'dialogPrediction conflicts';
+		elem.textContent = (msg.conflicts.length === 1 ? t('1 file would conflict: {0}', shown) : t('{0} files would conflict: {1}', msg.conflicts.length, shown)) + (more > 0 ? ' ' + t('and {0} more', more) : '') + note;
 	}
 	/** The remote that a remote branch name such as "origin/feature" belongs to, or null when none matches. */
 	private getRemoteOfBranch(remoteBranchName: string) {
@@ -2225,6 +2267,9 @@ window.addEventListener('message', event => {
 			break;
 		case 'fetchCiStatus':
 			gitGraph.loadCiStatuses(msg.repo, msg.statuses);
+			break;
+		case 'predictConflicts':
+			gitGraph.loadConflictPrediction(msg);
 			break;
 		case 'loadBranches':
 			gitGraph.loadBranches(msg.branches, msg.head, msg.remotes, msg.hard, msg.isRepo);

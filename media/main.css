@@ -1135,6 +1135,15 @@ tr.rebaseAction-squash .rebaseSubjectText, tr.rebaseAction-fixup .rebaseSubjectT
 	line-height:24px;
 	opacity:0.8;
 }
+.dialogPrediction{
+	margin:6px 0 2px 0;
+	font-size:12px;
+	opacity:0.85;
+}
+.dialogPrediction.conflicts{
+	color:var(--vscode-editorWarning-foreground, #cc9900);
+	opacity:1;
+}
 .ciStatus{
 	display:inline-block;
 	width:8px;

@@ -459,6 +459,13 @@ export class GitGraphView {
 							: await this.dataSource.rebase(msg.repo, msg.obj, msg.type, msg.ignoreDate)
 					});
 					break;
+				case 'predictConflicts':
+					this.sendMessage({
+						command: 'predictConflicts',
+						id: msg.id,
+						conflicts: await this.dataSource.predictConflicts(msg.repo, msg.obj, msg.type)
+					});
+					break;
 				case 'getRebaseTodo': {
 					const result = await this.dataSource.getRebaseTodo(msg.repo, msg.baseHash);
 					this.sendMessage({
