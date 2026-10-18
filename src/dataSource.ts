@@ -2,6 +2,7 @@ import * as cp from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { TextDecoder } from 'util';
 import { getConfig } from './config';
 import { applyAutosquash, serializeTodo, validateTodo } from './rebaseTodo';
 import { findGitExecutable } from './gitExecutable';
@@ -240,9 +241,10 @@ export class DataSource {
 		]).then((results) => parseFileChanges(results[0], results[1])).catch(() => null);
 	}
 
+	/** The content of a file at a commit, decoded with `git-graph.fileEncoding` (UTF-8 when the encoding is unknown). */
 	public getCommitFile(repo: string, commitHash: string, filePath: string) {
 		if (!isCommitHash(commitHash)) return Promise.resolve('');
-		return this.spawnGit(['show', commitHash + ':' + filePath], repo, (stdout) => stdout).catch(() => '');
+		return this.spawnGitBuffer(['show', commitHash + ':' + filePath], repo, (stdout) => decodeFileContent(stdout, getConfig().fileEncoding())).catch(() => '');
 	}
 
 	public getRemoteUrl(repo: string) {
@@ -1056,6 +1058,11 @@ export class DataSource {
 	 * Set `logFailure` to false for probes where a non-zero exit code is an expected answer.
 	 */
 	private spawnGit<T>(args: string[], repo: string, onSuccess: (stdout: string) => T, logFailure: boolean = true, extraEnvForCommand: { [key: string]: string } = {}, successCodes: number[] = [0]) {
+		return this.spawnGitBuffer(args, repo, (stdout) => onSuccess(stdout.toString()), logFailure, extraEnvForCommand, successCodes);
+	}
+
+	/** Like `spawnGit`, but hands the raw stdout bytes to `onSuccess` (for file content that may not be UTF-8). */
+	private spawnGitBuffer<T>(args: string[], repo: string, onSuccess: (stdout: Buffer) => T, logFailure: boolean = true, extraEnvForCommand: { [key: string]: string } = {}, successCodes: number[] = [0]) {
 		return new Promise<T>((resolve, reject) => {
 			const fullArgs = gitConfigOverrides.concat(args);
 			this.logger.logCmd(this.gitPath, fullArgs);
@@ -1087,7 +1094,7 @@ export class DataSource {
 				if (settled) return;
 				if (code !== null && successCodes.indexOf(code) !== -1) {
 					settled = true;
-					resolve(onSuccess(Buffer.concat(stdout).toString()));
+					resolve(onSuccess(Buffer.concat(stdout)));
 				} else {
 					const out = Buffer.concat(stdout).toString(), err = Buffer.concat(stderr).toString();
 					const text = err !== '' ? err : out;
@@ -1297,6 +1304,20 @@ export function parseRebaseRange(stdout: string): { hash: string, parents: numbe
 		const parts = line.split('\x1f');
 		return { hash: parts[0], parents: parts[1] === '' || parts[1] === undefined ? 0 : parts[1].split(' ').length, subject: parts.slice(2).join('\x1f') };
 	});
+}
+
+/**
+ * Decode file bytes with the given encoding label (anything `TextDecoder` knows, such as `utf8`,
+ * `latin1`, `windows-1252`, `shift_jis`, `gbk`). Unknown labels fall back to UTF-8.
+ */
+export function decodeFileContent(bytes: Buffer, encoding: string): string {
+	let decoder: TextDecoder;
+	try {
+		decoder = new TextDecoder(encoding);
+	} catch (e) {
+		decoder = new TextDecoder('utf-8');
+	}
+	return decoder.decode(bytes);
 }
 
 /** The real path of a folder (symbolic links resolved), or the path itself when it cannot be resolved. */

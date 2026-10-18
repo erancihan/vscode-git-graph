@@ -205,5 +205,7 @@
 	"config.dialog.pullBranch.squashMessageFormat.description": "Message of the commit created after \"Pull into current branch\" with \"Squash Commits\".",
 	"config.dialog.pullBranch.squashMessageFormat.enumDescriptions.0": "\"Merge remote-tracking branch '<remote>/<branch>'\"",
 	"config.dialog.pullBranch.squashMessageFormat.enumDescriptions.1": "The message git prepares in .git/SQUASH_MSG, which lists the squashed commits.",
-	"config.repository.onLoad.showSpecificBranches.markdownDescription": "Branch names (or names of `git-graph.customBranchGlobPatterns` entries) selected in the Branch dropdown when a repository opens without a remembered selection and without its own \"Branches shown on load\" setting. Combined with `git-graph.repository.onLoad.showCheckedOutBranch`."
+	"config.repository.onLoad.showSpecificBranches.markdownDescription": "Branch names (or names of `git-graph.customBranchGlobPatterns` entries) selected in the Branch dropdown when a repository opens without a remembered selection and without its own \"Branches shown on load\" setting. Combined with `git-graph.repository.onLoad.showCheckedOutBranch`.",
+	"config.fileEncoding.markdownDescription": "Character encoding used to decode files read from git history (diffs and \"View File at this Revision\"): any label the Web `TextDecoder` accepts, for example `utf8`, `latin1`, `windows-1252`, `shift_jis`, `gbk`. Unknown labels fall back to UTF-8. Can be set per folder.",
+	"config.openNewTabEditorGroup.description": "Editor group where Git Graph opens diffs and files: the active group, beside it, or a numbered group."
 }

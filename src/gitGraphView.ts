@@ -875,23 +875,23 @@ function viewDiff(repo: string, fromHash: string, toHash: string, oldFilePath: s
 	const isParentDiff = fromHash === toHash + '^';
 	const title = fileName(newFilePath) + ' (' + (isParentDiff && type === 'A' ? 'Added in ' + toLabel : isParentDiff && type === 'D' ? 'Deleted in ' + toLabel : (isParentDiff ? toLabel + '^' : abbrevCommit(fromHash)) + ' ↔ ' + toLabel) + ')';
 	const rightUri = toHash === '*' && type !== 'D' ? vscode.Uri.file(path.join(repo, newFilePath)) : encodeDiffDocUri(repo, newFilePath, toHash);
-	return runToBoolean(vscode.commands.executeCommand('vscode.diff', encodeDiffDocUri(repo, oldFilePath, fromHash), rightUri, title, { preview: true }));
+	return runToBoolean(vscode.commands.executeCommand('vscode.diff', encodeDiffDocUri(repo, oldFilePath, fromHash), rightUri, title, { preview: true, viewColumn: getConfig().openNewTabEditorGroup() }));
 }
 
 /** Open the Visual Studio Code diff between a file at a commit and the file in the working tree. */
 function viewDiffWithWorkingFile(repo: string, commitHash: string, filePath: string) {
 	const title = fileName(filePath) + ' (' + abbrevCommit(commitHash) + ' ↔ Working File)';
-	return runToBoolean(vscode.commands.executeCommand('vscode.diff', encodeDiffDocUri(repo, filePath, commitHash), vscode.Uri.file(path.join(repo, filePath)), title, { preview: true }));
+	return runToBoolean(vscode.commands.executeCommand('vscode.diff', encodeDiffDocUri(repo, filePath, commitHash), vscode.Uri.file(path.join(repo, filePath)), title, { preview: true, viewColumn: getConfig().openNewTabEditorGroup() }));
 }
 
 /** Open the content of a file as it was at a commit, read-only. */
 function viewFileAtRevision(repo: string, commitHash: string, filePath: string) {
-	return runToBoolean(vscode.window.showTextDocument(encodeDiffDocUri(repo, filePath, commitHash), { preview: true }));
+	return runToBoolean(vscode.window.showTextDocument(encodeDiffDocUri(repo, filePath, commitHash), { preview: true, viewColumn: getConfig().openNewTabEditorGroup() }));
 }
 
 /** Open the file from the working tree. */
 function openFile(repo: string, filePath: string) {
-	return runToBoolean(vscode.window.showTextDocument(vscode.Uri.file(path.join(repo, filePath)), { preview: true }));
+	return runToBoolean(vscode.window.showTextDocument(vscode.Uri.file(path.join(repo, filePath)), { preview: true, viewColumn: getConfig().openNewTabEditorGroup() }));
 }
 
 /**
