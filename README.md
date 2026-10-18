@@ -29,7 +29,7 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
         * Create, checkout, rename, delete, merge, rebase on, and push branches
         * Delete remote branches, fetch a remote branch into a local branch, pull a remote branch into the current branch
         * Add, delete, and push tags
-        * Checkout, cherry pick, merge, rebase on, revert, and drop commits
+        * Checkout, cherry pick, merge, rebase on (also interactively, in the integrated terminal), revert, and drop commits
         * Reset the current branch to a commit; reset or clean the uncommitted changes
         * Stash the uncommitted changes; apply, pop, drop, or branch from a stash
         * Copy commit hashes (full or short), tag names, branch names, and stash names to the clipboard
@@ -71,6 +71,7 @@ This extension contributes the following settings:
 * `git-graph.dialog.pullBranch.noFastForward`: Default state of "Create a new commit even if fast-forward is possible" in the "Pull into current branch" dialog. Default: false.
 * `git-graph.dialog.pullBranch.squashCommits`: Default state of "Squash Commits" in the "Pull into current branch" dialog. Default: false.
 * `git-graph.dialog.rebase.ignoreDate`: Default state of "Ignore Date" in the rebase dialogs. Default: true.
+* `git-graph.dialog.rebase.launchInteractiveRebase`: Default state of "Launch Interactive Rebase in new Terminal" in the rebase dialogs. Default: false.
 * `git-graph.dialog.resetCurrentBranchToCommit.mode`: Default reset mode: `Soft`, `Mixed` or `Hard`. Default: `Mixed`.
 * `git-graph.dialog.resetUncommittedChanges.mode`: Default reset mode in the "Reset uncommitted changes" dialog: `Mixed` or `Hard`. Default: `Mixed`.
 * `git-graph.dialog.stashUncommittedChanges.includeUntracked`: Default state of "Include Untracked" in the "Stash uncommitted changes" dialog. Default: false.
@@ -106,6 +107,7 @@ This extension contributes the following settings:
 * `git-graph.repository.showUntrackedFiles`: Count untracked files in the "Uncommitted Changes" row. Default: true.
 * `git-graph.repository.useMailmap`: Apply the repository's `.mailmap` to author and committer identities. Default: false.
 * `git-graph.repositoryDropdownOrder`: Order of the "Repo" dropdown: `Full Path`, `Name` or `Workspace Full Path`. Default: `Workspace Full Path`.
+* `git-graph.integratedTerminalShell`: Shell executable for the terminals Git Graph opens (interactive rebase). Empty: the default shell. User Settings only. Default: empty.
 * `git-graph.retainContextWhenHidden`: Keep the view alive while its tab is hidden so it restores instantly. Default: true.
 * `git-graph.sourceCodeProviderIntegrationLocation`: Where "View Git Graph" appears in the Source Control view: `Inline` (title bar button) or `More Actions`. Default: `Inline`.
 * `git-graph.showStatusBarItem`: Show a Status Bar item that opens Git Graph when clicked.

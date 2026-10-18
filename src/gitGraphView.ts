@@ -2,13 +2,14 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { AvatarManager } from './avatarManager';
 import { getConfig } from './config';
-import { DataSource } from './dataSource';
+import { DataSource, isCommitHash, isSafeRefName } from './dataSource';
 import { encodeDiffDocUri } from './diffDocProvider';
 import { ExtensionState } from './extensionState';
 import { Logger } from './logger';
 import { RepoFileWatcher } from './repoFileWatcher';
 import { RepoManager } from './repoManager';
-import { GitFileChangeType, GitGraphViewState, GitRepoSet, RequestMessage, ResponseMessage } from './types';
+import { runGitCommandInTerminal } from './terminal';
+import { GitFileChangeType, GitGraphViewState, GitRebaseType, GitRepoSet, RequestMessage, ResponseMessage } from './types';
 import { abbrevCommit, copyToClipboard } from './utils';
 
 export class GitGraphView {
@@ -298,7 +299,9 @@ export class GitGraphView {
 				case 'rebase':
 					this.sendMessage({
 						command: 'rebase',
-						status: await this.dataSource.rebase(msg.repo, msg.obj, msg.type, msg.ignoreDate)
+						status: msg.interactive
+							? this.launchInteractiveRebase(msg.repo, msg.obj, msg.type)
+							: await this.dataSource.rebase(msg.repo, msg.obj, msg.type, msg.ignoreDate)
 					});
 					break;
 				case 'renameBranch':
@@ -370,6 +373,15 @@ export class GitGraphView {
 
 	private async update() {
 		this.panel.webview.html = await this.getHtmlForWebview();
+	}
+
+	/**
+	 * Starts `git rebase --interactive` in a new integrated terminal, because the editor for the
+	 * todo list needs a terminal. Returns an error message, or null when the terminal was opened.
+	 */
+	private launchInteractiveRebase(repo: string, obj: string, type: GitRebaseType): string | null {
+		if (type === 'Commit' ? !isCommitHash(obj) : !isSafeRefName(obj)) return 'Invalid rebase target.';
+		return runGitCommandInTerminal(repo, this.dataSource.getGitPath(), ['rebase', '--interactive', obj], 'Git Graph: Interactive Rebase', this.logger);
 	}
 
 	private getHtmlForWebview() {

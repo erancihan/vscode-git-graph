@@ -94,7 +94,7 @@ export interface DialogDefaults {
 	merge: { noFastForward: boolean, noCommit: boolean, squashCommits: boolean };
 	popStash: { reinstateIndex: boolean };
 	pullBranch: { noFastForward: boolean, squashCommits: boolean };
-	rebase: { ignoreDate: boolean };
+	rebase: { ignoreDate: boolean, launchInteractiveRebase: boolean };
 	resetCurrentBranchToCommit: { mode: GitResetMode };
 	resetUncommittedChanges: { mode: 'mixed' | 'hard' };
 	stashUncommittedChanges: { includeUntracked: boolean };
@@ -485,6 +485,7 @@ export interface RequestRebase {
 	obj: string;
 	type: GitRebaseType;
 	ignoreDate: boolean;
+	interactive: boolean;
 }
 export interface ResponseRebase {
 	command: 'rebase';

@@ -78,7 +78,7 @@ describe('Config.dialogDefaults', () => {
 			merge: { noFastForward: true, noCommit: false, squashCommits: false },
 			popStash: { reinstateIndex: false },
 			pullBranch: { noFastForward: false, squashCommits: false },
-			rebase: { ignoreDate: true },
+			rebase: { ignoreDate: true, launchInteractiveRebase: false },
 			resetCurrentBranchToCommit: { mode: 'mixed' },
 			resetUncommittedChanges: { mode: 'mixed' },
 			stashUncommittedChanges: { includeUntracked: false },
@@ -96,6 +96,7 @@ describe('Config.dialogDefaults', () => {
 			'dialog.merge.squashCommits': true,
 			'dialog.cherryPick.recordOrigin': true,
 			'dialog.createBranch.checkOut': true,
+			'dialog.rebase.launchInteractiveRebase': true,
 			'dialog.general.referenceInputSpaceSubstitution': 'Underscore'
 		});
 		expect(getConfig().dialogDefaults()).toEqual({
@@ -108,7 +109,7 @@ describe('Config.dialogDefaults', () => {
 			merge: { noFastForward: false, noCommit: false, squashCommits: true },
 			popStash: { reinstateIndex: false },
 			pullBranch: { noFastForward: false, squashCommits: false },
-			rebase: { ignoreDate: true },
+			rebase: { ignoreDate: true, launchInteractiveRebase: true },
 			resetCurrentBranchToCommit: { mode: 'hard' },
 			resetUncommittedChanges: { mode: 'hard' },
 			stashUncommittedChanges: { includeUntracked: false },
@@ -212,5 +213,18 @@ describe('coerceInteger', () => {
 		expect(coerceInteger('many', 7)).toBe(7);
 		expect(coerceInteger(NaN, 7)).toBe(7);
 		expect(coerceInteger(null, 7)).toBe(7);
+	});
+});
+
+describe('Config.integratedTerminalShell', () => {
+	it('is empty by default and trims the configured path', () => {
+		expect(getConfig().integratedTerminalShell()).toBe('');
+		setConfig({ 'integratedTerminalShell': '  /bin/zsh ' });
+		expect(getConfig().integratedTerminalShell()).toBe('/bin/zsh');
+	});
+
+	it('ignores values that are not strings', () => {
+		setConfig({ 'integratedTerminalShell': 42 });
+		expect(getConfig().integratedTerminalShell()).toBe('');
 	});
 });

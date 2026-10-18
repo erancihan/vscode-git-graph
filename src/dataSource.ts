@@ -28,6 +28,11 @@ export class DataSource {
 	private readonly logger: Logger;
 	private gitPath: string = 'git';
 
+	/** Path of the git executable in use (`git` until discovery finishes). */
+	public getGitPath() {
+		return this.gitPath;
+	}
+
 	constructor(logger: Logger) {
 		this.logger = logger;
 		this.registerGitPath();
@@ -628,7 +633,7 @@ export class DataSource {
  * A reference name supplied by the user or read from the repository must never be mistaken for a
  * git option. Git itself rejects names that start with "-", so refusing them loses nothing.
  */
-function isSafeRefName(name: string) {
+export function isSafeRefName(name: string) {
 	return name !== '' && name[0] !== '-' && !/[\x00-\x1f\x7f]/.test(name);
 }
 
@@ -689,7 +694,7 @@ interface GitStashEntry extends GitStash {
 }
 
 /** Commit hashes are hexadecimal (SHA-1 or SHA-256), abbreviated to at least 4 characters. */
-function isCommitHash(hash: string) {
+export function isCommitHash(hash: string) {
 	return /^[0-9a-f]{4,64}$/i.test(hash);
 }
 

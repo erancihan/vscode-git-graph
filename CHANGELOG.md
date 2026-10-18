@@ -1,5 +1,9 @@
 # Change Log
 
+## Unreleased
+
+* The rebase dialogs have a "Launch Interactive Rebase in new Terminal" option. It opens an integrated terminal in the repository and runs `git rebase --interactive` there, so the todo list can be edited. New settings `git-graph.dialog.rebase.launchInteractiveRebase` and `git-graph.integratedTerminalShell`.
+
 ## 2.2.0 - 2026-10-18
 
 Milestone "2.2 Core actions", first release. Everything below was re-implemented from feature descriptions; no code was taken from upstream versions after 1.4.6 or from other extensions.

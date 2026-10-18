@@ -108,7 +108,8 @@ class Config {
 				squashCommits: this.getBoolean('dialog.pullBranch.squashCommits', null, false)
 			},
 			rebase: {
-				ignoreDate: this.getBoolean('dialog.rebase.ignoreDate', null, true)
+				ignoreDate: this.getBoolean('dialog.rebase.ignoreDate', null, true),
+				launchInteractiveRebase: this.getBoolean('dialog.rebase.launchInteractiveRebase', null, false)
 			},
 			resetCurrentBranchToCommit: {
 				mode: <GitResetMode>this.getEnum('dialog.resetCurrentBranchToCommit.mode', null, ['Soft', 'Mixed', 'Hard'], 'Mixed').toLowerCase()
@@ -297,6 +298,12 @@ class Config {
 
 	public maxDepthOfRepoSearch() {
 		return this.getNonNegativeInteger('maxDepthOfRepoSearch', null, 0);
+	}
+
+	/** Shell used by the terminals Git Graph opens (interactive rebase). Empty string: the default shell. */
+	public integratedTerminalShell() {
+		const shell = this.get<unknown>('integratedTerminalShell', null, '');
+		return typeof shell === 'string' ? shell.trim() : '';
 	}
 
 	public retainContextWhenHidden() {
