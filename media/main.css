@@ -1004,6 +1004,13 @@ svg.openFolderIcon, svg.closedFolderIcon, svg.fileIcon{
 	white-space:nowrap;
 	user-select:text;
 }
+.settingsWorktrees .settingsWorktreePath{
+	max-width:280px;
+	overflow:hidden;
+	text-overflow:ellipsis;
+	white-space:nowrap;
+	user-select:text;
+}
 .settingsRemotes .settingsRemoteName{
 	font-weight:700;
 }

@@ -663,6 +663,11 @@ class GitGraphView {
 					}
 				},
 				{
+					title: 'Create Worktree from this Commit' + ELLIPSIS,
+					visible: visibility.createWorktree,
+					onClick: () => this.showCreateWorktreeDialog(hash, 'Commit')
+				},
+				{
 					title: 'Archive' + ELLIPSIS,
 					visible: visibility.archive,
 					onClick: () => sendMessage({ command: 'archive', repo: this.currentRepo!, ref: hash })
@@ -903,6 +908,13 @@ class GitGraphView {
 				}
 				copyType = 'Branch Name';
 			}
+			if (isHead) {
+				menu.push({
+					title: 'Create Worktree from this Branch' + ELLIPSIS,
+					visible: this.config.contextMenuActionsVisibility.branch.createWorktree,
+					onClick: () => this.showCreateWorktreeDialog(refName, 'Branch')
+				});
+			}
 			if (isTag || isHead) {
 				menu.push({
 					title: 'Archive' + ELLIPSIS,
@@ -1084,6 +1096,16 @@ class GitGraphView {
 				showActionRunningDialog('Amending Commit');
 				sendMessage({ command: 'amendCommit', repo: this.currentRepo!, commitHash: commitHash, message: values[0], stageTracked: values[1] === 'checked' });
 			}
+		}, null);
+	}
+
+	/* Worktrees */
+	private showCreateWorktreeDialog(ref: string, type: 'Branch' | 'Commit') {
+		const what = type === 'Branch' ? 'branch <b><i>' + escapeHtml(ref) + '</i></b>' : 'commit <b><i>' + abbrevCommit(ref) + '</i></b>';
+		showFormDialog('Create a worktree for ' + what + '. You choose the folder next.' + (type === 'Commit' ? ' Without a new branch the worktree has a detached HEAD.' : ''), [
+			{ type: 'text', name: 'New branch (optional): ', default: '', placeholder: type === 'Branch' ? 'Leave empty to check out ' + ref : 'Branch to create at this commit' }
+		], 'Choose Folder' + ELLIPSIS, (values) => {
+			sendMessage({ command: 'addWorktree', repo: this.currentRepo!, ref: ref, newBranch: values[0].trim() !== '' ? values[0].trim() : null });
 		}, null);
 	}
 
@@ -2143,6 +2165,18 @@ window.addEventListener('message', event => {
 			break;
 		case 'bisect':
 			gitGraph.bisectCompleted(msg.status, msg.message);
+			break;
+		case 'addWorktree':
+			gitGraph.repoSettingsActionCompleted(msg.status, 'Unable to Create Worktree', false);
+			break;
+		case 'removeWorktree':
+			gitGraph.repoSettingsActionCompleted(msg.status, 'Unable to Remove Worktree', false);
+			break;
+		case 'pruneWorktrees':
+			gitGraph.repoSettingsActionCompleted(msg.status, 'Unable to Prune Worktrees', false);
+			break;
+		case 'openWorktree':
+			gitGraph.repoSettingsActionCompleted(msg.status, 'Unable to Open Worktree', false);
 			break;
 		case 'codeReviewsChanged':
 			gitGraph.setCodeReviews(msg.repo, msg.reviews);

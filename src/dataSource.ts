@@ -4,7 +4,7 @@ import * as path from 'path';
 import { getConfig } from './config';
 import { findGitExecutable } from './gitExecutable';
 import { Logger } from './logger';
-import { CherryPickOptions, GitArchiveType, GitBisectAction, GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChange, GitFileChangeType, GraphFilters, GitPushBranchMode, GitRebaseType, GitRefData, GitRemoteDetails, GitRepoSettings, GitRepoState, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitUnsavedChanges, GitUserDetails, MergeOptions } from './types';
+import { CherryPickOptions, GitArchiveType, GitBisectAction, GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChange, GitFileChangeType, GraphFilters, GitPushBranchMode, GitRebaseType, GitRefData, GitRemoteDetails, GitRepoSettings, GitRepoState, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitUnsavedChanges, GitUserDetails, GitWorktree, MergeOptions } from './types';
 import { getPathFromStr } from './utils';
 
 const eolRegex = /\r\n|\r|\n/g;
@@ -308,11 +308,38 @@ export class DataSource {
 		return null;
 	}
 
-	/** Everything the Repository Settings widget shows: remotes and user details. */
+	/** Everything the Repository Settings widget shows: remotes, user details and worktrees. */
 	public async getRepoSettings(repo: string): Promise<GitRepoSettings | null> {
 		if (!await this.isGitRepository(repo)) return null;
-		const [remotes, user] = await Promise.all([this.getRemoteDetails(repo), this.getUserDetails(repo)]);
-		return { remotes, user };
+		const [remotes, user, worktrees] = await Promise.all([this.getRemoteDetails(repo), this.getUserDetails(repo), this.getWorktrees(repo)]);
+		return { remotes, user, worktrees };
+	}
+
+	/* Worktrees */
+
+	public getWorktrees(repo: string): Promise<GitWorktree[]> {
+		return this.spawnGit(['worktree', 'list', '--porcelain'], repo, (stdout) => parseWorktreeList(stdout)).catch((): GitWorktree[] => []);
+	}
+
+	/** Create a worktree at `worktreePath` checking out `ref`, or a new branch `newBranch` starting at `ref`. */
+	public addWorktree(repo: string, worktreePath: string, ref: string, newBranch: string | null) {
+		if (!isSafeWorktreePath(worktreePath) || !(isSafeRefName(ref) || isCommitHash(ref)) || (newBranch !== null && !isSafeRefName(newBranch))) return rejectArguments();
+		const args = ['worktree', 'add'];
+		if (newBranch !== null) args.push('-b', newBranch);
+		args.push(worktreePath, ref);
+		return this.runGitCommand(args, repo);
+	}
+
+	public removeWorktree(repo: string, worktreePath: string, force: boolean) {
+		if (!isSafeWorktreePath(worktreePath)) return rejectArguments();
+		const args = ['worktree', 'remove'];
+		if (force) args.push('--force');
+		args.push(worktreePath);
+		return this.runGitCommand(args, repo);
+	}
+
+	public pruneWorktrees(repo: string) {
+		return this.runGitCommand(['worktree', 'prune'], repo);
 	}
 
 	/**
@@ -876,6 +903,35 @@ export function resolveGitDir(repo: string): string | null {
 		// no .git entry
 	}
 	return null;
+}
+
+/** Parses `git worktree list --porcelain`: blank-line separated records of "key value" lines. */
+export function parseWorktreeList(stdout: string): GitWorktree[] {
+	const worktrees: GitWorktree[] = [];
+	let current: GitWorktree | null = null;
+	for (const line of stdout.split(eolRegex)) {
+		if (line === '') {
+			if (current !== null) worktrees.push(current);
+			current = null;
+			continue;
+		}
+		const space = line.indexOf(' '), key = space === -1 ? line : line.substring(0, space), value = space === -1 ? '' : line.substring(space + 1);
+		if (key === 'worktree') {
+			current = { path: value, head: null, branch: null, isMain: worktrees.length === 0, locked: false, prunable: false };
+		} else if (current !== null) {
+			if (key === 'HEAD') current.head = value;
+			else if (key === 'branch') current.branch = value.replace(/^refs\/heads\//, '');
+			else if (key === 'locked') current.locked = true;
+			else if (key === 'prunable') current.prunable = true;
+		}
+	}
+	if (current !== null) worktrees.push(current);
+	return worktrees;
+}
+
+/** Worktree folders are absolute paths chosen through the editor's dialogs; they must not look like options. */
+export function isSafeWorktreePath(p: string) {
+	return typeof p === 'string' && path.isAbsolute(p) && !p.startsWith('-') && !/[\r\n\0]/.test(p);
 }
 
 /** Options for loading a repository: the settings, overridden by the repository state where it is set. */

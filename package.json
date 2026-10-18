@@ -195,6 +195,11 @@
 									"default": true,
 									"description": "Create Pull Request"
 								},
+								"createWorktree": {
+									"type": "boolean",
+									"default": true,
+									"description": "Create Worktree from this Branch"
+								},
 								"archive": {
 									"type": "boolean",
 									"default": true,
@@ -271,6 +276,11 @@
 									"type": "boolean",
 									"default": true,
 									"description": "Bisect: Mark as Bad / Good / Skip / Stop"
+								},
+								"createWorktree": {
+									"type": "boolean",
+									"default": true,
+									"description": "Create Worktree from this Commit"
 								},
 								"rebase": {
 									"type": "boolean",

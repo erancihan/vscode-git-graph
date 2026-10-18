@@ -2,7 +2,7 @@ import * as cp from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { DataSource, isSafeRelativePath, parseSignature } from '../src/dataSource';
+import { DataSource, isSafeRelativePath, parseSignature, parseWorktreeList } from '../src/dataSource';
 import { defaultRepoState } from '../src/repoManager';
 import { Logger } from '../src/logger';
 import { configurationValues, outputChannelLines } from './mocks/vscode';
@@ -783,6 +783,56 @@ describe('DataSource bisect', () => {
 		expect(await dataSource.isBisecting(repo)).toBe(false);
 		expect(git(repo, ['rev-parse', 'HEAD'])).toBe(hashes[5]);
 		expect((await dataSource.getCommits(repo, [], 50, false)).bisecting).toBe(false);
+	});
+});
+
+describe('DataSource worktrees', () => {
+	let repo: string;
+	let dataSource: DataSource;
+
+	beforeAll(() => {
+		repo = fs.mkdtempSync(path.join(os.tmpdir(), 'git-graph-worktree-'));
+		git(repo, ['init', '-q', '-b', 'master']);
+		git(repo, ['config', 'user.name', 'Test Committer']);
+		git(repo, ['config', 'user.email', 'committer@example.com']);
+		git(repo, ['config', 'commit.gpgsign', 'false']);
+		commit(repo, 'a.txt', 'one\n', 'Base');
+		git(repo, ['branch', 'topic']);
+		dataSource = new DataSource(new Logger());
+	});
+
+	afterAll(() => {
+		fs.rmSync(repo, { recursive: true, force: true });
+		fs.rmSync(repo + '-wt', { recursive: true, force: true });
+		fs.rmSync(repo + '-wt2', { recursive: true, force: true });
+	});
+
+	it('parses the porcelain listing', () => {
+		expect(parseWorktreeList('worktree /r\nHEAD abc\nbranch refs/heads/master\n\nworktree /r-wt\nHEAD def\ndetached\nlocked\n\nworktree /gone\nHEAD 123\nbranch refs/heads/x\nprunable gitdir file points to non-existent location\n')).toEqual([
+			{ path: '/r', head: 'abc', branch: 'master', isMain: true, locked: false, prunable: false },
+			{ path: '/r-wt', head: 'def', branch: null, isMain: false, locked: true, prunable: false },
+			{ path: '/gone', head: '123', branch: 'x', isMain: false, locked: false, prunable: true }
+		]);
+	});
+
+	it('adds, lists, removes and prunes worktrees', async () => {
+		expect(await dataSource.addWorktree(repo, repo + '-wt', 'topic', null)).toBeNull();
+		expect(await dataSource.addWorktree(repo, repo + '-wt2', 'master', 'from-master')).toBeNull();
+		const list = await dataSource.getWorktrees(repo);
+		expect(list.map((w) => w.branch)).toEqual(['master', 'topic', 'from-master']);
+		expect(list[0].isMain).toBe(true);
+		expect(fs.existsSync(path.join(repo + '-wt', 'a.txt'))).toBe(true);
+		expect((await dataSource.getRepoSettings(repo))!.worktrees).toHaveLength(3);
+
+		expect(await dataSource.addWorktree(repo, 'relative/path', 'topic', null)).toMatch(/not a valid/i);
+		expect(await dataSource.addWorktree(repo, repo + '-wt3', '--force', null)).toMatch(/not a valid/i);
+
+		fs.writeFileSync(path.join(repo + '-wt', 'dirty.txt'), 'x');
+		expect(await dataSource.removeWorktree(repo, repo + '-wt', false)).toMatch(/untracked|modified|contains/i);
+		expect(await dataSource.removeWorktree(repo, repo + '-wt', true)).toBeNull();
+		fs.rmSync(repo + '-wt2', { recursive: true, force: true });
+		expect(await dataSource.pruneWorktrees(repo)).toBeNull();
+		expect((await dataSource.getWorktrees(repo)).map((w) => w.branch)).toEqual(['master']);
 	});
 });
 
