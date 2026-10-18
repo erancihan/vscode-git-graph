@@ -12,6 +12,7 @@ web/
 eslint.config.mjs
 jest.config.js
 tests/
+scripts/
 coverage/
 package-lock.json
 *.vsix
