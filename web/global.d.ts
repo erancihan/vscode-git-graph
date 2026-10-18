@@ -143,6 +143,7 @@ declare global {
 		commitHead: string | null;
 		avatars: AvatarImageCollection;
 		currentBranches: string[] | null;
+		filters?: GG.GraphFilters; // missing in state written before 2.4.0
 		currentBranch?: string | null; // State written by versions before 2.2.0
 		currentRepo: string;
 		moreCommitsAvailable: boolean;

@@ -741,3 +741,40 @@ describe('parseSignature', () => {
 		expect(parseSignature('?', '', '')).toEqual({ status: 'E', signer: '', key: '' });
 	});
 });
+
+describe('DataSource filters', () => {
+	let repo: string;
+	let dataSource: DataSource;
+
+	beforeAll(() => {
+		repo = fs.mkdtempSync(path.join(os.tmpdir(), 'git-graph-filter-'));
+		git(repo, ['init', '-q', '-b', 'master']);
+		git(repo, ['config', 'user.name', 'Test Committer']);
+		git(repo, ['config', 'user.email', 'committer@example.com']);
+		git(repo, ['config', 'commit.gpgsign', 'false']);
+		commit(repo, 'a.txt', 'one\n', 'Touches a');
+		commit(repo, 'dir/b.txt', 'two\n', 'Touches dir/b');
+		git(repo, ['-c', 'user.name=Other Author', '-c', 'user.email=other@example.com', 'commit', '-q', '--allow-empty', '-m', 'By someone else']);
+		dataSource = new DataSource(new Logger());
+	});
+
+	afterAll(() => {
+		fs.rmSync(repo, { recursive: true, force: true });
+	});
+
+	const messages = (result: { commits: { hash: string, message: string }[] }) => result.commits.filter((c) => c.hash !== '*').map((c) => c.message);
+
+	it('filters by author (case-insensitive substring, several authors combine with OR)', async () => {
+		expect(messages(await dataSource.getCommits(repo, [], 50, false, null, { authors: ['OTHER@example'], paths: [] }))).toEqual(['By someone else']);
+		expect(messages(await dataSource.getCommits(repo, [], 50, false, null, { authors: ['other@example.com', 'Test Committer'], paths: [] }))).toHaveLength(3);
+		expect(messages(await dataSource.getCommits(repo, [], 50, false, null, { authors: ['a.b'], paths: [] }))).toEqual([]); // literal, not a regular expression
+	});
+
+	it('filters by path and refuses paths outside the repository', async () => {
+		expect(messages(await dataSource.getCommits(repo, [], 50, false, null, { authors: [], paths: ['a.txt'] }))).toEqual(['Touches a']);
+		expect(messages(await dataSource.getCommits(repo, [], 50, false, null, { authors: [], paths: ['dir'] }))).toEqual(['Touches dir/b']);
+		expect(messages(await dataSource.getCommits(repo, [], 50, false, null, { authors: [], paths: ['a.txt', 'dir'] }))).toEqual(['Touches dir/b', 'Touches a']);
+		expect(messages(await dataSource.getCommits(repo, [], 50, false, null, { authors: ['Test Committer'], paths: ['dir'] }))).toEqual(['Touches dir/b']);
+		expect(messages(await dataSource.getCommits(repo, [], 50, false, null, { authors: [], paths: ['../outside'] }))).toEqual([]);
+	});
+});

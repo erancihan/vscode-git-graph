@@ -262,6 +262,11 @@
 									"default": true,
 									"description": "Reword Commit Message (checked-out commit only)"
 								},
+								"filterByAuthor": {
+									"type": "boolean",
+									"default": true,
+									"description": "Show only commits by this author"
+								},
 								"rebase": {
 									"type": "boolean",
 									"default": true,

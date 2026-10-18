@@ -131,7 +131,7 @@ export interface GitUnsavedChanges {
 
 export interface ContextMenuActionsVisibility {
 	branch: { checkout: boolean, rename: boolean, delete: boolean, merge: boolean, rebase: boolean, push: boolean, createPullRequest: boolean, archive: boolean, copyName: boolean };
-	commit: { addTag: boolean, createBranch: boolean, checkout: boolean, cherrypick: boolean, revert: boolean, drop: boolean, merge: boolean, rebase: boolean, reset: boolean, archive: boolean, codeReview: boolean, reword: boolean, copyHash: boolean };
+	commit: { addTag: boolean, createBranch: boolean, checkout: boolean, cherrypick: boolean, revert: boolean, drop: boolean, merge: boolean, rebase: boolean, reset: boolean, archive: boolean, codeReview: boolean, reword: boolean, filterByAuthor: boolean, copyHash: boolean };
 	remoteBranch: { checkout: boolean, delete: boolean, fetch: boolean, pull: boolean, copyName: boolean };
 	stash: { apply: boolean, createBranch: boolean, pop: boolean, drop: boolean, copyName: boolean, copyHash: boolean };
 	tag: { delete: boolean, push: boolean, archive: boolean, copyName: boolean };
@@ -395,12 +395,19 @@ export interface ResponseLoadBranches {
 	isRepo: boolean;
 }
 
+/** Filters applied by git while loading: authors (name or email substrings, OR) and paths (OR). */
+export interface GraphFilters {
+	authors: string[];
+	paths: string[];
+}
+
 export interface RequestLoadCommits {
 	command: 'loadCommits';
 	repo: string;
 	branches: string[]; // Branch names, "HEAD", or "--glob=<pattern>" entries; empty => show all
 	maxCommits: number;
 	showRemoteBranches: boolean;
+	filters: GraphFilters;
 	hard: boolean;
 }
 export interface ResponseLoadCommits {

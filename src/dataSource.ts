@@ -2,7 +2,7 @@ import * as cp from 'child_process';
 import { getConfig } from './config';
 import { findGitExecutable } from './gitExecutable';
 import { Logger } from './logger';
-import { CherryPickOptions, GitArchiveType, GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChange, GitFileChangeType, GitPushBranchMode, GitRebaseType, GitRefData, GitRemoteDetails, GitRepoSettings, GitRepoState, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitUnsavedChanges, GitUserDetails, MergeOptions } from './types';
+import { CherryPickOptions, GitArchiveType, GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChange, GitFileChangeType, GraphFilters, GitPushBranchMode, GitRebaseType, GitRefData, GitRemoteDetails, GitRepoSettings, GitRepoState, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitUnsavedChanges, GitUserDetails, MergeOptions } from './types';
 import { getPathFromStr } from './utils';
 
 const eolRegex = /\r\n|\r|\n/g;
@@ -111,10 +111,10 @@ export class DataSource {
 	 * Load commits. `branches` lists branch names, "HEAD", or "--glob=<pattern>" entries; an empty list
 	 * shows all branches (and tags and remotes according to the settings).
 	 */
-	public async getCommits(repo: string, branches: string[], maxCommits: number, showRemoteBranches: boolean, repoState: GitRepoState | null = null) {
+	public async getCommits(repo: string, branches: string[], maxCommits: number, showRemoteBranches: boolean, repoState: GitRepoState | null = null, filters: GraphFilters = { authors: [], paths: [] }) {
 		const options = resolveLoadOptions(repoState);
 		const [commits, refData, stashes] = await Promise.all([
-			this.getGitLog(repo, branches, maxCommits + 1, showRemoteBranches, options),
+			this.getGitLog(repo, branches, maxCommits + 1, showRemoteBranches, options, filters),
 			this.getRefs(repo, showRemoteBranches, options),
 			options.showStashes ? this.getStashes(repo) : Promise.resolve(<GitStashEntry[]>[])
 		]);
@@ -703,10 +703,18 @@ export class DataSource {
 		}).catch((): GitRefData => ({ head: null, refs: [] }));
 	}
 
-	private getGitLog(repo: string, branches: string[], num: number, showRemoteBranches: boolean, options: LoadOptions = resolveLoadOptions(null)) {
+	private getGitLog(repo: string, branches: string[], num: number, showRemoteBranches: boolean, options: LoadOptions = resolveLoadOptions(null), filters: GraphFilters = { authors: [], paths: [] }) {
 		const config = getConfig(), formats = this.getFormats();
 		const args = ['log', '--max-count=' + num, '--format=' + formats.log, '--' + config.commitOrdering() + '-order'];
 		if (options.onlyFollowFirstParent) args.push('--first-parent');
+		const authors = filters.authors.filter((author) => author.trim() !== '' && !/[\r\n\0]/.test(author));
+		if (authors.length > 0) {
+			// Several --author patterns are combined with OR by git; --fixed-strings keeps them literal
+			args.push('--fixed-strings', '--regexp-ignore-case');
+			for (const author of authors) args.push('--author=' + author.trim());
+		}
+		const paths = filters.paths.filter((p) => p !== '');
+		if (!paths.every(isSafeRelativePath)) return Promise.resolve(<GitCommit[]>[]);
 		if (branches.length > 0) {
 			for (const branch of branches) {
 				if (isGlobSelector(branch)) {
@@ -729,6 +737,7 @@ export class DataSource {
 			if (options.includeCommitsMentionedByReflogs) args.push('--reflog');
 		}
 		args.push('--');
+		for (const p of paths) args.push(p);
 
 		return this.spawnGit(args, repo, (stdout) => {
 			const lines = stdout.split(eolRegex);

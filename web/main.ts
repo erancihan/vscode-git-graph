@@ -10,6 +10,7 @@ class GitGraphView {
 	private commitLookup: { [hash: string]: number } = {};
 	private avatars: AvatarImageCollection = {};
 	private currentBranches: string[] | null = null;
+	private filters: GG.GraphFilters = { authors: [], paths: [] };
 	private currentRepo!: string;
 
 	private graph: Graph;
@@ -109,6 +110,8 @@ class GitGraphView {
 			this.scrollToHeadPending = this.config.scrollToHeadOnLoad;
 			this.discardExpandedCommit();
 			this.currentBranches = null;
+			this.filters = { authors: [], paths: [] };
+			this.renderFilterBar();
 			this.saveState();
 			this.refresh(true);
 		});
@@ -130,6 +133,17 @@ class GitGraphView {
 		document.getElementById('refreshBtn')!.addEventListener('click', () => {
 			this.refresh(true);
 		});
+		document.getElementById('filterBtn')!.addEventListener('click', () => this.showFilterDialog());
+		document.getElementById('filterBar')!.addEventListener('click', (e) => {
+			const chip = <HTMLElement | null>(<Element>e.target).closest('.filterChipRemove');
+			if (chip !== null) {
+				const kind = chip.dataset.kind, value = decodeURIComponent(chip.dataset.value!);
+				if (kind === 'author') this.setFilters({ authors: this.filters.authors.filter((a) => a !== value), paths: this.filters.paths });
+				else if (kind === 'path') this.setFilters({ authors: this.filters.authors, paths: this.filters.paths.filter((p) => p !== value) });
+			} else if ((<Element>e.target).closest('#filterClear') !== null) {
+				this.setFilters({ authors: [], paths: [] });
+			}
+		});
 		document.getElementById('settingsBtn')!.addEventListener('click', () => {
 			if (typeof this.gitRepos[this.currentRepo] !== 'undefined') this.settingsWidget.show(this.currentRepo);
 		});
@@ -144,6 +158,8 @@ class GitGraphView {
 		this.renderShowLoading();
 		if (prevState) {
 			this.currentBranches = prevState.currentBranches || (typeof prevState.currentBranch === 'string' ? [prevState.currentBranch] : null);
+			if (prevState.filters && Array.isArray(prevState.filters.authors) && Array.isArray(prevState.filters.paths)) this.filters = prevState.filters;
+			this.renderFilterBar();
 			this.showRemoteBranches = prevState.showRemoteBranches;
 			this.showRemoteBranchesElem.checked = this.showRemoteBranches;
 			if (typeof this.gitRepos[prevState.currentRepo] !== 'undefined') {
@@ -195,6 +211,8 @@ class GitGraphView {
 		this.maxCommits = this.config.initialLoadCommits;
 		this.discardExpandedCommit();
 		this.currentBranches = null;
+		this.filters = { authors: [], paths: [] };
+		this.renderFilterBar();
 		this.scrollToHeadPending = this.config.scrollToHeadOnLoad;
 		this.saveState();
 		this.repoDropdown.setOptions(this.repoDropdown.getOptions(), [this.currentRepo]);
@@ -351,6 +369,7 @@ class GitGraphView {
 			command: 'loadCommits',
 			repo: this.currentRepo!,
 			branches: this.currentBranches === null || this.currentBranches.indexOf('') > -1 ? [] : this.currentBranches,
+			filters: this.filters,
 			maxCommits: this.maxCommits,
 			showRemoteBranches: this.showRemoteBranches,
 			hard: hard
@@ -387,6 +406,7 @@ class GitGraphView {
 			commitHead: this.commitHead,
 			avatars: this.avatars,
 			currentBranches: this.currentBranches,
+			filters: this.filters,
 			currentRepo: this.currentRepo,
 			moreCommitsAvailable: this.moreCommitsAvailable,
 			maxCommits: this.maxCommits,
@@ -609,6 +629,11 @@ class GitGraphView {
 							sendMessage({ command: 'resetToCommit', repo: this.currentRepo!, commitHash: hash, resetMode: <GG.GitResetMode>mode });
 						}, sourceElem);
 					}
+				},
+				{
+					title: 'Show only commits by ' + escapeHtml(this.commits[this.commitLookup[hash]].author),
+					visible: visibility.filterByAuthor && this.filters.authors.indexOf(this.commits[this.commitLookup[hash]].email) === -1,
+					onClick: () => this.addAuthorFilter(this.commits[this.commitLookup[hash]].email !== '' ? this.commits[this.commitLookup[hash]].email : this.commits[this.commitLookup[hash]].author)
 				},
 				{
 					title: 'Reword Commit Message' + ELLIPSIS,
@@ -946,8 +971,11 @@ class GitGraphView {
 	}
 	/** The sticky column headers sit directly below the controls bar, whose height depends on wrapping. */
 	private updateControlsHeightVariable() {
-		const controls = document.getElementById('controls');
-		if (controls !== null) document.body.style.setProperty('--git-graph-controls-height', controls.offsetHeight + 'px');
+		const controls = document.getElementById('controls'), filterBar = document.getElementById('filterBar');
+		if (controls !== null) {
+			document.body.style.setProperty('--git-graph-controls-height', controls.offsetHeight + 'px');
+			document.body.style.setProperty('--git-graph-header-offset', (controls.offsetHeight + (filterBar !== null ? filterBar.offsetHeight : 0)) + 'px');
+		}
 	}
 	/** Tells the stylesheet how wide the graph is, so labels placed in the Graph column start to its right. */
 	private updateGraphWidthVariable() {
@@ -1044,6 +1072,52 @@ class GitGraphView {
 				showActionRunningDialog('Amending Commit');
 				sendMessage({ command: 'amendCommit', repo: this.currentRepo!, commitHash: commitHash, message: values[0], stageTracked: values[1] === 'checked' });
 			}
+		}, null);
+	}
+
+	/* Filters */
+	/** Replace the filters, reload the commits from the start and show the chips. */
+	public setFilters(filters: GG.GraphFilters) {
+		const dedupe = (list: string[]) => list.map((v) => v.trim()).filter((v, i, all) => v !== '' && all.indexOf(v) === i);
+		this.filters = { authors: dedupe(filters.authors), paths: dedupe(filters.paths) };
+		this.maxCommits = this.config.initialLoadCommits;
+		this.discardExpandedCommit();
+		this.saveState();
+		this.renderFilterBar();
+		this.renderShowLoading();
+		this.requestLoadCommits(true, () => { });
+	}
+	public addAuthorFilter(author: string) {
+		this.setFilters({ authors: this.filters.authors.concat([author]), paths: this.filters.paths });
+	}
+	public addPathFilter(path: string) {
+		this.setFilters({ authors: this.filters.authors, paths: this.filters.paths.concat([path]) });
+	}
+	private renderFilterBar() {
+		const bar = document.getElementById('filterBar');
+		if (bar === null) return;
+		const chips = this.filters.authors.map((author) => this.filterChipHtml('author', 'Author', author)).concat(this.filters.paths.map((p) => this.filterChipHtml('path', 'Path', p)));
+		if (chips.length === 0) {
+			bar.className = '';
+			bar.innerHTML = '';
+		} else {
+			bar.className = 'active';
+			bar.innerHTML = '<span class="filterBarLabel">Filters:</span>' + chips.join('') + '<span id="filterClear" class="roundedBtn" title="Remove all filters">Clear</span>';
+		}
+		this.updateControlsHeightVariable();
+	}
+	private filterChipHtml(kind: 'author' | 'path', label: string, value: string) {
+		return '<span class="filterChip" title="' + label + ': ' + escapeHtml(value) + '"><span class="filterChipKind">' + label + '</span>' + escapeHtml(value) + '<span class="filterChipRemove" data-kind="' + kind + '" data-value="' + encodeURIComponent(value) + '" title="Remove this filter">' + svgIcons.close + '</span></span>';
+	}
+	private showFilterDialog() {
+		showFormDialog('Show only the commits that match <b>every</b> filter type (values of one type combine with OR):', [
+			{ type: 'text', name: 'Author: ', default: '', placeholder: 'Name or email (substring, case-insensitive)' },
+			{ type: 'text', name: 'Path: ', default: '', placeholder: 'File or folder relative to the repository' }
+		], 'Add Filters', (values) => {
+			const authors = values[0].trim() !== '' ? this.filters.authors.concat([values[0].trim()]) : this.filters.authors;
+			const paths = values[1].trim() !== '' ? this.filters.paths.concat([values[1].trim().replace(/^\.?\/+/, '').replace(/\/+$/, '')]) : this.filters.paths;
+			if (authors.length === this.filters.authors.length && paths.length === this.filters.paths.length) return;
+			this.setFilters({ authors: authors, paths: paths });
 		}, null);
 	}
 
@@ -1710,6 +1784,17 @@ class GitGraphView {
 					title: 'Open File',
 					visible: existsAtCommit,
 					onClick: () => sendMessage({ command: 'openFile', repo: this.currentRepo!, filePath: newFilePath })
+				},
+				null,
+				{
+					title: 'Show only commits affecting this file',
+					visible: this.filters.paths.indexOf(newFilePath) === -1,
+					onClick: () => this.addPathFilter(newFilePath)
+				},
+				{
+					title: 'Show only commits affecting this folder',
+					visible: newFilePath.indexOf('/') > -1 && this.filters.paths.indexOf(newFilePath.substring(0, newFilePath.lastIndexOf('/'))) === -1,
+					onClick: () => this.addPathFilter(newFilePath.substring(0, newFilePath.lastIndexOf('/')))
 				},
 				null,
 				{
