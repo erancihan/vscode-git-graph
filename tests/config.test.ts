@@ -162,6 +162,14 @@ describe('Config.commitDetailsView', () => {
 	});
 });
 
+describe('Config.customBranchGlobPatterns', () => {
+	it('keeps only entries with a name and a glob', () => {
+		expect(getConfig().customBranchGlobPatterns()).toEqual([]);
+		setConfig({ 'customBranchGlobPatterns': [{ name: ' Features ', glob: 'heads/feature/*' }, { name: '', glob: 'x' }, { glob: 'y' }, 'bad', null] });
+		expect(getConfig().customBranchGlobPatterns()).toEqual([{ name: 'Features', glob: 'heads/feature/*' }]);
+	});
+});
+
 describe('Config.defaultColumnVisibility', () => {
 	it('shows every column by default and reads the setting leniently', () => {
 		expect(getConfig().defaultColumnVisibility()).toEqual({ date: true, author: true, commit: true });

@@ -86,9 +86,13 @@ export class DataSource {
 		}).catch(() => ({ branches: <string[]>[], head: <string | null>null, error: true }));
 	}
 
-	public async getCommits(repo: string, branch: string, maxCommits: number, showRemoteBranches: boolean) {
+	/**
+	 * Load commits. `branches` lists branch names, "HEAD", or "--glob=<pattern>" entries; an empty list
+	 * shows all branches (and tags and remotes according to the settings).
+	 */
+	public async getCommits(repo: string, branches: string[], maxCommits: number, showRemoteBranches: boolean) {
 		const [commits, refData, stashes] = await Promise.all([
-			this.getGitLog(repo, branch, maxCommits + 1, showRemoteBranches),
+			this.getGitLog(repo, branches, maxCommits + 1, showRemoteBranches),
 			this.getRefs(repo, showRemoteBranches),
 			getConfig().showStashes() ? this.getStashes(repo) : Promise.resolve(<GitStashEntry[]>[])
 		]);
@@ -519,13 +523,20 @@ export class DataSource {
 		}).catch((): GitRefData => ({ head: null, refs: [] }));
 	}
 
-	private getGitLog(repo: string, branch: string, num: number, showRemoteBranches: boolean) {
+	private getGitLog(repo: string, branches: string[], num: number, showRemoteBranches: boolean) {
 		const config = getConfig();
 		const args = ['log', '--max-count=' + num, '--format=' + this.getFormats().log, '--' + config.commitOrdering() + '-order'];
 		if (config.onlyFollowFirstParent()) args.push('--first-parent');
-		if (branch !== '') {
-			if (!isSafeRefName(branch)) return Promise.resolve(<GitCommit[]>[]);
-			args.push(branch);
+		if (branches.length > 0) {
+			for (const branch of branches) {
+				if (isGlobSelector(branch)) {
+					args.push(branch);
+				} else if (isSafeRefName(branch)) {
+					args.push(branch);
+				} else {
+					return Promise.resolve(<GitCommit[]>[]);
+				}
+			}
 		} else {
 			// HEAD is listed explicitly so that a detached HEAD is part of the graph
 			args.push('HEAD', '--branches');
@@ -653,6 +664,14 @@ function parseFileChanges(nameStatusLines: string[], numStatLines: string[]) {
 export function isSafeRelativePath(relativePath: string) {
 	if (relativePath === '' || relativePath.startsWith('/') || /^[a-zA-Z]:/.test(relativePath) || relativePath.indexOf('\0') > -1) return false;
 	return relativePath.split('/').every((segment) => segment !== '' && segment !== '.' && segment !== '..');
+}
+
+/**
+ * Branch dropdown entries for custom glob patterns have the form "--glob=<pattern>". The pattern is
+ * limited to the characters of reference names and shell globs, so it cannot carry further options.
+ */
+function isGlobSelector(selector: string) {
+	return /^--glob=[A-Za-z0-9_.*?\[\]\-\/]+$/.test(selector);
 }
 
 /** Stash selectors have the form "stash@{N}". */

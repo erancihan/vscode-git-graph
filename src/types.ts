@@ -108,9 +108,15 @@ export interface CommitDetailsViewConfig {
 	compactFolders: boolean;
 }
 
+export interface CustomBranchGlobPattern {
+	name: string;
+	glob: string;
+}
+
 export interface GitGraphViewState {
 	autoCenterCommitDetailsView: boolean;
 	commitDetailsView: CommitDetailsViewConfig;
+	customBranchGlobPatterns: CustomBranchGlobPattern[];
 	contextMenuActionsVisibility: ContextMenuActionsVisibility;
 	dateFormat: DateFormat;
 	defaultColumnVisibility: ColumnVisibility;
@@ -310,7 +316,7 @@ export interface ResponseLoadBranches {
 export interface RequestLoadCommits {
 	command: 'loadCommits';
 	repo: string;
-	branchName: string;
+	branches: string[]; // Branch names, "HEAD", or "--glob=<pattern>" entries; empty => show all
 	maxCommits: number;
 	showRemoteBranches: boolean;
 	hard: boolean;

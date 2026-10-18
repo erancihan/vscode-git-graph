@@ -12,6 +12,7 @@ declare global {
 	interface Config {
 		autoCenterCommitDetailsView: boolean;
 		commitDetailsView: GG.CommitDetailsViewConfig;
+		customBranchGlobPatterns: GG.CustomBranchGlobPattern[];
 		contextMenuActionsVisibility: GG.ContextMenuActionsVisibility;
 		defaultColumnVisibility: GG.ColumnVisibility;
 		dialogDefaults: GG.DialogDefaults;
@@ -132,7 +133,8 @@ declare global {
 		commits: GG.GitCommitNode[];
 		commitHead: string | null;
 		avatars: AvatarImageCollection;
-		currentBranch: string | null;
+		currentBranches: string[] | null;
+		currentBranch?: string | null; // State written by versions before 2.2.0
 		currentRepo: string;
 		moreCommitsAvailable: boolean;
 		maxCommits: number;

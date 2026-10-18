@@ -249,7 +249,7 @@ export class GitGraphView {
 				case 'loadCommits':
 					this.sendMessage({
 						command: 'loadCommits',
-						... await this.dataSource.getCommits(msg.repo, msg.branchName, msg.maxCommits, msg.showRemoteBranches),
+						... await this.dataSource.getCommits(msg.repo, msg.branches, msg.maxCommits, msg.showRemoteBranches),
 						hard: msg.hard
 					});
 					break;
@@ -377,6 +377,7 @@ export class GitGraphView {
 		const viewState: GitGraphViewState = {
 			autoCenterCommitDetailsView: config.autoCenterCommitDetailsView(),
 			commitDetailsView: config.commitDetailsView(),
+			customBranchGlobPatterns: config.customBranchGlobPatterns(),
 			contextMenuActionsVisibility: config.contextMenuActionsVisibility(),
 			dateFormat: config.dateFormat(),
 			defaultColumnVisibility: config.defaultColumnVisibility(),

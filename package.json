@@ -327,6 +327,29 @@
 					},
 					"additionalProperties": false
 				},
+				"git-graph.customBranchGlobPatterns": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"name": {
+								"type": "string",
+								"description": "Name shown in the Branch dropdown"
+							},
+							"glob": {
+								"type": "string",
+								"description": "Glob pattern of the references to show, for example \"heads/feature/*\" or \"remotes/origin/release-*\". \"refs/\" is prepended when it is missing."
+							}
+						},
+						"required": [
+							"name",
+							"glob"
+						],
+						"additionalProperties": false
+					},
+					"default": [],
+					"description": "Named glob patterns offered in the Branch dropdown, for example {\"name\": \"Feature Branches\", \"glob\": \"heads/feature/*\"}."
+				},
 				"git-graph.date.format": {
 					"type": "string",
 					"enum": [
