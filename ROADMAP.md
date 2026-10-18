@@ -17,7 +17,7 @@ Work is tracked in GitHub milestones. Each theme has a tracking issue labeled `t
 3. No account, no telemetry, no network calls except the ones the user enables (avatars, issue links).
 4. Each milestone ships as a Marketplace and Open VSX release. Small releases are preferred over large ones.
 
-## Where we stand (2.2.0)
+## Where we stand (2.2.1)
 
 Shipped in 2.0.x: the Git Graph 1.4.6 feature set, a current toolchain (TypeScript 5, ESLint, Node 20, VS Code 1.74 or later), CI, release pipeline, two bug fixes.
 
@@ -25,7 +25,7 @@ Shipped in 2.1.0 (milestone "Foundations"): Output Channel logging; `spawn`-base
 
 Shipped in 2.2.0 (milestone "Core actions", first release): fetch, push, pull, delete remote branch, fetch into local branch, rebase; create branch with checkout, squash and no-commit merges, cherry pick options, drop commit, reset and clean uncommitted changes, signed commits and tags; stashes on the graph with apply, pop, drop, branch and stash actions; find widget; column visibility, muted commits, first-parent and reflog loading, scroll shortcuts; file actions, file list view, compact folders and commit comparison in the details view; repository add and remove commands, submodules, dropdown order, Source Control view button; multi-select branches and custom glob patterns; HEAD entry, branches and tags in the details, short hash copying.
 
-Still open from 2.2 (planned as 2.2.x releases): interactive rebase in the terminal, reference label alignment and combined labels, tooltips, docked and resizable details view, clickable parents, external diff tool, signature status, details navigation shortcuts. See the status comments on #11, #12, #14, #16 and #17.
+Shipped in 2.2.1 (milestone "Core actions", second release): interactive rebase in the integrated terminal; reference label alignment, combined local and remote branch labels and label tooltips; docked and resizable details view with clickable parents and arrow-key navigation; commit signature status; archive; external diff tool; push to several remotes. Milestone 2.2 is complete.
 
 Missing versus Git Graph 1.30 beyond that: milestone 2.3 (Repository Settings widget, code review mode, issue linking, avatars, askpass, accessibility, utility commands). Missing versus the field: see the ranked table in `docs/COMPETITORS.md`, section 3.
 

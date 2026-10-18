@@ -1,6 +1,8 @@
 # Change Log
 
-## Unreleased
+## 2.2.1 - 2026-10-18
+
+Milestone "2.2 Core actions", second release: the items that were still open after 2.2.0. Everything below was re-implemented from feature descriptions; no code was taken from upstream versions after 1.4.6 or from other extensions.
 
 * The rebase dialogs have a "Launch Interactive Rebase in new Terminal" option. It opens an integrated terminal in the repository and runs `git rebase --interactive` there, so the todo list can be edited. New settings `git-graph.dialog.rebase.launchInteractiveRebase` and `git-graph.integratedTerminalShell`.
 * Reference labels: a local branch and its remote branches on the same commit are shown as one label (`git-graph.referenceLabels.combineLocalAndRemoteBranchLabels`); right-click the remote name for the remote branch actions. `git-graph.referenceLabels.alignment` moves tag labels to the right end of the Description column and, optionally, branch labels next to the graph so the commit messages stay aligned. Labels show their full name and type as a tooltip.
