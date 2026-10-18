@@ -348,7 +348,9 @@ class Config {
 	/** Keep the controls bar and the column headers visible while the graph scrolls. */
 	/** CI status settings: off by default, at most `maxCommits` newest commits, extra hosts mapped to a provider. */
 	public ciStatus(): CiStatusConfig {
-		const rawHosts = this.workspaceConfiguration.get<unknown>('ciStatus.hosts', {}), hosts: CiHostMap = {};
+		// Only the user (global) values count: a workspace must not be able to switch the feature on or map a host
+		const inspectHosts = this.workspaceConfiguration.inspect<unknown>('ciStatus.hosts'), inspectEnabled = this.workspaceConfiguration.inspect<unknown>('ciStatus.enabled');
+		const rawHosts = inspectHosts !== undefined && inspectHosts.globalValue !== undefined ? inspectHosts.globalValue : {}, hosts: CiHostMap = {};
 		if (typeof rawHosts === 'object' && rawHosts !== null && !Array.isArray(rawHosts)) {
 			for (const host of Object.keys(rawHosts)) {
 				const type = (<{ [key: string]: unknown }>rawHosts)[host];
@@ -357,7 +359,7 @@ class Config {
 		}
 		const maxCommits = this.workspaceConfiguration.get<number>('ciStatus.maxCommits', 30);
 		return {
-			enabled: this.getBoolean('ciStatus.enabled', null, false),
+			enabled: inspectEnabled !== undefined && inspectEnabled.globalValue === true,
 			maxCommits: typeof maxCommits === 'number' && isFinite(maxCommits) ? Math.min(100, Math.max(1, Math.round(maxCommits))) : 30,
 			hosts: hosts
 		};

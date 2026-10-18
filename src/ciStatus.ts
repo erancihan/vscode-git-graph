@@ -140,6 +140,7 @@ export function httpsFetchJson(url: string, headers: { [name: string]: string })
 
 const FINAL_TTL = Number.POSITIVE_INFINITY, PENDING_TTL = 2 * 60 * 1000, MAX_PARALLEL = 4;
 const GITLAB_TOKEN_KEY = 'git-graph.ciStatus.gitlabToken.';
+const GITHUB_TOKEN_KEY = 'git-graph.ciStatus.githubToken.';
 
 interface CacheEntry { status: CommitCiStatus; fetchedAt: number; }
 
@@ -162,7 +163,7 @@ export class CiStatusManager {
 	private pausedUntil: { [repo: string]: number } = {};
 	private notified: { [key: string]: boolean } = {};
 	private githubAsked = false;
-	private gitlabAsked: { [host: string]: boolean } = {};
+	private tokenAsked: { [key: string]: boolean } = {};
 
 	constructor(dataSource: DataSource, secrets: vscode.SecretStorage, logger: Logger, fetchJson: FetchJson = httpsFetchJson) {
 		this.dataSource = dataSource;
@@ -279,34 +280,51 @@ export class CiStatusManager {
 		this.send(repo, statuses);
 	}
 
-	/** Authorization headers for the endpoint, asking the user once per session when nothing is stored. */
+	/**
+	 * Authorization headers for the endpoint, asking the user once per session when nothing is stored.
+	 * The github.com sign-in token is only ever sent to api.github.com; every other host (GitHub
+	 * Enterprise, GitLab) gets its own personal access token, stored per host in the secret storage.
+	 */
 	private async authHeaders(endpoint: CiEndpoint): Promise<{ [name: string]: string } | null> {
 		if (endpoint.type === 'GitHub') {
-			let session: vscode.AuthenticationSession | undefined;
-			try {
-				session = await vscode.authentication.getSession('github', ['repo'], { createIfNone: false, silent: true });
-				if (session === undefined && !this.githubAsked) {
-					this.githubAsked = true;
-					session = await vscode.authentication.getSession('github', ['repo'], { createIfNone: true });
-				}
-			} catch (e) {
-				this.logger.logError('CI status: GitHub sign-in failed: ' + (e instanceof Error ? e.message : String(e)));
-			}
-			// Public repositories work without a token, with a much lower rate limit
 			const headers: { [name: string]: string } = { 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
-			if (session !== undefined) headers['Authorization'] = 'Bearer ' + session.accessToken;
+			if (endpoint.host === 'github.com') {
+				let session: vscode.AuthenticationSession | undefined;
+				try {
+					session = await vscode.authentication.getSession('github', ['repo'], { createIfNone: false, silent: true });
+					if (session === undefined && !this.githubAsked) {
+						this.githubAsked = true;
+						session = await vscode.authentication.getSession('github', ['repo'], { createIfNone: true });
+					}
+				} catch (e) {
+					this.logger.logError('CI status: GitHub sign-in failed: ' + (e instanceof Error ? e.message : String(e)));
+				}
+				// Public repositories work without a token, with a much lower rate limit
+				if (session !== undefined) headers['Authorization'] = 'Bearer ' + session.accessToken;
+				return headers;
+			}
+			const token = await this.hostToken(endpoint, vscode.l10n.t('Git Graph: Personal access token for {0} (GitHub Enterprise, scope repo or repo:status), used to read the CI status of commits. It is stored in the VS Code secret storage for this host only.', endpoint.host));
+			if (token === null) return null;
+			headers['Authorization'] = 'Bearer ' + token;
 			return headers;
 		}
-		let token = await this.secrets.get(GITLAB_TOKEN_KEY + endpoint.host);
-		if (token === undefined && !this.gitlabAsked[endpoint.host]) {
-			this.gitlabAsked[endpoint.host] = true;
-			const value = await vscode.window.showInputBox({ prompt: vscode.l10n.t('Git Graph: Personal access token for {0} (scope read_api), used to read the CI status of commits. It is stored in the VS Code secret storage.', endpoint.host), password: true, ignoreFocusOut: true });
+		const token = await this.hostToken(endpoint, vscode.l10n.t('Git Graph: Personal access token for {0} (scope read_api), used to read the CI status of commits. It is stored in the VS Code secret storage for this host only.', endpoint.host));
+		return token !== null ? { 'PRIVATE-TOKEN': token } : null;
+	}
+
+	/** The personal access token stored for a host, asking for it once per session when none is stored. */
+	private async hostToken(endpoint: CiEndpoint, prompt: string): Promise<string | null> {
+		const key = (endpoint.type === 'GitHub' ? GITHUB_TOKEN_KEY : GITLAB_TOKEN_KEY) + endpoint.host;
+		let token = await this.secrets.get(key);
+		if (token === undefined && !this.tokenAsked[key]) {
+			this.tokenAsked[key] = true;
+			const value = await vscode.window.showInputBox({ prompt: prompt, password: true, ignoreFocusOut: true });
 			if (typeof value === 'string' && value.trim() !== '') {
 				token = value.trim();
-				await this.secrets.store(GITLAB_TOKEN_KEY + endpoint.host, token);
+				await this.secrets.store(key, token);
 			}
 		}
-		return token !== undefined ? { 'PRIVATE-TOKEN': token } : null;
+		return token !== undefined ? token : null;
 	}
 
 	private notify(key: string, message: string) {

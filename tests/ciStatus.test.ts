@@ -1,7 +1,7 @@
 import { CiStatusManager, JsonResponse, mapGitHubCheckRun, mapGitHubStatus, mapGitLabStatus, rateLimitPauseUntil, resolveCiEndpoint, safeCheckUrl, summariseChecks } from '../src/ciStatus';
 import { Logger } from '../src/logger';
 import { ResponseMessage } from '../src/types';
-import { shownMessages } from './mocks/vscode';
+import { authentication, shownMessages } from './mocks/vscode';
 
 describe('CI status helpers', () => {
 	it('resolves endpoints for github.com, gitlab.com and configured hosts', () => {
@@ -113,6 +113,34 @@ describe('CiStatusManager', () => {
 		await flush();
 		expect(requests.length).toBe(0);
 		expect(shownMessages.length).toBe(1);
+	});
+
+	it('never sends the github.com sign-in token to another GitHub host', async () => {
+		const original = authentication.getSession;
+		(<{ getSession: unknown }>authentication).getSession = async () => ({ accessToken: 'gho_secret', id: '1', scopes: ['repo'], account: { id: 'u', label: 'u' } });
+		try {
+			const headersSeen: { [url: string]: { [name: string]: string } } = {};
+			const fetcher = async (url: string, headers: { [name: string]: string }) => { headersSeen[url] = headers; return { status: 200, headers: {}, body: { check_runs: [] } }; };
+			secrets.store.set('git-graph.ciStatus.githubToken.ghe.example.com', 'ghe_pat');
+			remotes.url = 'https://ghe.example.com/owner/repo.git';
+			const ghe = new CiStatusManager(dataSource, <never>{ get: secrets.get, store: secrets.set }, new Logger(), fetcher);
+			ghe.registerView(<never>{ sendMessage: () => { } });
+			await ghe.fetchStatuses('/ghe', [H1], 30, { 'ghe.example.com': 'GitHub' });
+			await flush();
+			remotes.url = 'git@github.com:owner/repo.git';
+			const github = new CiStatusManager(dataSource, <never>{ get: secrets.get, store: secrets.set }, new Logger(), fetcher);
+			github.registerView(<never>{ sendMessage: () => { } });
+			await github.fetchStatuses('/gh', [H1], 30, {});
+			await flush();
+			const urls = Object.keys(headersSeen);
+			expect(urls.some((url) => url.indexOf('https://ghe.example.com/api/v3/') === 0)).toBe(true);
+			for (const url of urls) {
+				if (url.indexOf('https://ghe.example.com/') === 0) expect(headersSeen[url]['Authorization']).toBe('Bearer ghe_pat');
+				else expect(headersSeen[url]['Authorization']).toBe('Bearer gho_secret');
+			}
+		} finally {
+			(<{ getSession: unknown }>authentication).getSession = original;
+		}
 	});
 
 	it('uses the stored GitLab token and the statuses endpoint', async () => {
