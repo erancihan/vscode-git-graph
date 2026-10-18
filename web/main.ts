@@ -19,6 +19,7 @@ class GitGraphView {
 	private graph: Graph;
 	private findWidget: FindWidget;
 	private settingsWidget: SettingsWidget;
+	private rebaseEditor: RebaseEditor;
 	private config: Config;
 	private moreCommitsAvailable: boolean = false;
 	private showRemoteBranches: boolean = true;
@@ -75,9 +76,14 @@ class GitGraphView {
 			getRemotes: () => this.gitRemotes,
 			refresh: () => this.refresh(true)
 		});
+		this.rebaseEditor = new RebaseEditor({ refresh: () => this.refresh(true) });
 		document.addEventListener('keydown', (e) => {
 			if (e.key === 'Escape' && this.settingsWidget.isVisible() && !isDialogOrContextMenuOpen()) {
 				this.settingsWidget.hide();
+				return;
+			}
+			if (e.key === 'Escape' && this.rebaseEditor.isVisible() && !isDialogOrContextMenuOpen()) {
+				this.rebaseEditor.hide();
 				return;
 			}
 			if (!e.ctrlKey && !e.metaKey && !e.altKey && this.expandedCommit !== null && !isDialogOrContextMenuOpen() && !isTextInput(e.target)) {
@@ -192,6 +198,12 @@ class GitGraphView {
 
 	public isSettingsWidgetVisible() {
 		return this.settingsWidget.isVisible();
+	}
+	public loadRebaseTodo(msg: GG.ResponseGetRebaseTodo) {
+		this.rebaseEditor.loadTodo(msg);
+	}
+	public interactiveRebaseCompleted(status: GG.GitCommandStatus) {
+		this.rebaseEditor.rebaseCompleted(status);
 	}
 	public loadRepoSettings(settings: GG.GitRepoSettings | null) {
 		this.settingsWidget.loadSettings(settings);
@@ -609,6 +621,21 @@ class GitGraphView {
 					visible: visibility.rebase,
 					onClick: () => {
 						this.showRebaseDialog('Are you sure you want to rebase the <b>current branch</b> on commit <b><i>' + abbrevCommit(hash) + '</i></b>?', hash, 'Commit', sourceElem);
+					}
+				},
+				{
+					title: 'Interactive Rebase from this Commit' + ELLIPSIS,
+					visible: visibility.interactiveRebase && hash !== this.commitHead,
+					onClick: () => this.rebaseEditor.show(this.currentRepo!, hash)
+				},
+				{
+					title: 'Fixup into Parent' + ELLIPSIS,
+					visible: visibility.fixup && this.commits[this.commitLookup[hash]].parentHashes.length === 1,
+					onClick: () => {
+						showConfirmationDialog('Are you sure you want to fold commit <b><i>' + abbrevCommit(hash) + '</i></b> into its parent? The parent keeps its message, and the commits after it on the current branch are rewritten.', () => {
+							showActionRunningDialog('Folding Commit into its Parent');
+							sendMessage({ command: 'fixupCommit', repo: this.currentRepo!, commitHash: hash });
+						}, sourceElem);
 					}
 				},
 				{
@@ -2176,6 +2203,15 @@ window.addEventListener('message', event => {
 			} else {
 				showErrorDialog('Unable to Rebase', msg.status, null);
 			}
+			break;
+		case 'getRebaseTodo':
+			gitGraph.loadRebaseTodo(msg);
+			break;
+		case 'interactiveRebase':
+			gitGraph.interactiveRebaseCompleted(msg.status);
+			break;
+		case 'fixupCommit':
+			gitGraph.interactiveRebaseCompleted(msg.status);
 			break;
 		case 'renameBranch':
 			refreshGraphOrDisplayError(msg.status, 'Unable to Rename Branch');

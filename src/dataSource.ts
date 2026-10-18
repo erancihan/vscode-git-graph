@@ -1,10 +1,12 @@
 import * as cp from 'child_process';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { getConfig } from './config';
+import { applyAutosquash, serializeTodo, validateTodo } from './rebaseTodo';
 import { findGitExecutable } from './gitExecutable';
 import { Logger } from './logger';
-import { CherryPickOptions, GitArchiveType, GitBisectAction, GitOperationAction, GitOperationInProgress, GitOperationType, GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChange, GitFileChangeType, GraphFilters, GitPushBranchMode, GitRebaseType, GitRefData, GitRemoteDetails, GitRepoSettings, GitRepoState, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitUnsavedChanges, GitUserDetails, GitWorktree, MergeOptions } from './types';
+import { CherryPickOptions, GitArchiveType, GitBisectAction, GitOperationAction, GitOperationInProgress, GitOperationType, GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChange, GitFileChangeType, GraphFilters, GitPushBranchMode, GitRebaseTodoEntry, GitRebaseType, GitRefData, GitRemoteDetails, GitRepoSettings, GitRepoState, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitUnsavedChanges, GitUserDetails, GitWorktree, MergeOptions } from './types';
 import { getPathFromStr } from './utils';
 
 const eolRegex = /\r\n|\r|\n/g;
@@ -31,10 +33,24 @@ export class DataSource {
 	private gitPath: string = 'git';
 	private gitVersion: string | null = null;
 	private environmentProvider: () => { [key: string]: string } = () => ({});
+	private extensionPath: string | null = null;
+	/** Temporary folders of interactive rebases that git stopped (edit, conflicts); removed once the rebase is over. */
+	private rebaseTempDirs: { repo: string, dir: string }[] = [];
 
 	/** Extra environment variables for every git process (used for the askpass helper). */
 	public setEnvironmentProvider(provider: () => { [key: string]: string }) {
 		this.environmentProvider = provider;
+	}
+
+	/** Folder of the extension, needed to find the sequence editor helper of the interactive rebase editor. */
+	public setExtensionPath(extensionPath: string) {
+		this.extensionPath = extensionPath;
+	}
+
+	/** Remove the temporary files of every finished or abandoned interactive rebase. */
+	public dispose() {
+		for (const item of this.rebaseTempDirs) removeDirectory(item.dir);
+		this.rebaseTempDirs = [];
 	}
 
 	/** Output of `git --version`, or null until it has been read. */
@@ -478,11 +494,13 @@ export class DataSource {
 	}
 
 	/** Continue, skip or abort the stopped operation. No editor is opened for the commit message. */
-	public operationAction(repo: string, type: GitOperationType, action: GitOperationAction) {
+	public async operationAction(repo: string, type: GitOperationType, action: GitOperationAction): Promise<GitCommandStatus> {
 		const types: GitOperationType[] = ['merge', 'rebase', 'cherry-pick', 'revert'], actions: GitOperationAction[] = ['continue', 'skip', 'abort'];
 		if (types.indexOf(type) === -1 || actions.indexOf(action) === -1) return rejectArguments();
 		if (action === 'skip' && type === 'merge') return rejectArguments();
-		return this.runGitCommand(['-c', 'core.editor=true', type, '--' + action], repo);
+		const status = await this.runGitCommand(['-c', 'core.editor=true', type, '--' + action], repo);
+		if (type === 'rebase') await this.cleanupRebaseTempDirs(repo);
+		return status;
 	}
 
 	/* Bisect */
@@ -738,6 +756,112 @@ export class DataSource {
 		return this.runGitCommand(args, repo);
 	}
 
+	/* Interactive rebase editor */
+
+	/**
+	 * The commits after `baseHash` up to HEAD, oldest first, as the todo list of an interactive
+	 * rebase (every entry a pick, rearranged for autosquash when `rebase.autoSquash` is set). The
+	 * base must be an ancestor of HEAD and the range must not contain merge commits.
+	 */
+	public async getRebaseTodo(repo: string, baseHash: string): Promise<{ todo: GitRebaseTodoEntry[] | null, headHash: string | null, error: string | null }> {
+		if (!isCommitHash(baseHash)) return { todo: null, headHash: null, error: 'Invalid commit hash.' };
+		const headHash = await this.spawnGit(['rev-parse', '--verify', 'HEAD'], repo, (stdout) => stdout.trim(), false).catch(() => null);
+		if (headHash === null) return { todo: null, headHash: null, error: 'The repository has no checked-out commit.' };
+		if (!await this.spawnGit(['merge-base', '--is-ancestor', baseHash, 'HEAD'], repo, () => true, false).catch(() => false)) {
+			return { todo: null, headHash: headHash, error: 'The commit is not an ancestor of the checked-out commit (HEAD), so there is nothing to rebase onto it.' };
+		}
+		const entries = await this.spawnGit(['log', '--reverse', '--format=%H%x1f%P%x1f%s', baseHash + '..HEAD', '--'], repo, (stdout) => parseRebaseRange(stdout)).catch((): null => null);
+		if (entries === null) return { todo: null, headHash: headHash, error: 'Unable to list the commits to rebase.' };
+		if (entries.length === 0) return { todo: null, headHash: headHash, error: 'There are no commits after this one on the current branch.' };
+		if (entries.some((entry) => entry.parents > 1)) return { todo: null, headHash: headHash, error: 'The commits to rebase include a merge commit. The rebase editor only rewrites linear history.' };
+		let todo: GitRebaseTodoEntry[] = entries.map((entry) => ({ action: <const>'pick', hash: entry.hash, subject: entry.subject, message: null }));
+		const autosquash = await this.spawnGit(['config', '--type=bool', 'rebase.autosquash'], repo, (stdout) => stdout.trim() === 'true', false).catch(() => false);
+		if (autosquash) todo = applyAutosquash(todo);
+		return { todo: todo, headHash: headHash, error: null };
+	}
+
+	/**
+	 * Run `git rebase --interactive <base>` with the todo list from the rebase editor. The list is
+	 * handed to git through the sequence editor helper (resources/sequence-editor.sh), reworded and
+	 * squashed messages through files read by `exec` lines, and `core.editor=true` keeps git from
+	 * opening an editor. Refused when HEAD moved since the list was built or the list does not match
+	 * the commits in the range. When git stops (edit, conflicts) the usual operation bar takes over.
+	 */
+	public async interactiveRebase(repo: string, baseHash: string, headHash: string, todo: GitRebaseTodoEntry[]): Promise<GitCommandStatus> {
+		if (!isCommitHash(baseHash) || !isCommitHash(headHash)) return rejectArguments();
+		if (this.extensionPath === null) return 'The interactive rebase editor is not available.';
+		const range = await this.getRebaseTodo(repo, baseHash);
+		if (range.todo === null) return range.error;
+		if (range.headHash !== headHash) return 'The checked-out commit (HEAD) changed since the rebase was prepared. Refresh the graph and try again.';
+		const invalid = validateTodo(todo, range.todo.map((entry) => entry.hash));
+		if (invalid !== null) return invalid;
+		if (todo.every((entry) => entry.action === 'drop')) return 'Every commit is dropped. Use "Reset current branch to this Commit" instead.';
+
+		let dir: string;
+		try {
+			dir = fs.mkdtempSync(path.join(os.tmpdir(), 'git-graph-rebase-'));
+		} catch (e) {
+			return 'Unable to create the temporary folder for the rebase: ' + (e instanceof Error ? e.message : String(e));
+		}
+		const messageFile = (index: number) => path.join(dir, 'message-' + index + '.txt');
+		const todoFile = path.join(dir, 'todo.txt');
+		try {
+			for (let i = 0; i < todo.length; i++) {
+				if (typeof todo[i].message === 'string' && todo[i].message!.trim() !== '') fs.writeFileSync(messageFile(i), todo[i].message!.replace(/\r\n?/g, '\n').replace(/\s+$/, '') + '\n');
+			}
+			fs.writeFileSync(todoFile, serializeTodo(todo, messageFile, getConfig().signCommits()));
+			if (process.platform !== 'win32') {
+				try { fs.chmodSync(path.join(this.extensionPath, 'resources', 'sequence-editor.sh'), 0o755); } catch (e) { /* read-only install: the packaged mode applies */ }
+			}
+		} catch (e) {
+			removeDirectory(dir);
+			return 'Unable to write the rebase todo list: ' + (e instanceof Error ? e.message : String(e));
+		}
+		const env = {
+			GIT_SEQUENCE_EDITOR: path.join(this.extensionPath, 'resources', 'sequence-editor.sh'),
+			GIT_GRAPH_SEQUENCE_NODE: process.execPath,
+			GIT_GRAPH_SEQUENCE_MAIN: path.join(this.extensionPath, 'resources', 'sequence-editor.js'),
+			GIT_GRAPH_REBASE_TODO: todoFile,
+			ELECTRON_RUN_AS_NODE: '1'
+		};
+		const args = ['-c', 'core.editor=true', 'rebase', '--interactive'];
+		if (getConfig().signCommits()) args.push('-S');
+		args.push(baseHash);
+		this.rebaseTempDirs.push({ repo: repo, dir: dir });
+		const status = await this.runGitCommand(args, repo, true, env);
+		await this.cleanupRebaseTempDirs(repo);
+		return status;
+	}
+
+	/** Fold a commit into its parent (the parent keeps its message) by replaying the branch with a generated todo list. */
+	public async fixupCommit(repo: string, commitHash: string): Promise<GitCommandStatus> {
+		if (!isCommitHash(commitHash)) return rejectArguments();
+		const parents = await this.spawnGit(['rev-list', '--parents', '-n', '1', commitHash, '--'], repo, (stdout) => stdout.trim().split(' ').slice(1), false).catch((): string[] => []);
+		if (parents.length !== 1) return parents.length === 0 ? 'The commit has no parent to fold it into.' : 'A merge commit cannot be folded into a parent.';
+		const grandparents = await this.spawnGit(['rev-list', '--parents', '-n', '1', parents[0], '--'], repo, (stdout) => stdout.trim().split(' ').slice(1), false).catch((): string[] => []);
+		if (grandparents.length !== 1) return grandparents.length === 0 ? 'The parent is the first commit of the repository; the rebase editor cannot rewrite it.' : 'The parent is a merge commit; it cannot be rewritten by the rebase editor.';
+		const range = await this.getRebaseTodo(repo, grandparents[0]);
+		if (range.todo === null || range.headHash === null) return range.error;
+		const index = range.todo.findIndex((entry) => entry.hash === commitHash), parentIndex = range.todo.findIndex((entry) => entry.hash === parents[0]);
+		if (index === -1 || parentIndex === -1) return 'The commit is not on the current branch.';
+		const todo: GitRebaseTodoEntry[] = range.todo.map((entry) => ({ ...entry, action: 'pick' }));
+		const [entry] = todo.splice(index, 1);
+		todo.splice(parentIndex + 1, 0, { ...entry, action: 'fixup' });
+		return this.interactiveRebase(repo, grandparents[0], range.headHash, todo);
+	}
+
+	/** Remove the temporary files of the repository's interactive rebases once no rebase is in progress. */
+	private async cleanupRebaseTempDirs(repo: string) {
+		if (!this.rebaseTempDirs.some((item) => item.repo === repo)) return;
+		const operation = await this.getOperationInProgress(repo);
+		if (operation !== null && operation.type === 'rebase') return;
+		this.rebaseTempDirs = this.rebaseTempDirs.filter((item) => {
+			if (item.repo !== repo) return true;
+			removeDirectory(item.dir);
+			return false;
+		});
+	}
+
 	public resetToCommit(repo: string, commitHash: string, resetMode: GitResetMode) {
 		if (!isCommitHash(commitHash)) return rejectArguments();
 		return this.runGitCommand(['reset', '--' + resetMode, commitHash], repo);
@@ -852,8 +976,8 @@ export class DataSource {
 	 * Run a git command that changes the repository. Resolves to `null` on success, or to the error
 	 * message that should be shown to the user.
 	 */
-	private runGitCommand(args: string[], repo: string, logFailure = true): Promise<GitCommandStatus> {
-		return this.spawnGit(args, repo, () => null, logFailure).catch((error: string) => error);
+	private runGitCommand(args: string[], repo: string, logFailure = true, extraEnv: { [key: string]: string } = {}): Promise<GitCommandStatus> {
+		return this.spawnGit(args, repo, () => null, logFailure, extraEnv).catch((error: string) => error);
 	}
 
 	/**
@@ -863,7 +987,7 @@ export class DataSource {
 	 * decoded once the process has closed, so multi-byte characters split across chunks stay intact.
 	 * Set `logFailure` to false for probes where a non-zero exit code is an expected answer.
 	 */
-	private spawnGit<T>(args: string[], repo: string, onSuccess: (stdout: string) => T, logFailure: boolean = true) {
+	private spawnGit<T>(args: string[], repo: string, onSuccess: (stdout: string) => T, logFailure: boolean = true, extraEnvForCommand: { [key: string]: string } = {}) {
 		return new Promise<T>((resolve, reject) => {
 			const fullArgs = gitConfigOverrides.concat(args);
 			this.logger.logCmd(this.gitPath, fullArgs);
@@ -879,7 +1003,7 @@ export class DataSource {
 
 			let cmd: cp.ChildProcess;
 			try {
-				const extraEnv = this.environmentProvider();
+				const extraEnv = Object.assign({}, this.environmentProvider(), extraEnvForCommand);
 				cmd = cp.spawn(this.gitPath, fullArgs, { cwd: repo, env: Object.keys(extraEnv).length > 0 ? Object.assign({}, process.env, extraEnv) : process.env });
 			} catch (e) {
 				fail('Unable to start git (' + this.gitPath + '): ' + (e instanceof Error ? e.message : String(e)));
@@ -1079,6 +1203,21 @@ interface GitStashEntry extends GitStash {
 /** Commit hashes are hexadecimal (SHA-1 or SHA-256), abbreviated to at least 4 characters. */
 export function isCommitHash(hash: string) {
 	return /^[0-9a-f]{4,64}$/i.test(hash);
+}
+
+/** Parse `git log --format=%H%x1f%P%x1f%s` into hash, number of parents and subject per line. */
+export function parseRebaseRange(stdout: string): { hash: string, parents: number, subject: string }[] {
+	return stdout.split(eolRegex).filter((line) => line !== '').map((line) => {
+		const parts = line.split('\x1f');
+		return { hash: parts[0], parents: parts[1] === '' || parts[1] === undefined ? 0 : parts[1].split(' ').length, subject: parts.slice(2).join('\x1f') };
+	});
+}
+
+/** Delete a temporary folder and its files. Errors are ignored (the folder is in the temp directory). */
+function removeDirectory(dir: string) {
+	try {
+		fs.rmSync(dir, { recursive: true, force: true });
+	} catch (e) { /* best effort */ }
 }
 
 function rejectArguments(): Promise<GitCommandStatus> {

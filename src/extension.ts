@@ -24,6 +24,7 @@ export function activate(context: vscode.ExtensionContext) {
 		return Promise.resolve(vscode.window.showInputBox({ prompt: 'Git Graph: ' + prompt, password: isPassword, ignoreFocusOut: true })).then((value) => typeof value === 'string' ? value : null);
 	}, logger);
 	dataSource.setEnvironmentProvider(() => getConfig().integratedAskpass() ? askpass.getEnvironment() : {});
+	dataSource.setExtensionPath(context.extensionPath);
 	if (getConfig().integratedAskpass()) askpass.start();
 	const avatarManager = new AvatarManager(dataSource, extensionState, logger);
 	const statusBarItem = new StatusBarItem(context);
@@ -125,6 +126,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}),
 		repoManager,
 		askpass,
+		dataSource,
 		logger
 	);
 	logger.log('Started Git Graph - Ready to use!');

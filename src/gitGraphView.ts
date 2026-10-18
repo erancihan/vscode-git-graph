@@ -447,6 +447,30 @@ export class GitGraphView {
 							: await this.dataSource.rebase(msg.repo, msg.obj, msg.type, msg.ignoreDate)
 					});
 					break;
+				case 'getRebaseTodo': {
+					const result = await this.dataSource.getRebaseTodo(msg.repo, msg.baseHash);
+					this.sendMessage({
+						command: 'getRebaseTodo',
+						baseHash: msg.baseHash,
+						headHash: result.headHash,
+						todo: result.todo,
+						error: result.error,
+						pushed: result.todo !== null ? await this.dataSource.isHeadPushed(msg.repo) : false
+					});
+					break;
+				}
+				case 'interactiveRebase':
+					this.sendMessage({
+						command: 'interactiveRebase',
+						status: await this.dataSource.interactiveRebase(msg.repo, msg.baseHash, msg.headHash, msg.todo)
+					});
+					break;
+				case 'fixupCommit':
+					this.sendMessage({
+						command: 'fixupCommit',
+						status: await this.dataSource.fixupCommit(msg.repo, msg.commitHash)
+					});
+					break;
 				case 'renameBranch':
 					this.sendMessage({
 						command: 'renameBranch',

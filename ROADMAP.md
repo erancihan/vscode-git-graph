@@ -33,7 +33,9 @@ Shipped in 2.4.0 (milestone "Beyond upstream", first release): sticky header; re
 
 Shipped in 2.4.1: worktrees (list, add, open, remove, prune) and conflict help (operation bar with Continue / Skip / Abort).
 
-Still open in 2.4: interactive rebase editor (#30), multi-language UI (#32), CI status column (#39), conflict prediction, one uncommitted-changes row per worktree.
+Merged after 2.4.1 (unreleased): interactive rebase editor (#30) with the "Fixup into Parent" shortcut.
+
+Still open in 2.4: multi-language UI (#32), CI status column (#39), conflict prediction, one uncommitted-changes row per worktree.
 
 Still missing versus Git Graph 1.30: export and import of repository settings, `git config` includes, initial branches per repository, pull request configuration stored per repository, and the smaller presentation items listed in `docs/UPSTREAM_GAP.md`. Missing versus the field: see the ranked table in `docs/COMPETITORS.md`, section 3 (milestone 2.4).
 
