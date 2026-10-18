@@ -94,7 +94,7 @@ describe('DataSource', () => {
 	});
 
 	it('passes ref names with quotes and messages with spaces through unchanged', async () => {
-		expect(await dataSource.createBranch(repo, 'it\'s-a-"branch"', first)).toBeNull();
+		expect(await dataSource.createBranch(repo, 'it\'s-a-"branch"', first, false)).toBeNull();
 		expect(git(repo, ['rev-parse', 'it\'s-a-"branch"'])).toBe(first);
 		expect(await dataSource.addTag(repo, 'annotated', first, false, 'Message with "quotes" and spaces')).toBeNull();
 		expect(git(repo, ['tag', '-l', '-n1', 'annotated'])).toMatch(/Message with "quotes" and spaces$/);
@@ -109,10 +109,10 @@ describe('DataSource', () => {
 
 	it('rejects ref names that look like options and leaves the repository untouched', async () => {
 		const before = git(repo, ['branch', '--list']);
-		expect(await dataSource.createBranch(repo, '--help', first)).toMatch(/not a valid/i);
+		expect(await dataSource.createBranch(repo, '--help', first, false)).toMatch(/not a valid/i);
 		expect(await dataSource.checkoutBranch(repo, '-b', null)).toMatch(/not a valid/i);
 		expect(await dataSource.deleteBranch(repo, '--force', false)).toMatch(/not a valid/i);
-		expect(await dataSource.mergeBranch(repo, '--squash', false)).toMatch(/not a valid/i);
+		expect(await dataSource.mergeBranch(repo, '--squash', { createNewCommit: false, squash: false, noCommit: false })).toMatch(/not a valid/i);
 		expect(await dataSource.pushTag(repo, '--mirror')).toMatch(/not a valid/i);
 		expect(await dataSource.addTag(repo, '-f', first, true, '')).toMatch(/not a valid/i);
 		expect(git(repo, ['branch', '--list'])).toBe(before);
@@ -132,6 +132,104 @@ describe('DataSource', () => {
 		await new Promise(r => setTimeout(r, 50));
 		delete configurationValues['git'];
 		expect(await broken.isGitRepository(repo)).toBe(true); // falls back to git on PATH when the path does not exist
+	});
+});
+
+describe('DataSource history actions', () => {
+	let repo: string;
+	let dataSource: DataSource;
+	let base: string, featureTip: string;
+	const noOptions = { createNewCommit: false, squash: false, noCommit: false };
+
+	beforeAll(() => {
+		repo = fs.mkdtempSync(path.join(os.tmpdir(), 'git-graph-actions-'));
+		git(repo, ['init', '-q', '-b', 'master']);
+		git(repo, ['config', 'user.name', 'Test Committer']);
+		git(repo, ['config', 'user.email', 'committer@example.com']);
+		git(repo, ['config', 'commit.gpgsign', 'false']);
+		base = commit(repo, 'a.txt', 'one\n', 'Base commit');
+		git(repo, ['checkout', '-q', '-b', 'feature']);
+		commit(repo, 'b.txt', 'two\n', 'Feature one');
+		featureTip = commit(repo, 'c.txt', 'three\n', 'Feature two');
+		git(repo, ['checkout', '-q', 'master']);
+		dataSource = new DataSource(new Logger());
+	});
+
+	afterEach(() => {
+		delete configurationValues['git-graph'];
+	});
+
+	afterAll(() => {
+		fs.rmSync(repo, { recursive: true, force: true });
+	});
+
+	it('creates a branch and checks it out when asked', async () => {
+		expect(await dataSource.createBranch(repo, 'stay', base, false)).toBeNull();
+		expect(git(repo, ['rev-parse', '--abbrev-ref', 'HEAD'])).toBe('master');
+		expect(await dataSource.createBranch(repo, 'go', base, true)).toBeNull();
+		expect(git(repo, ['rev-parse', '--abbrev-ref', 'HEAD'])).toBe('go');
+		git(repo, ['checkout', '-q', 'master']);
+	});
+
+	it('squash merges into one commit with the default message', async () => {
+		expect(await dataSource.mergeBranch(repo, 'feature', { ...noOptions, squash: true })).toBeNull();
+		expect(git(repo, ['log', '-1', '--format=%s'])).toBe('Merge branch \'feature\'');
+		expect(git(repo, ['log', '-1', '--format=%P']).split(' ')).toHaveLength(1);
+		expect(fs.existsSync(path.join(repo, 'c.txt'))).toBe(true);
+		git(repo, ['reset', '-q', '--hard', base]);
+	});
+
+	it('squash merges with the SQUASH_MSG message when configured', async () => {
+		configurationValues['git-graph'] = { 'dialog.merge.squashMessageFormat': 'Git SQUASH_MSG' };
+		expect(await dataSource.mergeBranch(repo, 'feature', { ...noOptions, squash: true })).toBeNull();
+		const body = git(repo, ['log', '-1', '--format=%B']);
+		expect(body).toContain('Squashed commit of the following');
+		expect(body).toContain('Feature two');
+		git(repo, ['reset', '-q', '--hard', base]);
+	});
+
+	it('merges without committing when asked', async () => {
+		expect(await dataSource.mergeCommit(repo, featureTip, { ...noOptions, createNewCommit: true, noCommit: true })).toBeNull();
+		expect(git(repo, ['rev-parse', 'HEAD'])).toBe(base);
+		expect(fs.existsSync(path.join(repo, '.git', 'MERGE_HEAD'))).toBe(true);
+		git(repo, ['merge', '--abort']);
+	});
+
+	it('cherry picks with record origin and no commit', async () => {
+		expect(await dataSource.cherrypickCommit(repo, featureTip, { parentIndex: 0, recordOrigin: true, noCommit: false })).toBeNull();
+		expect(git(repo, ['log', '-1', '--format=%B'])).toContain('cherry picked from commit ' + featureTip);
+		git(repo, ['reset', '-q', '--hard', base]);
+		expect(await dataSource.cherrypickCommit(repo, featureTip, { parentIndex: 0, recordOrigin: false, noCommit: true })).toBeNull();
+		expect(git(repo, ['rev-parse', 'HEAD'])).toBe(base);
+		expect(git(repo, ['diff', '--cached', '--name-only'])).toBe('c.txt');
+		git(repo, ['reset', '-q', '--hard', base]);
+	});
+
+	it('drops a commit from the current branch', async () => {
+		git(repo, ['checkout', '-q', '-b', 'drop', 'feature']);
+		const dropped = git(repo, ['rev-parse', 'feature^']);
+		expect(await dataSource.dropCommit(repo, dropped)).toBeNull();
+		expect(git(repo, ['log', '--format=%s'])).toBe('Feature two\nBase commit');
+		expect(fs.existsSync(path.join(repo, 'b.txt'))).toBe(false);
+		git(repo, ['checkout', '-q', 'master']);
+	});
+
+	it('resets uncommitted changes and cleans untracked files', async () => {
+		fs.writeFileSync(path.join(repo, 'a.txt'), 'changed\n');
+		git(repo, ['add', 'a.txt']);
+		fs.writeFileSync(path.join(repo, 'junk.txt'), 'junk\n');
+		fs.mkdirSync(path.join(repo, 'junkdir'));
+		fs.writeFileSync(path.join(repo, 'junkdir', 'x.txt'), 'x\n');
+		expect(await dataSource.resetUncommittedChanges(repo, 'mixed')).toBeNull();
+		expect(git(repo, ['diff', '--cached', '--name-only'])).toBe('');
+		expect(git(repo, ['diff', '--name-only'])).toBe('a.txt');
+		expect(await dataSource.resetUncommittedChanges(repo, 'hard')).toBeNull();
+		expect(git(repo, ['status', '--porcelain', '--untracked-files=no'])).toBe('');
+		expect(await dataSource.cleanUntrackedFiles(repo, false)).toBeNull();
+		expect(fs.existsSync(path.join(repo, 'junk.txt'))).toBe(false);
+		expect(fs.existsSync(path.join(repo, 'junkdir'))).toBe(true);
+		expect(await dataSource.cleanUntrackedFiles(repo, true)).toBeNull();
+		expect(fs.existsSync(path.join(repo, 'junkdir'))).toBe(false);
 	});
 });
 

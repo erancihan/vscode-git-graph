@@ -118,7 +118,13 @@ export class GitGraphView {
 				case 'cherrypickCommit':
 					this.sendMessage({
 						command: 'cherrypickCommit',
-						status: await this.dataSource.cherrypickCommit(msg.repo, msg.commitHash, msg.parentIndex)
+						status: await this.dataSource.cherrypickCommit(msg.repo, msg.commitHash, { parentIndex: msg.parentIndex, recordOrigin: msg.recordOrigin, noCommit: msg.noCommit })
+					});
+					break;
+				case 'cleanUntrackedFiles':
+					this.sendMessage({
+						command: 'cleanUntrackedFiles',
+						status: await this.dataSource.cleanUntrackedFiles(msg.repo, msg.directories)
 					});
 					break;
 				case 'commitDetails':
@@ -137,7 +143,7 @@ export class GitGraphView {
 				case 'createBranch':
 					this.sendMessage({
 						command: 'createBranch',
-						status: await this.dataSource.createBranch(msg.repo, msg.branchName, msg.commitHash)
+						status: await this.dataSource.createBranch(msg.repo, msg.branchName, msg.commitHash, msg.checkout)
 					});
 					break;
 				case 'deleteBranch':
@@ -156,6 +162,12 @@ export class GitGraphView {
 					this.sendMessage({
 						command: 'deleteTag',
 						status: await this.dataSource.deleteTag(msg.repo, msg.tagName)
+					});
+					break;
+				case 'dropCommit':
+					this.sendMessage({
+						command: 'dropCommit',
+						status: await this.dataSource.dropCommit(msg.repo, msg.commitHash)
 					});
 					break;
 				case 'fetch':
@@ -206,13 +218,13 @@ export class GitGraphView {
 				case 'mergeBranch':
 					this.sendMessage({
 						command: 'mergeBranch',
-						status: await this.dataSource.mergeBranch(msg.repo, msg.branchName, msg.createNewCommit)
+						status: await this.dataSource.mergeBranch(msg.repo, msg.branchName, { createNewCommit: msg.createNewCommit, squash: msg.squash, noCommit: msg.noCommit })
 					});
 					break;
 				case 'mergeCommit':
 					this.sendMessage({
 						command: 'mergeCommit',
-						status: await this.dataSource.mergeCommit(msg.repo, msg.commitHash, msg.createNewCommit)
+						status: await this.dataSource.mergeCommit(msg.repo, msg.commitHash, { createNewCommit: msg.createNewCommit, squash: msg.squash, noCommit: msg.noCommit })
 					});
 					break;
 				case 'pullBranch':
@@ -249,6 +261,12 @@ export class GitGraphView {
 					this.sendMessage({
 						command: 'resetToCommit',
 						status: await this.dataSource.resetToCommit(msg.repo, msg.commitHash, msg.resetMode)
+					});
+					break;
+				case 'resetUncommittedChanges':
+					this.sendMessage({
+						command: 'resetUncommittedChanges',
+						status: await this.dataSource.resetUncommittedChanges(msg.repo, msg.mode)
 					});
 					break;
 				case 'revertCommit':
