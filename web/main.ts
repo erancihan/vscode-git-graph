@@ -14,6 +14,7 @@ class GitGraphView {
 
 	private graph: Graph;
 	private findWidget: FindWidget;
+	private settingsWidget: SettingsWidget;
 	private config: Config;
 	private moreCommitsAvailable: boolean = false;
 	private showRemoteBranches: boolean = true;
@@ -52,7 +53,22 @@ class GitGraphView {
 				if (this.expandedCommit === null || this.expandedCommit.hash !== rowElem.dataset.hash) this.loadCommitDetails(rowElem);
 			}
 		});
+		this.settingsWidget = new SettingsWidget({
+			getRepoState: (repo) => this.gitRepos[repo],
+			saveRepoState: (repo, state) => {
+				this.gitRepos[repo] = state;
+				this.saveState();
+				sendMessage({ command: 'saveRepoState', repo: repo, state: state });
+				if (repo === this.currentRepo) this.updateRepoDropdownNames();
+			},
+			getRemotes: () => this.gitRemotes,
+			refresh: () => this.refresh(true)
+		});
 		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && this.settingsWidget.isVisible() && !isDialogOrContextMenuOpen()) {
+				this.settingsWidget.hide();
+				return;
+			}
 			if (!e.ctrlKey && !e.metaKey && !e.altKey && this.expandedCommit !== null && !isDialogOrContextMenuOpen() && !isTextInput(e.target)) {
 				// Navigation while the commit details view is open
 				if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
@@ -108,6 +124,9 @@ class GitGraphView {
 		document.getElementById('refreshBtn')!.addEventListener('click', () => {
 			this.refresh(true);
 		});
+		document.getElementById('settingsBtn')!.addEventListener('click', () => {
+			if (typeof this.gitRepos[this.currentRepo] !== 'undefined') this.settingsWidget.show(this.currentRepo);
+		});
 		document.getElementById('fetchBtn')!.addEventListener('click', () => {
 			showActionRunningDialog('Fetching from Remote(s)');
 			sendMessage({ command: 'fetch', repo: this.currentRepo!, remote: null, prune: this.config.fetchAndPrune, pruneTags: this.config.fetchAndPruneTags });
@@ -133,6 +152,30 @@ class GitGraphView {
 		}
 		this.loadRepos(this.gitRepos, lastActiveRepo);
 		this.requestLoadBranchesAndCommits(false);
+	}
+
+	/** Fill the repository dropdown: the custom name from the repository state, or the folder name. */
+	private updateRepoDropdownNames() {
+		const repoPaths = Object.keys(this.gitRepos), options = [];
+		for (let i = 0; i < repoPaths.length; i++) {
+			const state = this.gitRepos[repoPaths[i]], customName = state && typeof state.name === 'string' ? state.name : null;
+			options.push({ name: customName !== null ? customName : repoPaths[i].substring(repoPaths[i].lastIndexOf('/') + 1), value: repoPaths[i] });
+		}
+		this.repoDropdown.setOptions(options, [this.currentRepo]);
+	}
+
+	public isSettingsWidgetVisible() {
+		return this.settingsWidget.isVisible();
+	}
+	public loadRepoSettings(settings: GG.GitRepoSettings | null) {
+		this.settingsWidget.loadSettings(settings);
+	}
+	public repoSettingsActionCompleted(status: GG.GitCommandStatus, errorTitle: string, affectsGraph: boolean) {
+		if (this.settingsWidget.isVisible()) {
+			this.settingsWidget.actionCompleted(status, errorTitle, affectsGraph);
+		} else {
+			refreshGraphOrDisplayError(status, errorTitle);
+		}
 	}
 
 	public getDialogDefaults() {
@@ -164,13 +207,8 @@ class GitGraphView {
 			changedRepo = true;
 		}
 
-		let options = [], repoComps, i;
-		for (i = 0; i < repoPaths.length; i++) {
-			repoComps = repoPaths[i].split('/');
-			options.push({ name: repoComps[repoComps.length - 1], value: repoPaths[i] });
-		}
 		document.getElementById('repoControl')!.style.display = repoPaths.length > 1 ? 'inline' : 'none';
-		this.repoDropdown.setOptions(options, [this.currentRepo]);
+		this.updateRepoDropdownNames();
 
 		if (changedRepo) {
 			this.refresh(true);
@@ -1598,6 +1636,10 @@ window.addEventListener('message', event => {
 			refreshGraphOrDisplayError(msg.status, 'Unable to Drop Commit');
 			break;
 		case 'fetch':
+			if (gitGraph.isSettingsWidgetVisible()) {
+				gitGraph.repoSettingsActionCompleted(msg.status, 'Unable to Fetch from Remote', true);
+				break;
+			}
 			refreshGraphOrDisplayError(msg.status, 'Unable to Fetch from Remote(s)');
 			break;
 		case 'fetchIntoLocalBranch':
@@ -1661,6 +1703,24 @@ window.addEventListener('message', event => {
 			break;
 		case 'archive':
 			if (msg.status !== null) showErrorDialog('Unable to Create Archive', msg.status, null);
+			break;
+		case 'getRepoSettings':
+			gitGraph.loadRepoSettings(msg.settings);
+			break;
+		case 'addRemote':
+			gitGraph.repoSettingsActionCompleted(msg.status, 'Unable to Add Remote', true);
+			break;
+		case 'editRemote':
+			gitGraph.repoSettingsActionCompleted(msg.status, 'Unable to Save Remote', true);
+			break;
+		case 'deleteRemote':
+			gitGraph.repoSettingsActionCompleted(msg.status, 'Unable to Delete Remote', true);
+			break;
+		case 'pruneRemote':
+			gitGraph.repoSettingsActionCompleted(msg.status, 'Unable to Prune Remote', true);
+			break;
+		case 'setUserDetails':
+			gitGraph.repoSettingsActionCompleted(msg.status, 'Unable to Save User Details', false);
 			break;
 		case 'openExternalDiff':
 			if (msg.status === null) {
