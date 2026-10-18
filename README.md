@@ -24,6 +24,7 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
         * Open the Visual Studio Code diff of a file change by clicking on it in the commit details view
         * Right-click a file for more: view the file at that revision, diff with the working file, open the file, copy its path
         * Switch between the file tree and a flat file list
+        * Compare two commits: Ctrl/Cmd+click a second commit (or the uncommitted changes) while the details are open
     * Perform Git actions by right clicking on a commit, branch, tag, stash, or the uncommitted changes:
         * Create, checkout, rename, delete, merge, rebase on, and push branches
         * Delete remote branches, fetch a remote branch into a local branch, pull a remote branch into the current branch

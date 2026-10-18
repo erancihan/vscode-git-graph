@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { getConfig } from './config';
-import { DataSource } from './dataSource';
+import { DataSource, isSafeRelativePath } from './dataSource';
 import { ExtensionState } from './extensionState';
 import { StatusBarItem } from './statusBarItem';
 import { GitRepoSet, GitRepoState } from './types';
@@ -161,6 +161,7 @@ export class RepoManager {
 		const submodules = await this.dataSource.getSubmodules(repo);
 		let changes = false;
 		for (let i = 0; i < submodules.length; i++) {
+			if (!isSafeRelativePath(submodules[i])) continue; // Defence in depth: never leave the repository
 			const path = repo + '/' + submodules[i];
 			if (typeof this.repos[path] !== 'undefined' || this.isIgnored(path)) continue;
 			if (await this.dataSource.isGitRepository(path)) {

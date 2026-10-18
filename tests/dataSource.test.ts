@@ -2,7 +2,7 @@ import * as cp from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { DataSource } from '../src/dataSource';
+import { DataSource, isSafeRelativePath } from '../src/dataSource';
 import { Logger } from '../src/logger';
 import { configurationValues, outputChannelLines } from './mocks/vscode';
 
@@ -86,6 +86,22 @@ describe('DataSource', () => {
 		expect(details!.committer).toBe('Test Committer');
 		expect(details!.body).toBe('Second commit with "quotes" and \'apostrophes\'');
 		expect(details!.fileChanges).toEqual([{ oldFilePath: 'b.txt', newFilePath: 'b.txt', type: 'A', additions: 1, deletions: 0 }]);
+	});
+
+	it('compares two commits and a commit with the working tree', async () => {
+		const changes = await dataSource.compareCommits(repo, first, third);
+		expect(changes).not.toBeNull();
+		expect(changes!.map(c => c.newFilePath + ':' + c.type).sort()).toEqual(['a.txt:M', 'b.txt:A']);
+		expect(changes!.find(c => c.newFilePath === 'a.txt')).toEqual({ oldFilePath: 'a.txt', newFilePath: 'a.txt', type: 'M', additions: 1, deletions: 0 });
+		fs.writeFileSync(path.join(repo, 'a.txt'), 'one\nchanged\n');
+		try {
+			const working = await dataSource.compareCommits(repo, second, '*');
+			expect(working!.map(c => c.newFilePath + ':' + c.type)).toEqual(['a.txt:M']);
+		} finally {
+			git(repo, ['checkout', '-q', '--', 'a.txt']);
+		}
+		expect(await dataSource.compareCommits(repo, 'HEAD', third)).toBeNull();
+		expect(await dataSource.compareCommits(repo, first, '--cached')).toBeNull();
 	});
 
 	it('returns the content of a file at a commit', async () => {
@@ -264,8 +280,26 @@ describe('DataSource submodules', () => {
 		expect(await dataSource.isGitRepository(path.join(repo, 'vendor', 'lib'))).toBe(true);
 	});
 
-	it('returns an empty list when there is no .gitmodules file', async () => {
+	it('returns an empty list when the repository has no submodules', async () => {
 		expect(await dataSource.getSubmodules(sub)).toEqual([]);
+	});
+
+	it('ignores .gitmodules entries that are not gitlinks in the index', async () => {
+		fs.appendFileSync(path.join(repo, '.gitmodules'), '[submodule "evil"]\n\tpath = ../../outside\n\turl = ' + sub + '\n');
+		expect(await dataSource.getSubmodules(repo)).toEqual(['vendor/lib']);
+	});
+});
+
+describe('isSafeRelativePath', () => {
+	it('accepts relative paths inside the repository', () => {
+		expect(isSafeRelativePath('vendor/lib')).toBe(true);
+		expect(isSafeRelativePath('a')).toBe(true);
+	});
+
+	it('rejects paths that could leave the repository', () => {
+		for (const bad of ['', '/abs', 'C:/x', '../x', 'a/../../x', 'a/./b', 'a//b', 'a/\0b']) {
+			expect(isSafeRelativePath(bad)).toBe(false);
+		}
 	});
 });
 

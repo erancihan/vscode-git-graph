@@ -72,6 +72,10 @@ declare global {
 		srcElem: HTMLElement | null;
 		commitDetails: GG.GitCommitDetails | null;
 		fileTree: GitFolder | null;
+		/** Set when the view compares the commit with another commit ("*" is the working tree). */
+		compareWithHash: string | null;
+		compareWithSrcElem: HTMLElement | null;
+		compareFileChanges: GG.GitFileChange[] | null;
 	}
 
 	interface GitFile {
