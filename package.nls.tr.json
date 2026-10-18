@@ -9,5 +9,7 @@
 	"command.version.title": "Sürüm Bilgilerini Al",
 	"command.endAllWorkspaceCodeReviews.title": "Çalışma Alanındaki Tüm Kod İncelemelerini Bitir",
 	"command.openFile.title": "Dosyayı Aç",
-	"config.title": "Git Graph"
+	"config.title": "Git Graph",
+	"command.endSpecificWorkspaceCodeReview.title": "Çalışma Alanında Belirli Bir Kod İncelemesini Bitir...",
+	"command.resumeWorkspaceCodeReview.title": "Çalışma Alanında Belirli Bir Kod İncelemesine Devam Et..."
 }

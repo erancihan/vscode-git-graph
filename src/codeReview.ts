@@ -65,3 +65,24 @@ export function markFileUnreviewed(review: CodeReview, filePath: string, now: nu
 		remainingFiles: review.remainingFiles.indexOf(filePath) > -1 ? review.remainingFiles : review.remainingFiles.concat([filePath])
 	};
 }
+
+/** The commit (and the commit it is compared with) behind a review id, or null for a malformed id. */
+export function parseCodeReviewId(id: string): { commitHash: string, compareWithHash: string | null } | null {
+	const match = /^([0-9a-f]{40})(?:-([0-9a-f]{40}))?$/.exec(id);
+	if (match === null) return null;
+	// "<from>-<to>": the comparison opened on <to> with <from> as the other side
+	return match[2] !== undefined ? { commitHash: match[2], compareWithHash: match[1] } : { commitHash: match[1], compareWithHash: null };
+}
+
+/** Quick pick texts for a review: repository and commits, remaining files, last activity. */
+export function describeCodeReview(repo: string, review: CodeReview, now: number): { label: string, description: string, detail: string } {
+	const parsed = parseCodeReviewId(review.id);
+	const what = parsed === null ? review.id : parsed.compareWithHash !== null ? parsed.compareWithHash.substring(0, 8) + ' \u2194 ' + parsed.commitHash.substring(0, 8) : parsed.commitHash.substring(0, 8);
+	const ageMinutes = Math.max(0, Math.round((now - review.lastActive) / 60000));
+	const age = ageMinutes < 60 ? ageMinutes + ' min ago' : ageMinutes < 60 * 48 ? Math.round(ageMinutes / 60) + ' h ago' : Math.round(ageMinutes / 1440) + ' days ago';
+	return {
+		label: repo.substring(repo.lastIndexOf('/') + 1) + ': ' + what,
+		description: review.remainingFiles.length + ' file' + (review.remainingFiles.length !== 1 ? 's' : '') + ' left',
+		detail: repo + ' \u00b7 last active ' + age
+	};
+}

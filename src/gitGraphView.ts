@@ -13,11 +13,13 @@ import { buildPullRequestUrl, detectPullRequestProvider, parseRemoteUrl } from '
 import { RepoManager, defaultRepoState } from './repoManager';
 import { REPO_SETTINGS_FILE, applyRepoSettings, describeRepoSettings, hashRepoSettings, parseRepoSettings, repoSettingsFilePath, repoSettingsMatch, serializeRepoSettings, writeRepoSettingsFile } from './repoSettingsFile';
 import { runGitCommandInTerminal } from './terminal';
-import { GitArchiveType, GitCommandStatus, GitFileChangeType, GitGraphViewState, GitRebaseType, L10nBundle, GitRepoSet, GitRepoState, PullRequestProvider, RequestMessage, ResponseMessage } from './types';
+import { CodeReview, GitArchiveType, GitCommandStatus, GitFileChangeType, GitGraphViewState, GitRebaseType, L10nBundle, LoadViewTo, GitRepoSet, GitRepoState, PullRequestProvider, RequestMessage, ResponseMessage } from './types';
 import { abbrevCommit, copyToClipboard } from './utils';
 
 export class GitGraphView {
 	public static currentPanel: GitGraphView | undefined;
+	/** Commit to open once the view that is being created has loaded (set by createOrShow). */
+	private static pendingLoadViewTo: LoadViewTo | null = null;
 
 	private readonly panel: vscode.WebviewPanel;
 	private readonly extensionPath: string;
@@ -37,15 +39,16 @@ export class GitGraphView {
 	 * Show the view. `loadRepo` is the repository to show (for example the one that contains the
 	 * active editor's document), or null to keep the last active repository.
 	 */
-	public static createOrShow(extensionPath: string, dataSource: DataSource, extensionState: ExtensionState, avatarManager: AvatarManager, ciStatusManager: CiStatusManager, repoManager: RepoManager, logger: Logger, loadRepo: string | null) {
+	public static createOrShow(extensionPath: string, dataSource: DataSource, extensionState: ExtensionState, avatarManager: AvatarManager, ciStatusManager: CiStatusManager, repoManager: RepoManager, logger: Logger, loadRepo: string | null, loadViewTo: LoadViewTo | null = null) {
 		const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
 
 		if (GitGraphView.currentPanel) {
 			GitGraphView.currentPanel.panel.reveal(column);
-			if (loadRepo !== null) GitGraphView.currentPanel.sendMessage({ command: 'selectRepo', repo: loadRepo });
+			if (loadRepo !== null) GitGraphView.currentPanel.sendMessage({ command: 'selectRepo', repo: loadRepo, loadViewTo: loadViewTo });
 			return;
 		}
 		if (loadRepo !== null) extensionState.setLastActiveRepo(loadRepo);
+		GitGraphView.pendingLoadViewTo = loadViewTo;
 
 		const panel = vscode.window.createWebviewPanel('git-graph', 'Git Graph', column || vscode.ViewColumn.One, {
 			enableScripts: true,
@@ -665,6 +668,13 @@ export class GitGraphView {
 		}
 	}
 
+	/** Tell the open view that the reviews of a repository changed outside of it (a command ended one). */
+	public static notifyCodeReviewsChanged(repo: string, reviews: { [id: string]: CodeReview }) {
+		if (GitGraphView.currentPanel) {
+			GitGraphView.currentPanel.sendMessage({ command: 'codeReviewsChanged', repo: repo, reviews: reviews });
+		}
+	}
+
 	/** Only repositories the extension discovered or the user added may carry state. */
 	private isKnownRepo(repo: string) {
 		return typeof repo === 'string' && Object.prototype.hasOwnProperty.call(this.repoManager.getRepos(), repo);
@@ -706,6 +716,7 @@ export class GitGraphView {
 			repos: this.repoManager.getRepos(),
 			scrollToHeadOnLoad: config.scrollToHeadOnLoad(),
 			showCurrentBranchByDefault: config.showCurrentBranchByDefault(),
+			loadViewTo: GitGraphView.pendingLoadViewTo,
 			graphUncommittedChanges: config.graphUncommittedChanges(),
 			markdown: config.markdown(),
 			onLoadBranches: config.onLoadShowSpecificBranches(),
