@@ -11,6 +11,7 @@
 * Fixed: commit messages shown in the parent selector of the cherry pick and revert dialogs were inserted as HTML. They are now escaped.
 * Repositories: "Git Graph: Add Git Repository..." adds a repository from any folder (kept across sessions, also outside the workspace), "Git Graph: Remove Git Repository..." removes one and keeps it out of future discovery. Submodules declared in `.gitmodules` are added as repositories. New settings `git-graph.repositoryDropdownOrder`, `git-graph.openToTheRepoOfTheActiveTextEditorDocument`, and `git-graph.sourceCodeProviderIntegrationLocation` for the new "View Git Graph" button in the Source Control view.
 * Security: submodule paths are taken from the index (gitlink entries) and must stay inside the repository; a crafted `.gitmodules` cannot register a folder outside the repository. Every git command runs with `safe.bareRepository=explicit`, so a bare repository embedded in a checkout is not picked up as the repository.
+* The Branch dropdown supports selecting more than one branch: Ctrl/Cmd+click adds an entry to the selection. Named glob patterns from `git-graph.customBranchGlobPatterns` appear as entries, for example all `feature/*` branches.
 * The Branch dropdown has a "HEAD (checked-out commit)" entry that shows the history of the checked-out commit, also when HEAD is detached.
 * The Commit Details View lists the branches and tags that point at the commit.
 * "Copy Short Commit Hash to Clipboard" copies the 8-character hash.

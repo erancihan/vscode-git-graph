@@ -1,9 +1,10 @@
 class Dropdown {
 	private options: DropdownOption[] = [];
-	private selectedOption: number = 0;
+	private selectedOptions: number[] = [0];
 	private dropdownVisible: boolean = false;
 	private showInfo: boolean;
-	private changeCallback: { (value: string): void };
+	private multipleAllowed: boolean;
+	private changeCallback: { (values: string[]): void };
 
 	private elem: HTMLElement;
 	private currentValueElem: HTMLDivElement;
@@ -12,8 +13,13 @@ class Dropdown {
 	private noResultsElem: HTMLDivElement;
 	private filterInput: HTMLInputElement;
 
-	constructor(id: string, showInfo: boolean, dropdownType: string, changeCallback: { (value: string): void }) {
+	/**
+	 * @param multipleAllowed When true, Ctrl/Cmd+click on an option adds it to (or removes it from) the
+	 * selection and keeps the dropdown open. Option 0 is exclusive: selecting it clears the others.
+	 */
+	constructor(id: string, showInfo: boolean, multipleAllowed: boolean, dropdownType: string, changeCallback: { (values: string[]): void }) {
 		this.showInfo = showInfo;
+		this.multipleAllowed = multipleAllowed;
 		this.changeCallback = changeCallback;
 		this.elem = document.getElementById(id)!;
 
@@ -55,11 +61,24 @@ class Dropdown {
 					const option = <HTMLElement | null>(<HTMLElement>e.target).closest('.dropdownOption');
 					if (option !== null && option.parentNode === this.optionsElem && typeof option.dataset.id !== 'undefined') {
 						const selectedOption = parseInt(option.dataset.id!);
-						this.close();
-						if (this.selectedOption !== selectedOption) {
-							this.selectedOption = selectedOption;
+						if (this.multipleAllowed && (e.ctrlKey || e.metaKey) && selectedOption !== 0) {
+							// Toggle the option in the selection, keep the dropdown open
+							const index = this.selectedOptions.indexOf(selectedOption);
+							if (index > -1) {
+								this.selectedOptions.splice(index, 1);
+								if (this.selectedOptions.length === 0) this.selectedOptions = [0];
+							} else {
+								this.selectedOptions = this.selectedOptions.filter((i) => i !== 0).concat([selectedOption]).sort((a, b) => a - b);
+							}
 							this.render();
-							this.changeCallback(this.options[this.selectedOption].value);
+							this.changeCallback(this.getSelectedValues());
+						} else {
+							this.close();
+							if (this.selectedOptions.length !== 1 || this.selectedOptions[0] !== selectedOption) {
+								this.selectedOptions = [selectedOption];
+								this.render();
+								this.changeCallback(this.getSelectedValues());
+							}
 						}
 					}
 				}
@@ -76,17 +95,19 @@ class Dropdown {
 		return this.options;
 	}
 
-	public setOptions(options: DropdownOption[], selected: string) {
+	public setOptions(options: DropdownOption[], selected: string[]) {
 		this.options = options;
-		let selectedOption = 0;
+		const selectedOptions: number[] = [];
 		for (let i = 0; i < options.length; i++) {
-			if (options[i].value === selected) {
-				selectedOption = i;
-			}
+			if (selected.indexOf(options[i].value) > -1) selectedOptions.push(i);
 		}
-		this.selectedOption = selectedOption;
+		this.selectedOptions = selectedOptions.length > 0 ? selectedOptions : [0];
 		if (options.length <= 1) this.close();
 		this.render();
+	}
+
+	public getSelectedValues() {
+		return this.selectedOptions.map((i) => this.options[i].value);
 	}
 
 	public refresh() {
@@ -95,10 +116,11 @@ class Dropdown {
 
 	private render() {
 		this.elem.classList.add('loaded');
-		this.currentValueElem.innerHTML = this.options[this.selectedOption].name;
+		this.currentValueElem.innerHTML = escapeHtml(this.selectedOptions.map((i) => this.options[i].name).join(', '));
+		this.currentValueElem.title = this.multipleAllowed ? 'Ctrl/Cmd+click an option to select more than one' : '';
 		let html = '';
 		for (let i = 0; i < this.options.length; i++) {
-			html += '<div class="dropdownOption' + (this.selectedOption === i ? ' selected' : '') + '" data-id="' + i + '">' + escapeHtml(this.options[i].name) + (this.showInfo ? '<div class="dropdownOptionInfo" title="' + escapeHtml(this.options[i].value) + '">' + svgIcons.info + '</div>' : '') + '</div>';
+			html += '<div class="dropdownOption' + (this.selectedOptions.indexOf(i) > -1 ? ' selected' : '') + '" data-id="' + i + '">' + escapeHtml(this.options[i].name) + (this.showInfo ? '<div class="dropdownOptionInfo" title="' + escapeHtml(this.options[i].value) + '">' + svgIcons.info + '</div>' : '') + '</div>';
 		}
 		this.optionsElem.className = 'dropdownOptions' + (this.showInfo ? ' showInfo' : '');
 		this.optionsElem.innerHTML = html;

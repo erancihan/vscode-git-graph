@@ -33,7 +33,7 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
         * Reset the current branch to a commit; reset or clean the uncommitted changes
         * Stash the uncommitted changes; apply, pop, drop, or branch from a stash
         * Copy commit hashes (full or short), tag names, branch names, and stash names to the clipboard
-    * Show only the commits of one branch, of the checked-out commit (HEAD), or of everything
+    * Show the commits of one or more branches (Ctrl/Cmd+click in the Branch dropdown), of named glob patterns, of the checked-out commit (HEAD), or of everything
     * Fetch from all remotes with the Fetch button
     * Find commits with Ctrl/Cmd+F: match case and regular expression modes, step through the matches
     * Show or hide the Date, Author and Commit columns (right-click a column header), mute merge commits or commits outside the ancestry of HEAD
@@ -51,6 +51,7 @@ This extension contributes the following settings:
 * `git-graph.commitDetailsView.fileView.fileTree.compactFolders`: Show a folder that only contains one folder on one line. Default: true.
 * `git-graph.commitDetailsView.fileView.type`: Default file view in the commit details: `File Tree` or `File List`. Default: `File Tree`.
 * `git-graph.contextMenuActionsVisibility`: Hide individual context menu actions, for example `{"commit": {"reset": false}}`. Menus: `branch`, `commit`, `remoteBranch`, `tag`.
+* `git-graph.customBranchGlobPatterns`: Named glob patterns offered in the Branch dropdown, for example `[{"name": "Features", "glob": "heads/feature/*"}]`.
 * `git-graph.date.format`: Specifies the date format used in the date column of the graph.
 * `git-graph.date.type`: Specifies whether the author date or the commit date is displayed.
 * `git-graph.defaultColumnVisibility`: Default visibility of the Date, Author and Commit columns, for example `{"Date": true, "Author": false, "Commit": true}`. Right-click a column header to change it per repository.

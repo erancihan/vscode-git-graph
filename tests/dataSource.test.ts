@@ -64,7 +64,7 @@ describe('DataSource', () => {
 	});
 
 	it('loads commits with refs attached and reports whether more are available', async () => {
-		const result = await dataSource.getCommits(repo, '', 2, false);
+		const result = await dataSource.getCommits(repo, [], 2, false);
 		expect(result.moreCommitsAvailable).toBe(true);
 		expect(result.commits.map(c => c.hash)).toEqual([third, second]);
 		expect(result.head).toBe(second);
@@ -74,9 +74,26 @@ describe('DataSource', () => {
 	});
 
 	it('loads commits of a single branch', async () => {
-		const result = await dataSource.getCommits(repo, 'master', 10, false);
+		const result = await dataSource.getCommits(repo, ['master'], 10, false);
 		expect(result.moreCommitsAvailable).toBe(false);
 		expect(result.commits.map(c => c.hash)).toEqual([second, first]);
+	});
+
+	it('loads commits of several branches, of HEAD, and of a glob pattern', async () => {
+		let result = await dataSource.getCommits(repo, ['master', 'feature/it\'s-here'], 10, false);
+		expect(result.commits.map(c => c.hash)).toEqual([third, second, first]);
+		result = await dataSource.getCommits(repo, ['HEAD'], 10, false);
+		expect(result.commits.map(c => c.hash)).toEqual([second, first]);
+		result = await dataSource.getCommits(repo, ['--glob=heads/feature/*'], 10, false);
+		expect(result.commits.map(c => c.hash)).toEqual([third, second, first]);
+		result = await dataSource.getCommits(repo, ['--glob=heads/nothing-*'], 10, false);
+		expect(result.commits).toEqual([]);
+	});
+
+	it('loads nothing when a branch entry looks like an option', async () => {
+		const result = await dataSource.getCommits(repo, ['--all'], 10, false);
+		expect(result.commits).toEqual([]);
+		expect((await dataSource.getCommits(repo, ['--glob=heads/* --all'], 10, false)).commits).toEqual([]);
 	});
 
 	it('returns commit details including file changes', async () => {
@@ -328,7 +345,7 @@ describe('DataSource stashes', () => {
 	});
 
 	it('loads without stashes when the repository has none', async () => {
-		const result = await dataSource.getCommits(repo, '', 10, false);
+		const result = await dataSource.getCommits(repo, [], 10, false);
 		expect(result.commits.every(c => c.stash === null)).toBe(true);
 	});
 
@@ -341,7 +358,7 @@ describe('DataSource stashes', () => {
 	});
 
 	it('shows the stash as a row above its base commit', async () => {
-		const result = await dataSource.getCommits(repo, '', 10, false);
+		const result = await dataSource.getCommits(repo, [], 10, false);
 		const stashIndex = result.commits.findIndex(c => c.stash !== null);
 		expect(stashIndex).toBeGreaterThan(-1);
 		const row = result.commits[stashIndex];
@@ -354,7 +371,7 @@ describe('DataSource stashes', () => {
 
 	it('hides stashes when the setting is off', async () => {
 		configurationValues['git-graph'] = { 'repository.showStashes': false };
-		const result = await dataSource.getCommits(repo, '', 10, false);
+		const result = await dataSource.getCommits(repo, [], 10, false);
 		expect(result.commits.every(c => c.stash === null)).toBe(true);
 	});
 
@@ -505,37 +522,37 @@ describe('DataSource commit loading options', () => {
 	});
 
 	it('includes the detached HEAD commit when showing all branches', async () => {
-		const result = await dataSource.getCommits(repo, '', 10, false);
+		const result = await dataSource.getCommits(repo, [], 10, false);
 		expect(result.head).toBe(detached);
 		expect(result.commits.map(c => c.hash)).toEqual(expect.arrayContaining([detached, tagOnly, base]));
 	});
 
 	it('attaches annotated tags to the tagged commit exactly once', async () => {
-		const result = await dataSource.getCommits(repo, '', 10, false);
+		const result = await dataSource.getCommits(repo, [], 10, false);
 		const tagged = result.commits.find(c => c.hash === tagOnly)!;
 		expect(tagged.refs).toEqual([{ hash: tagOnly, name: 'annotated-tag', type: 'tag' }]);
 	});
 
 	it('hides commits only reachable from tags when the setting is off', async () => {
 		configurationValues['git-graph'] = { 'repository.showCommitsOnlyReferencedByTags': false };
-		const result = await dataSource.getCommits(repo, '', 10, false);
+		const result = await dataSource.getCommits(repo, [], 10, false);
 		expect(result.commits.map(c => c.hash)).not.toContain(tagOnly);
 		expect(result.commits.map(c => c.hash)).toContain(detached);
 	});
 
 	it('hides tags when the setting is off', async () => {
 		configurationValues['git-graph'] = { 'repository.showTags': false };
-		const result = await dataSource.getCommits(repo, '', 10, false);
+		const result = await dataSource.getCommits(repo, [], 10, false);
 		expect(result.commits.every(c => c.refs.every(r => r.type !== 'tag'))).toBe(true);
 	});
 
 	it('applies the mailmap when enabled', async () => {
 		fs.writeFileSync(path.join(repo, '.mailmap'), 'Mapped Name <mapped@example.com> <author@example.com>\n');
 		try {
-			let result = await dataSource.getCommits(repo, '', 10, false);
+			let result = await dataSource.getCommits(repo, [], 10, false);
 			expect(result.commits.find(c => c.hash === base)!.author).toBe('Test Author');
 			configurationValues['git-graph'] = { 'repository.useMailmap': true };
-			result = await dataSource.getCommits(repo, '', 10, false);
+			result = await dataSource.getCommits(repo, [], 10, false);
 			expect(result.commits.find(c => c.hash === base)!.author).toBe('Mapped Name');
 			expect(result.commits.find(c => c.hash === base)!.email).toBe('mapped@example.com');
 			const details = await dataSource.commitDetails(repo, base);
@@ -549,11 +566,11 @@ describe('DataSource commit loading options', () => {
 	it('counts untracked files only when the setting is on', async () => {
 		fs.writeFileSync(path.join(repo, 'untracked.txt'), 'new\n');
 		try {
-			let result = await dataSource.getCommits(repo, '', 10, false);
+			let result = await dataSource.getCommits(repo, [], 10, false);
 			expect(result.commits[0].hash).toBe('*');
 			expect(result.commits[0].message).toBe('Uncommitted Changes (1)');
 			configurationValues['git-graph'] = { 'repository.showUntrackedFiles': false };
-			result = await dataSource.getCommits(repo, '', 10, false);
+			result = await dataSource.getCommits(repo, [], 10, false);
 			expect(result.commits[0].hash).not.toBe('*');
 		} finally {
 			fs.unlinkSync(path.join(repo, 'untracked.txt'));
@@ -562,12 +579,12 @@ describe('DataSource commit loading options', () => {
 
 	it('passes the first parent and reflog options to git log', async () => {
 		configurationValues['git-graph'] = { 'repository.onlyFollowFirstParent': true, 'repository.includeCommitsMentionedByReflogs': true };
-		await dataSource.getCommits(repo, '', 10, false);
+		await dataSource.getCommits(repo, [], 10, false);
 		const lines = outputChannelLines['Git Graph'];
 		const logLine = lines.slice(-4).find(l => l.includes(' log '))!;
 		expect(logLine).toContain('--first-parent');
 		expect(logLine).toContain('--reflog');
-		await dataSource.getCommits(repo, 'master', 10, false);
+		await dataSource.getCommits(repo, ['master'], 10, false);
 		const branchLogLine = outputChannelLines['Git Graph'].slice(-4).find(l => l.includes(' log '))!;
 		expect(branchLogLine).toContain('--first-parent');
 		expect(branchLogLine).not.toContain('--reflog');
@@ -575,11 +592,11 @@ describe('DataSource commit loading options', () => {
 
 	it('passes the configured ordering to git log', async () => {
 		configurationValues['git-graph'] = { 'repository.commits.order': 'topo' };
-		await dataSource.getCommits(repo, '', 10, false);
+		await dataSource.getCommits(repo, [], 10, false);
 		const lines = outputChannelLines['Git Graph'];
 		expect(lines.some(l => l.includes(' log ') && l.includes('--topo-order'))).toBe(true);
 		configurationValues['git-graph'] = { 'commitOrdering': 'author-date' };
-		await dataSource.getCommits(repo, '', 10, false);
+		await dataSource.getCommits(repo, [], 10, false);
 		expect(lines.slice(-4).some(l => l.includes('--author-date-order'))).toBe(true);
 	});
 });
