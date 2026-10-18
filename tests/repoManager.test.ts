@@ -67,6 +67,17 @@ describe('isSafeIssuePattern', () => {
 		expect(isSafeIssuePattern('\\(a+\\)+')).toBe(true);
 		expect(isSafeIssuePattern('(ab){2}')).toBe(true);
 		expect(isSafeIssuePattern('(a+)(b+)')).toBe(true);
+		expect(isSafeIssuePattern('(a?)+')).toBe(false);
+		expect(isSafeIssuePattern('(a{0,3})*')).toBe(false);
+		expect(isSafeIssuePattern('(a?)?')).toBe(true);
+		expect(isSafeIssuePattern('(a*)?')).toBe(true);
+		expect(isSafeIssuePattern('(a|b)?')).toBe(true);
+		expect(isSafeIssuePattern('(ab){1}')).toBe(true);
+		expect(isSafeIssuePattern('[]a')).toBe(true);
+		expect(isSafeIssuePattern('[^]+')).toBe(true);
+		expect(isSafeIssuePattern('[](a+)+')).toBe(false);
+		expect(isSafeIssuePattern('a+a+a+a+a+a+a+a+a+a+a+')).toBe(false);
+		expect(isSafeIssuePattern('a{2,5}b{3}')).toBe(true);
 		expect(isSafeIssuePattern('(')).toBe(false);
 		expect(isSafeIssuePattern('a'.repeat(201))).toBe(false);
 		expect(isSafeIssuePattern('')).toBe(false);
