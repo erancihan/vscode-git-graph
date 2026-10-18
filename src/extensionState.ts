@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import { ExtensionContext, Memento } from 'vscode';
-import { Avatar, AvatarCache, GitRepoSet } from './types';
+import { pruneCodeReviews } from './codeReview';
+import { Avatar, AvatarCache, CodeReview, CodeReviewSet, GitRepoSet } from './types';
 import { getPathFromStr } from './utils';
 
 const AVATAR_STORAGE_FOLDER = '/avatars';
@@ -9,6 +10,7 @@ const LAST_ACTIVE_REPO = 'lastActiveRepo';
 const REPO_STATES = 'repoStates';
 const IGNORED_REPOS = 'ignoredRepos';
 const MANUALLY_ADDED_REPOS = 'manuallyAddedRepos';
+const CODE_REVIEWS = 'codeReviews';
 
 export class ExtensionState {
 	private globalState: Memento;
@@ -56,6 +58,41 @@ export class ExtensionState {
 	}
 	public setManuallyAddedRepos(repos: string[]) {
 		this.workspaceState.update(MANUALLY_ADDED_REPOS, repos);
+	}
+
+	/* Code Reviews */
+	public getCodeReviews(): CodeReviewSet {
+		const reviews = this.workspaceState.get<CodeReviewSet>(CODE_REVIEWS, {});
+		return reviews && typeof reviews === 'object' ? reviews : {};
+	}
+	public getCodeReviewsOfRepo(repo: string) {
+		const reviews = this.getCodeReviews();
+		return typeof reviews[repo] === 'object' ? reviews[repo] : {};
+	}
+	public saveCodeReview(repo: string, review: CodeReview) {
+		const reviews = this.getCodeReviews();
+		if (typeof reviews[repo] !== 'object') reviews[repo] = {};
+		reviews[repo][review.id] = review;
+		this.workspaceState.update(CODE_REVIEWS, reviews);
+		return reviews[repo];
+	}
+	public removeCodeReview(repo: string, id: string) {
+		const reviews = this.getCodeReviews();
+		if (typeof reviews[repo] === 'object') {
+			delete reviews[repo][id];
+			if (Object.keys(reviews[repo]).length === 0) delete reviews[repo];
+		}
+		this.workspaceState.update(CODE_REVIEWS, reviews);
+		return typeof reviews[repo] === 'object' ? reviews[repo] : {};
+	}
+	public endAllCodeReviews() {
+		const count = Object.keys(this.getCodeReviews()).reduce((sum, repo) => sum + Object.keys(this.getCodeReviews()[repo]).length, 0);
+		this.workspaceState.update(CODE_REVIEWS, {});
+		return count;
+	}
+	/** Drop reviews that were not touched for 90 days. Called once at start-up. */
+	public pruneCodeReviews() {
+		this.workspaceState.update(CODE_REVIEWS, pruneCodeReviews(this.getCodeReviews(), Date.now()));
 	}
 
 	/* Last Active Repo */

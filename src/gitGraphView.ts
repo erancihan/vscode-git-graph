@@ -327,6 +327,23 @@ export class GitGraphView {
 						error: await this.createPullRequest(msg.repo, msg.provider, msg.sourceRemote, msg.sourceBranch, msg.destinationRemote, msg.destinationBranch)
 					});
 					break;
+				case 'startCodeReview':
+					this.sendMessage({
+						command: 'codeReviewsChanged',
+						repo: msg.repo,
+						reviews: this.extensionState.saveCodeReview(msg.repo, { id: msg.id, lastActive: Date.now(), lastViewedFile: msg.lastViewedFile, remainingFiles: msg.files })
+					});
+					break;
+				case 'endCodeReview':
+					this.sendMessage({
+						command: 'codeReviewsChanged',
+						repo: msg.repo,
+						reviews: this.extensionState.removeCodeReview(msg.repo, msg.id)
+					});
+					break;
+				case 'updateCodeReview':
+					this.extensionState.saveCodeReview(msg.repo, msg.review);
+					break;
 				case 'openExternalUrl':
 					this.sendMessage({
 						command: 'openExternalUrl',
@@ -481,6 +498,13 @@ export class GitGraphView {
 		return await openExternalUrl(url, this.logger) ? null : 'The browser could not be opened.';
 	}
 
+	/** Tell the open view that every code review was ended (command "End All Code Reviews in Workspace"). */
+	public static notifyCodeReviewsEnded() {
+		if (GitGraphView.currentPanel) {
+			GitGraphView.currentPanel.sendMessage({ command: 'codeReviewsChanged', repo: '*', reviews: {} });
+		}
+	}
+
 	/** The stored state of a repository (defaults when the repository is unknown). */
 	private getRepoState(repo: string): GitRepoState {
 		const repos = this.repoManager.getRepos();
@@ -491,6 +515,7 @@ export class GitGraphView {
 		const config = getConfig(), nonce = getNonce();
 		const viewState: GitGraphViewState = {
 			autoCenterCommitDetailsView: config.autoCenterCommitDetailsView(),
+			codeReviews: this.extensionState.getCodeReviews(),
 			commitDetailsView: config.commitDetailsView(),
 			customBranchGlobPatterns: config.customBranchGlobPatterns(),
 			customPullRequestProviders: config.customPullRequestProviders(),

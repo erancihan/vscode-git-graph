@@ -26,6 +26,7 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
         * Switch between the file tree and a flat file list
         * Compare two commits: Ctrl/Cmd+click a second commit (or the uncommitted changes) while the details are open
         * Inline or docked to the bottom, with a draggable height; click a parent hash to jump to that commit; Up and Down arrows step through commits, Escape closes
+        * Code review mode: start a review of a commit, viewed files are ticked off, progress is kept across sessions
     * Perform Git actions by right clicking on a commit, branch, tag, stash, or the uncommitted changes:
         * Create, checkout, rename, delete, merge, rebase on, and push branches (to one or several remotes); create a pull request on GitHub, GitLab, Bitbucket or a custom provider
         * Archive a branch, tag or commit as a zip or tar file
@@ -133,6 +134,7 @@ This extension reads the following setting:
 * `git-graph.addGitRepository`: Git Graph: Add Git Repository... (a repository outside the workspace folders, or one that was removed)
 * `git-graph.removeGitRepository`: Git Graph: Remove Git Repository...
 * `git-graph.clearAvatarCache`: Git Graph: Clear Avatar Cache (reports how many avatars were removed)
+* `git-graph.endAllWorkspaceCodeReviews`: Git Graph: End All Code Reviews in Workspace
 * `git-graph.fetch`: Git Graph: Fetch from Remote(s) (asks for the repository when there are several)
 * `git-graph.version`: Git Graph: Get Version Information (extension, Visual Studio Code, git and OS versions, with a Copy button)
 * `git-graph.openFile`: Git Graph: Open File (from the title of a file that Git Graph shows at a revision)

@@ -24,6 +24,9 @@ class GitGraphView {
 	private lastStashScrolledTo: number = -1;
 	private fileViewType: GG.FileViewType;
 	private commitDetailsHeight: number = DETAILS_DEFAULT_HEIGHT;
+	private codeReviews: GG.CodeReviewSet;
+	/** Id of the review to start once the details of the commit (or comparison) are loaded. */
+	private pendingCodeReviewStart: string | null = null;
 
 	private tableElem: HTMLElement;
 	private footerElem: HTMLElement;
@@ -35,9 +38,10 @@ class GitGraphView {
 	private loadBranchesCallback: ((changes: boolean, isRepo: boolean) => void) | null = null;
 	private loadCommitsCallback: ((changes: boolean) => void) | null = null;
 
-	constructor(repos: GG.GitRepoSet, lastActiveRepo: string | null, config: Config, prevState: WebViewState | null) {
+	constructor(repos: GG.GitRepoSet, lastActiveRepo: string | null, config: Config, codeReviews: GG.CodeReviewSet, prevState: WebViewState | null) {
 		this.gitRepos = repos;
 		this.config = config;
+		this.codeReviews = codeReviews && typeof codeReviews === 'object' ? codeReviews : {};
 		this.maxCommits = config.initialLoadCommits;
 		this.showRemoteBranches = config.showRemoteBranches;
 		this.scrollToHeadPending = config.scrollToHeadOnLoad && prevState === null;
@@ -604,6 +608,17 @@ class GitGraphView {
 					}
 				},
 				{
+					title: (this.getCodeReviewById(hash) !== null ? 'End Code Review' : 'Start Code Review'),
+					visible: visibility.codeReview,
+					onClick: () => {
+						if (this.getCodeReviewById(hash) !== null) {
+							this.endCodeReview(hash);
+						} else {
+							this.startCodeReview(hash, sourceElem);
+						}
+					}
+				},
+				{
 					title: 'Archive' + ELLIPSIS,
 					visible: visibility.archive,
 					onClick: () => sendMessage({ command: 'archive', repo: this.currentRepo!, ref: hash })
@@ -987,6 +1002,77 @@ class GitGraphView {
 		], sourceElem);
 	}
 	/** Merge dialog shared by the commit and branch menus: no-fast-forward, squash and no-commit options. */
+	/* Code Reviews */
+	private getCodeReviewById(id: string): GG.CodeReview | null {
+		const reviews = this.codeReviews[this.currentRepo];
+		return reviews && typeof reviews[id] === 'object' ? reviews[id] : null;
+	}
+	/** The review of what the details view shows (commit or comparison), or null. */
+	private getActiveCodeReview(): GG.CodeReview | null {
+		const range = this.getDetailsRange();
+		return range !== null ? this.getCodeReviewById(codeReviewIdOf(range.fromHash, range.toHash)) : null;
+	}
+	/** Begin a review of a commit: open its details (if needed) and record every changed file as not yet reviewed. */
+	private startCodeReview(hash: string, sourceElem: HTMLElement) {
+		const id = codeReviewIdOf(null, hash);
+		if (this.expandedCommit !== null && this.expandedCommit.hash === hash && this.expandedCommit.compareWithHash === null && this.expandedCommit.commitDetails !== null) {
+			this.sendStartCodeReview(id, this.expandedCommit.commitDetails.fileChanges);
+		} else {
+			this.pendingCodeReviewStart = id;
+			this.loadCommitDetails(sourceElem);
+		}
+	}
+	private sendStartCodeReview(id: string, fileChanges: GG.GitFileChange[]) {
+		const files = fileChanges.map((change) => change.newFilePath);
+		const review: GG.CodeReview = { id: id, lastActive: Date.now(), lastViewedFile: null, remainingFiles: files };
+		if (typeof this.codeReviews[this.currentRepo] !== 'object') this.codeReviews[this.currentRepo] = {};
+		this.codeReviews[this.currentRepo][id] = review;
+		sendMessage({ command: 'startCodeReview', repo: this.currentRepo!, id: id, files: files, lastViewedFile: null });
+		this.rerenderDetails();
+	}
+	private endCodeReview(id: string) {
+		if (typeof this.codeReviews[this.currentRepo] === 'object') delete this.codeReviews[this.currentRepo][id];
+		sendMessage({ command: 'endCodeReview', repo: this.currentRepo!, id: id });
+		this.rerenderDetails();
+	}
+	/** Record that a file of the active review was viewed (or un-viewed) and persist the change. */
+	private setFileReviewed(filePath: string, reviewed: boolean) {
+		const review = this.getActiveCodeReview();
+		if (review === null) return;
+		const remaining = review.remainingFiles.filter((file) => file !== filePath);
+		if (!reviewed) remaining.push(filePath);
+		const updated: GG.CodeReview = { id: review.id, lastActive: Date.now(), lastViewedFile: reviewed ? filePath : review.lastViewedFile, remainingFiles: remaining };
+		this.codeReviews[this.currentRepo][review.id] = updated;
+		sendMessage({ command: 'updateCodeReview', repo: this.currentRepo!, review: updated });
+		this.rerenderDetails();
+	}
+	/** Replace the reviews of a repository ("*" clears every repository), then redraw the open details. */
+	public setCodeReviews(repo: string, reviews: { [id: string]: GG.CodeReview }) {
+		if (repo === '*') {
+			this.codeReviews = {};
+		} else if (Object.keys(reviews).length === 0) {
+			delete this.codeReviews[repo];
+		} else {
+			this.codeReviews[repo] = reviews;
+		}
+		this.rerenderDetails();
+	}
+	private rerenderDetails() {
+		if (this.expandedCommit === null || this.expandedCommit.fileTree === null) return;
+		const range = this.getDetailsRange();
+		if (this.expandedCommit.compareFileChanges !== null && range !== null) {
+			this.showCommitComparison(range.fromHash, range.toHash, this.expandedCommit.compareFileChanges, this.expandedCommit.fileTree);
+		} else if (this.expandedCommit.commitDetails !== null) {
+			this.showCommitDetails(this.expandedCommit.commitDetails, this.expandedCommit.fileTree);
+		}
+	}
+	/** Banner shown at the top of the details view while a review is active. */
+	private codeReviewBannerHtml(review: GG.CodeReview | null, fileChanges: GG.GitFileChange[]) {
+		if (review === null) return '';
+		const total = fileChanges.length, remaining = review.remainingFiles.filter((file) => fileChanges.some((change) => change.newFilePath === file)).length;
+		return '<div id="codeReviewBanner"><span class="codeReviewTitle">Code Review</span><span class="codeReviewProgress">' + (total - remaining) + ' of ' + total + ' file' + (total !== 1 ? 's' : '') + ' reviewed' + (remaining === 0 ? ' - done' : '') + '</span><span id="codeReviewEnd" class="roundedBtn">End Code Review</span></div>';
+	}
+
 	/**
 	 * Asks for confirmation of a rebase. An interactive rebase runs in a new integrated terminal,
 	 * so the graph does not show the "action running" dialog for it; the view refreshes when the
@@ -1357,12 +1443,18 @@ class GitGraphView {
 		this.saveState();
 
 		const describe = (hash: string) => hash === '*' ? '<b>Uncommitted Changes</b>' : '<b>' + abbrevCommit(hash) + '</b>' + (typeof this.commitLookup[hash] === 'number' ? ': ' + escapeHtml(this.commits[this.commitLookup[hash]].message) : '');
-		let html = '<div id="commitDetailsSummary">';
+		const review = this.getCodeReviewById(codeReviewIdOf(fromHash, toHash));
+		if (this.pendingCodeReviewStart === codeReviewIdOf(fromHash, toHash)) {
+			this.pendingCodeReviewStart = null;
+			this.sendStartCodeReview(codeReviewIdOf(fromHash, toHash), fileChanges);
+			return;
+		}
+		let html = this.codeReviewBannerHtml(review, fileChanges) + '<div id="commitDetailsSummary">';
 		html += '<span class="commitDetailsSummaryTop"><span class="commitDetailsSummaryTopRow"><span class="commitDetailsSummaryKeyValues">';
 		html += '<b>Comparing: </b>' + describe(fromHash) + '<br><b>With: </b>' + describe(toHash) + '<br><br>';
 		html += fileChanges.length + ' file' + (fileChanges.length !== 1 ? 's' : '') + ' differ' + (fileChanges.length === 1 ? 's' : '') + '. Click a file to view the diff between the two revisions. Ctrl/Cmd+click the compared commit again to return to its details.';
 		html += '</span></span></span></div>';
-		html += this.generateDetailsFilesHtml(fileTree, fileChanges);
+		html += this.generateDetailsFilesHtml(fileTree, fileChanges, review);
 		html += '<div id="commitDetailsClose">' + svgIcons.close + '</div>';
 		this.renderDetailsElem(html, this.expandedCommit.srcElem);
 	}
@@ -1377,7 +1469,13 @@ class GitGraphView {
 		this.expandedCommit.srcElem.classList.add('commitDetailsOpen');
 		this.saveState();
 
-		let html = '<div id="commitDetailsSummary">';
+		const review = this.getCodeReviewById(codeReviewIdOf(null, commitDetails.hash));
+		if (this.pendingCodeReviewStart === codeReviewIdOf(null, commitDetails.hash)) {
+			this.pendingCodeReviewStart = null;
+			this.sendStartCodeReview(codeReviewIdOf(null, commitDetails.hash), commitDetails.fileChanges);
+			return;
+		}
+		let html = this.codeReviewBannerHtml(review, commitDetails.fileChanges) + '<div id="commitDetailsSummary">';
 		html += '<span class="commitDetailsSummaryTop' + (typeof this.avatars[commitDetails.email] === 'string' ? ' withAvatar' : '') + '"><span class="commitDetailsSummaryTopRow"><span class="commitDetailsSummaryKeyValues">';
 		html += '<b>Commit: </b>' + escapeHtml(commitDetails.hash) + '<br>';
 		html += '<b>Parents: </b>' + commitDetails.parents.map((parent) => {
@@ -1398,7 +1496,7 @@ class GitGraphView {
 		if (typeof this.avatars[commitDetails.email] === 'string') html += '<span class="commitDetailsSummaryAvatar"><img src="' + this.avatars[commitDetails.email] + '"></span>';
 		html += '</span></span><br><br>';
 		html += linkifyMessage(commitDetails.body, compileIssueLinking(this.getIssueLinkingConfig()), true).replace(/\n/g, '<br>') + '</div>';
-		html += this.generateDetailsFilesHtml(fileTree, commitDetails.fileChanges);
+		html += this.generateDetailsFilesHtml(fileTree, commitDetails.fileChanges, review);
 		html += '<div id="commitDetailsClose">' + svgIcons.close + '</div>';
 		this.renderDetailsElem(html, this.expandedCommit.srcElem);
 	}
@@ -1438,11 +1536,13 @@ class GitGraphView {
 			document.addEventListener('mouseup', onUp);
 		});
 	}
-	private generateDetailsFilesHtml(fileTree: GitFolder, fileChanges: GG.GitFileChange[]) {
-		return '<div id="commitDetailsFiles"><div id="commitDetailsFileViewSwitch">'
+	private generateDetailsFilesHtml(fileTree: GitFolder, fileChanges: GG.GitFileChange[], review: GG.CodeReview | null = null) {
+		const reviewed = review !== null ? fileChanges.map((change) => change.newFilePath).filter((file) => review.remainingFiles.indexOf(file) === -1) : null;
+		const reviewState: ReviewedFiles | null = reviewed !== null ? { reviewed: reviewed, lastViewed: review!.lastViewedFile } : null;
+		return '<div id="commitDetailsFiles"' + (review !== null ? ' class="codeReviewActive"' : '') + '><div id="commitDetailsFileViewSwitch">'
 			+ '<span class="fileViewTypeBtn' + (this.fileViewType === 'tree' ? ' active' : '') + '" data-type="tree" title="File Tree">' + svgIcons.fileTree + '</span>'
 			+ '<span class="fileViewTypeBtn' + (this.fileViewType === 'list' ? ' active' : '') + '" data-type="list" title="File List">' + svgIcons.fileList + '</span>'
-			+ '</div>' + (this.fileViewType === 'tree' ? generateGitFileTreeHtml(fileTree, fileChanges, this.config.commitDetailsView.compactFolders) : generateGitFileListHtml(fileChanges)) + '</div>';
+			+ '</div>' + (this.fileViewType === 'tree' ? generateGitFileTreeHtml(fileTree, fileChanges, this.config.commitDetailsView.compactFolders, reviewState) : generateGitFileListHtml(fileChanges, reviewState)) + '</div>';
 	}
 	/**
 	 * Show the details view: inline (a table row below `srcElem`) or docked to the bottom of the
@@ -1506,6 +1606,13 @@ class GitGraphView {
 		document.getElementById('commitDetailsClose')!.addEventListener('click', () => {
 			this.hideCommitDetails();
 		});
+		const endReviewBtn = document.getElementById('codeReviewEnd');
+		if (endReviewBtn !== null) {
+			endReviewBtn.addEventListener('click', () => {
+				const review = this.getActiveCodeReview();
+				if (review !== null) this.endCodeReview(review.id);
+			});
+		}
 		addListenerToClass('gitFolder', 'click', (e) => {
 			const sourceElem = <HTMLElement>(<Element>e.target!).closest('.gitFolder');
 			const parent = sourceElem.parentElement!;
@@ -1519,7 +1626,9 @@ class GitGraphView {
 		addListenerToClass('gitFile', 'click', (e) => {
 			const sourceElem = <HTMLElement>(<Element>e.target).closest('.gitFile')!, range = this.getDetailsRange();
 			if (range === null || !sourceElem.classList.contains('gitDiffPossible')) return;
-			sendMessage({ command: 'viewDiff', repo: this.currentRepo!, fromHash: range.fromHash, toHash: range.toHash, oldFilePath: decodeURIComponent(sourceElem.dataset.oldfilepath!), newFilePath: decodeURIComponent(sourceElem.dataset.newfilepath!), type: <GG.GitFileChangeType>sourceElem.dataset.type });
+			const newFilePath = decodeURIComponent(sourceElem.dataset.newfilepath!);
+			sendMessage({ command: 'viewDiff', repo: this.currentRepo!, fromHash: range.fromHash, toHash: range.toHash, oldFilePath: decodeURIComponent(sourceElem.dataset.oldfilepath!), newFilePath: newFilePath, type: <GG.GitFileChangeType>sourceElem.dataset.type });
+			if (this.getActiveCodeReview() !== null) this.setFileReviewed(newFilePath, true);
 		});
 		addListenerToClass('gitFile', 'contextmenu', (e) => {
 			e.stopPropagation();
@@ -1555,6 +1664,17 @@ class GitGraphView {
 					title: 'Open File',
 					visible: existsAtCommit,
 					onClick: () => sendMessage({ command: 'openFile', repo: this.currentRepo!, filePath: newFilePath })
+				},
+				null,
+				{
+					title: 'Mark as Reviewed',
+					visible: this.getActiveCodeReview() !== null && this.getActiveCodeReview()!.remainingFiles.indexOf(newFilePath) > -1,
+					onClick: () => this.setFileReviewed(newFilePath, true)
+				},
+				{
+					title: 'Mark as Not Reviewed',
+					visible: this.getActiveCodeReview() !== null && this.getActiveCodeReview()!.remainingFiles.indexOf(newFilePath) === -1,
+					onClick: () => this.setFileReviewed(newFilePath, false)
 				},
 				null,
 				{
@@ -1608,7 +1728,7 @@ const gitGraph = new GitGraphView(viewState.repos, viewState.lastActiveRepo, {
 	scrollToHeadOnLoad: viewState.scrollToHeadOnLoad,
 	showCurrentBranchByDefault: viewState.showCurrentBranchByDefault,
 	showRemoteBranches: viewState.showRemoteBranches
-}, vscode.getState());
+}, viewState.codeReviews, vscode.getState());
 
 
 /* Command Processing */
@@ -1748,6 +1868,9 @@ window.addEventListener('message', event => {
 		case 'createPullRequest':
 			if (msg.error !== null) showErrorDialog('Unable to Create Pull Request', msg.error, null);
 			break;
+		case 'codeReviewsChanged':
+			gitGraph.setCodeReviews(msg.repo, msg.reviews);
+			break;
 		case 'openExternalUrl':
 			if (msg.success === false) showErrorDialog('Unable to open the link', 'Only http and https links can be opened.', null);
 			break;
@@ -1866,7 +1989,11 @@ function generateGitFileTree(gitFiles: GG.GitFileChange[]) {
 	}
 	return files;
 }
-function generateGitFileTreeHtml(folder: GitFolder, gitFiles: GG.GitFileChange[], compactFolders: boolean) {
+interface ReviewedFiles {
+	reviewed: string[];
+	lastViewed: string | null;
+}
+function generateGitFileTreeHtml(folder: GitFolder, gitFiles: GG.GitFileChange[], compactFolders: boolean, review: ReviewedFiles | null = null) {
 	// With compact folders, a chain of folders that each only contain one folder is shown on one line
 	let displayName = folder.name, deepest = folder;
 	if (compactFolders) {
@@ -1882,27 +2009,28 @@ function generateGitFileTreeHtml(folder: GitFolder, gitFiles: GG.GitFileChange[]
 	for (i = 0; i < keys.length; i++) {
 		if (deepest.contents[keys[i]].type === 'folder') {
 			gitFolder = <GitFolder>deepest.contents[keys[i]];
-			html += '<li' + (!gitFolder.open ? ' class="closed"' : '') + '>' + generateGitFileTreeHtml(gitFolder, gitFiles, compactFolders) + '</li>';
+			html += '<li' + (!gitFolder.open ? ' class="closed"' : '') + '>' + generateGitFileTreeHtml(gitFolder, gitFiles, compactFolders, review) + '</li>';
 		} else {
 			gitFile = gitFiles[(<GitFile>(deepest.contents[keys[i]])).index];
-			html += generateGitFileHtml(gitFile, escapeHtml(deepest.contents[keys[i]].name));
+			html += generateGitFileHtml(gitFile, escapeHtml(deepest.contents[keys[i]].name), review);
 		}
 	}
 	return html + '</ul>';
 }
-function generateGitFileListHtml(gitFiles: GG.GitFileChange[]) {
+function generateGitFileListHtml(gitFiles: GG.GitFileChange[], review: ReviewedFiles | null = null) {
 	const indexes = gitFiles.map((_, i) => i).sort((a, b) => gitFiles[a].newFilePath < gitFiles[b].newFilePath ? -1 : gitFiles[a].newFilePath > gitFiles[b].newFilePath ? 1 : 0);
 	let html = '<ul class="gitFolderContents gitFileList">';
 	for (let i = 0; i < indexes.length; i++) {
 		const gitFile = gitFiles[indexes[i]], slash = gitFile.newFilePath.lastIndexOf('/');
 		const label = slash > -1 ? '<span class="gitFileDirectory">' + escapeHtml(gitFile.newFilePath.substring(0, slash + 1)) + '</span>' + escapeHtml(gitFile.newFilePath.substring(slash + 1)) : escapeHtml(gitFile.newFilePath);
-		html += generateGitFileHtml(gitFile, label);
+		html += generateGitFileHtml(gitFile, label, review);
 	}
 	return html + '</ul>';
 }
-function generateGitFileHtml(gitFile: GG.GitFileChange, labelHtml: string) {
+function generateGitFileHtml(gitFile: GG.GitFileChange, labelHtml: string, review: ReviewedFiles | null = null) {
 	const diffPossible = gitFile.additions !== null && gitFile.deletions !== null;
-	return '<li class="gitFile ' + gitFile.type + (diffPossible ? ' gitDiffPossible' : '') + '" data-oldfilepath="' + encodeURIComponent(gitFile.oldFilePath) + '" data-newfilepath="' + encodeURIComponent(gitFile.newFilePath) + '" data-type="' + gitFile.type + '"' + (!diffPossible ? ' title="This is a binary file, unable to view diff."' : '') + '><span class="gitFileIcon">' + svgIcons.file + '</span>' + labelHtml
+	const reviewClasses = review !== null ? (review.reviewed.indexOf(gitFile.newFilePath) > -1 ? ' reviewed' : '') + (review.lastViewed === gitFile.newFilePath ? ' lastViewed' : '') : '';
+	return '<li class="gitFile ' + gitFile.type + (diffPossible ? ' gitDiffPossible' : '') + reviewClasses + '" data-oldfilepath="' + encodeURIComponent(gitFile.oldFilePath) + '" data-newfilepath="' + encodeURIComponent(gitFile.newFilePath) + '" data-type="' + gitFile.type + '"' + (!diffPossible ? ' title="This is a binary file, unable to view diff."' : '') + '><span class="gitFileIcon">' + svgIcons.file + '</span>' + labelHtml
 		+ (gitFile.type === 'R' ? ' <span class="gitFileRename" title="' + escapeHtml(gitFile.oldFilePath + ' was renamed to ' + gitFile.newFilePath) + '">R</span>' : '')
 		+ (gitFile.type !== 'A' && gitFile.type !== 'D' && diffPossible ? '<span class="gitFileAddDel">(<span class="gitFileAdditions" title="' + gitFile.additions + ' addition' + (gitFile.additions !== 1 ? 's' : '') + '">+' + gitFile.additions + '</span>|<span class="gitFileDeletions" title="' + gitFile.deletions + ' deletion' + (gitFile.deletions !== 1 ? 's' : '') + '">-' + gitFile.deletions + '</span>)</span>' : '')
 		+ '</li>';

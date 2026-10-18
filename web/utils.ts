@@ -138,6 +138,11 @@ function linkifyMessage(message: string, issueLinking: { regex: RegExp, url: str
 	return html + escapeHtml(message.substring(position));
 }
 
+/** Identifier of a code review: the commit hash, or "<from>-<to>" for a comparison (mirrors src/codeReview.ts). */
+function codeReviewIdOf(fromHash: string | null, toHash: string) {
+	return fromHash !== null && fromHash !== toHash + '^' ? fromHash + '-' + toHash : toHash;
+}
+
 function insertAfter(newNode: HTMLElement, referenceNode: HTMLElement) {
 	referenceNode.parentNode!.insertBefore(newNode, referenceNode.nextSibling);
 }
