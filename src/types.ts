@@ -157,6 +157,7 @@ export type GitResetMode = 'soft' | 'mixed' | 'hard';
 export type CommitOrdering = 'date' | 'author-date' | 'topo';
 export type GitPushBranchMode = 'normal' | 'force' | 'force-with-lease';
 export type GitRebaseType = 'Branch' | 'Commit';
+export type RepoDropdownOrder = 'Full Path' | 'Name' | 'Workspace Full Path';
 export type SquashMessageFormat = 'Default' | 'Git SQUASH_MSG';
 export interface MergeOptions { createNewCommit: boolean; squash: boolean; noCommit: boolean; }
 export interface CherryPickOptions { parentIndex: number; recordOrigin: boolean; noCommit: boolean; }
@@ -353,6 +354,11 @@ export interface RequestPushTag {
 export interface ResponsePushTag {
 	command: 'pushTag';
 	status: GitCommandStatus;
+}
+
+export interface ResponseSelectRepo {
+	command: 'selectRepo';
+	repo: string;
 }
 
 export interface ResponseRefresh {
@@ -677,6 +683,7 @@ export type ResponseMessage =
 	| ResponseResetToCommit
 	| ResponseResetUncommittedChanges
 	| ResponseRevertCommit
+	| ResponseSelectRepo
 	| ResponseViewDiff
 	| ResponseViewDiffWithWorkingFile
 	| ResponseViewFileAtRevision;

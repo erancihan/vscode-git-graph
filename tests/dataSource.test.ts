@@ -233,6 +233,42 @@ describe('DataSource history actions', () => {
 	});
 });
 
+describe('DataSource submodules', () => {
+	let repo: string, sub: string;
+	let dataSource: DataSource;
+
+	beforeAll(() => {
+		sub = fs.mkdtempSync(path.join(os.tmpdir(), 'git-graph-sub-'));
+		git(sub, ['init', '-q', '-b', 'master']);
+		git(sub, ['config', 'user.name', 'Test Committer']);
+		git(sub, ['config', 'user.email', 'committer@example.com']);
+		git(sub, ['config', 'commit.gpgsign', 'false']);
+		commit(sub, 'lib.txt', 'lib\n', 'Library commit');
+		repo = fs.mkdtempSync(path.join(os.tmpdir(), 'git-graph-super-'));
+		git(repo, ['init', '-q', '-b', 'master']);
+		git(repo, ['config', 'user.name', 'Test Committer']);
+		git(repo, ['config', 'user.email', 'committer@example.com']);
+		git(repo, ['config', 'commit.gpgsign', 'false']);
+		commit(repo, 'a.txt', 'one\n', 'Base commit');
+		git(repo, ['-c', 'protocol.file.allow=always', 'submodule', 'add', '-q', sub, 'vendor/lib']);
+		git(repo, ['commit', '-q', '-m', 'Add submodule']);
+		dataSource = new DataSource(new Logger());
+	});
+
+	afterAll(() => {
+		for (const dir of [repo, sub]) fs.rmSync(dir, { recursive: true, force: true });
+	});
+
+	it('lists the submodule paths from .gitmodules', async () => {
+		expect(await dataSource.getSubmodules(repo)).toEqual(['vendor/lib']);
+		expect(await dataSource.isGitRepository(path.join(repo, 'vendor', 'lib'))).toBe(true);
+	});
+
+	it('returns an empty list when there is no .gitmodules file', async () => {
+		expect(await dataSource.getSubmodules(sub)).toEqual([]);
+	});
+});
+
 describe('DataSource stashes', () => {
 	let repo: string;
 	let dataSource: DataSource;

@@ -7,6 +7,8 @@ const AVATAR_STORAGE_FOLDER = '/avatars';
 const AVATAR_CACHE = 'avatarCache';
 const LAST_ACTIVE_REPO = 'lastActiveRepo';
 const REPO_STATES = 'repoStates';
+const IGNORED_REPOS = 'ignoredRepos';
+const MANUALLY_ADDED_REPOS = 'manuallyAddedRepos';
 
 export class ExtensionState {
 	private globalState: Memento;
@@ -38,6 +40,22 @@ export class ExtensionState {
 	}
 	public saveRepos(gitRepoSet: GitRepoSet) {
 		this.workspaceState.update(REPO_STATES, gitRepoSet);
+	}
+
+	/* Repos removed by the user: discovery must not add them again */
+	public getIgnoredRepos() {
+		return this.workspaceState.get<string[]>(IGNORED_REPOS, []);
+	}
+	public setIgnoredRepos(repos: string[]) {
+		this.workspaceState.update(IGNORED_REPOS, repos);
+	}
+
+	/* Repos added by the user: kept even when they are outside the workspace folders */
+	public getManuallyAddedRepos() {
+		return this.workspaceState.get<string[]>(MANUALLY_ADDED_REPOS, []);
+	}
+	public setManuallyAddedRepos(repos: string[]) {
+		this.workspaceState.update(MANUALLY_ADDED_REPOS, repos);
 	}
 
 	/* Last Active Repo */

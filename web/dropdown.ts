@@ -72,6 +72,10 @@ class Dropdown {
 		this.filterInput.addEventListener('keyup', () => this.filter());
 	}
 
+	public getOptions() {
+		return this.options;
+	}
+
 	public setOptions(options: DropdownOption[], selected: string) {
 		this.options = options;
 		let selectedOption = 0;

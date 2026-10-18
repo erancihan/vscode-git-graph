@@ -124,6 +124,19 @@ class GitGraphView {
 		return this.config.dialogDefaults;
 	}
 
+	/** Switch to a repository (for example the one of the active editor). Ignored when it is unknown or already shown. */
+	public selectRepo(repo: string) {
+		if (typeof this.gitRepos[repo] === 'undefined' || repo === this.currentRepo) return;
+		this.currentRepo = repo;
+		this.maxCommits = this.config.initialLoadCommits;
+		this.expandedCommit = null;
+		this.currentBranch = null;
+		this.scrollToHeadPending = this.config.scrollToHeadOnLoad;
+		this.saveState();
+		this.repoDropdown.setOptions(this.repoDropdown.getOptions(), this.currentRepo);
+		this.refresh(true);
+	}
+
 	/* Loading Data */
 	public loadRepos(repos: GG.GitRepoSet, lastActiveRepo: string | null) {
 		this.gitRepos = repos;
@@ -1296,6 +1309,9 @@ window.addEventListener('message', event => {
 			break;
 		case 'refresh':
 			gitGraph.refresh(false);
+			break;
+		case 'selectRepo':
+			gitGraph.selectRepo(msg.repo);
 			break;
 		case 'resetToCommit':
 			refreshGraphOrDisplayError(msg.status, 'Unable to Reset to Commit');

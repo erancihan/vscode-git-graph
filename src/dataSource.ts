@@ -194,6 +194,18 @@ export class DataSource {
 		return this.spawnGit(['remote'], repo, (stdout) => stdout.split(eolRegex).filter((line) => line !== '')).catch((): string[] => []);
 	}
 
+	/** Paths (relative to the repository) of the submodules declared in .gitmodules. */
+	public getSubmodules(repo: string) {
+		return this.spawnGit(['config', '--file', '.gitmodules', '--get-regexp', '^submodule\\..*\\.path$'], repo, (stdout) => {
+			const lines = stdout.split(eolRegex), paths: string[] = [];
+			for (let i = 0; i < lines.length; i++) {
+				const space = lines[i].indexOf(' ');
+				if (space > -1) paths.push(getPathFromStr(lines[i].substring(space + 1).trim()));
+			}
+			return paths;
+		}, false).catch((): string[] => []);
+	}
+
 	public isGitRepository(path: string) {
 		return this.spawnGit(['rev-parse', '--git-dir'], path, () => true, false).catch(() => false);
 	}
