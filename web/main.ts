@@ -176,12 +176,12 @@ class GitGraphView {
 		this.gitBranchHead = branchHead;
 		this.gitRemotes = remotes;
 		document.getElementById('fetchBtn')!.style.display = remotes.length > 0 ? '' : 'none';
-		if (this.currentBranch === null || (this.currentBranch !== '' && this.gitBranches.indexOf(this.currentBranch) === -1)) {
+		if (this.currentBranch === null || (this.currentBranch !== '' && this.currentBranch !== 'HEAD' && this.gitBranches.indexOf(this.currentBranch) === -1)) {
 			this.currentBranch = this.config.showCurrentBranchByDefault && this.gitBranchHead !== null ? this.gitBranchHead : '';
 		}
 		this.saveState();
 
-		const options = [{ name: 'Show All', value: '' }];
+		const options = [{ name: 'Show All', value: '' }, { name: 'HEAD (checked-out commit)', value: 'HEAD' }];
 		for (let i = 0; i < this.gitBranches.length; i++) {
 			options.push({ name: this.gitBranches[i].indexOf('remotes/') === 0 ? this.gitBranches[i].substring(8) : this.gitBranches[i], value: this.gitBranches[i] });
 		}
@@ -550,6 +550,13 @@ class GitGraphView {
 					visible: visibility.copyHash,
 					onClick: () => {
 						sendMessage({ command: 'copyToClipboard', type: 'Commit Hash', data: hash });
+					}
+				},
+				{
+					title: 'Copy Short Commit Hash to Clipboard',
+					visible: visibility.copyHash,
+					onClick: () => {
+						sendMessage({ command: 'copyToClipboard', type: 'Short Commit Hash', data: abbrevCommit(hash) });
 					}
 				}
 			], sourceElem);
@@ -1171,7 +1178,12 @@ class GitGraphView {
 		html += '<b>Parents: </b>' + commitDetails.parents.join(', ') + '<br>';
 		html += '<b>Author: </b>' + escapeHtml(commitDetails.author) + ' &lt;<a href="mailto:' + encodeURIComponent(commitDetails.email) + '">' + escapeHtml(commitDetails.email) + '</a>&gt;<br>';
 		html += '<b>Date: </b>' + (new Date(commitDetails.date * 1000)).toString() + '<br>';
-		html += '<b>Committer: </b>' + escapeHtml(commitDetails.committer) + '</span>';
+		html += '<b>Committer: </b>' + escapeHtml(commitDetails.committer);
+		const refs = typeof this.commitLookup[commitDetails.hash] === 'number' ? this.commits[this.commitLookup[commitDetails.hash]].refs : [];
+		const branches = refs.filter((ref) => ref.type === 'head' || ref.type === 'remote').map((ref) => escapeHtml(ref.name)), tags = refs.filter((ref) => ref.type === 'tag').map((ref) => escapeHtml(ref.name));
+		if (branches.length > 0) html += '<br><b>Branches: </b>' + branches.join(', ');
+		if (tags.length > 0) html += '<br><b>Tags: </b>' + tags.join(', ');
+		html += '</span>';
 		if (typeof this.avatars[commitDetails.email] === 'string') html += '<span class="commitDetailsSummaryAvatar"><img src="' + this.avatars[commitDetails.email] + '"></span>';
 		html += '</span></span><br><br>';
 		html += escapeHtml(commitDetails.body).replace(/\n/g, '<br>') + '</div>';
