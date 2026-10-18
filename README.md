@@ -52,6 +52,8 @@ This extension contributes the following settings:
 * `git-graph.repository.showRemoteHeads`: Show remote HEAD references such as `origin/HEAD`. Default: true.
 * `git-graph.repository.showTags`: Show tags on the graph. Default: true.
 * `git-graph.repository.showUncommittedChanges`: Show uncommitted changes. Set to false to decrease load time on large repositories.
+* `git-graph.repository.showUntrackedFiles`: Count untracked files in the "Uncommitted Changes" row. Default: true.
+* `git-graph.repository.useMailmap`: Apply the repository's `.mailmap` to author and committer identities. Default: false.
 * `git-graph.showStatusBarItem`: Show a Status Bar item that opens Git Graph when clicked.
 * `git-graph.tabIconColourTheme`: Specifies the colour theme of the icon displayed on the Git Graph tab.
 

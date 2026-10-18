@@ -209,6 +209,16 @@
 					"default": true,
 					"description": "Show uncommitted changes (set to false to decrease load time on large repositories)."
 				},
+				"git-graph.repository.showUntrackedFiles": {
+					"type": "boolean",
+					"default": true,
+					"description": "Count untracked files in the \"Uncommitted Changes\" row. Set to false to speed up loading in repositories with many untracked files."
+				},
+				"git-graph.repository.useMailmap": {
+					"type": "boolean",
+					"default": false,
+					"description": "Apply the .mailmap file of the repository to author and committer names and email addresses."
+				},
 				"git-graph.showStatusBarItem": {
 					"type": "boolean",
 					"default": true,

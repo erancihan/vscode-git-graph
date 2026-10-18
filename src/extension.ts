@@ -30,9 +30,6 @@ export function activate(context: vscode.ExtensionContext) {
 			if (e.affectsConfiguration('git-graph.showStatusBarItem')) {
 				statusBarItem.refresh();
 			}
-			if (e.affectsConfiguration('git-graph.date.type') || e.affectsConfiguration('git-graph.dateType')) {
-				dataSource.generateGitCommandFormats();
-			}
 			if (e.affectsConfiguration('git-graph.maxDepthOfRepoSearch')) {
 				repoManager.maxDepthOfRepoSearchChanged();
 			}
