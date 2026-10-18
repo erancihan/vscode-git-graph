@@ -101,8 +101,16 @@ export interface DialogDefaults {
 	general: { referenceInputSpaceSubstitution: string | null };
 }
 
+export type FileViewType = 'tree' | 'list';
+
+export interface CommitDetailsViewConfig {
+	fileViewType: FileViewType;
+	compactFolders: boolean;
+}
+
 export interface GitGraphViewState {
 	autoCenterCommitDetailsView: boolean;
+	commitDetailsView: CommitDetailsViewConfig;
 	contextMenuActionsVisibility: ContextMenuActionsVisibility;
 	dateFormat: DateFormat;
 	defaultColumnVisibility: ColumnVisibility;
@@ -542,6 +550,38 @@ export interface ResponsePushStash {
 	status: GitCommandStatus;
 }
 
+export interface RequestOpenFile {
+	command: 'openFile';
+	repo: string;
+	filePath: string;
+}
+export interface ResponseOpenFile {
+	command: 'openFile';
+	success: boolean;
+}
+
+export interface RequestViewFileAtRevision {
+	command: 'viewFileAtRevision';
+	repo: string;
+	commitHash: string;
+	filePath: string;
+}
+export interface ResponseViewFileAtRevision {
+	command: 'viewFileAtRevision';
+	success: boolean;
+}
+
+export interface RequestViewDiffWithWorkingFile {
+	command: 'viewDiffWithWorkingFile';
+	repo: string;
+	commitHash: string;
+	filePath: string;
+}
+export interface ResponseViewDiffWithWorkingFile {
+	command: 'viewDiffWithWorkingFile';
+	success: boolean;
+}
+
 export interface RequestSaveRepoState {
 	command: 'saveRepoState';
 	repo: string;
@@ -585,6 +625,7 @@ export type RequestMessage =
 	| RequestLoadRepos
 	| RequestMergeBranch
 	| RequestMergeCommit
+	| RequestOpenFile
 	| RequestPopStash
 	| RequestPullBranch
 	| RequestPushBranch
@@ -596,7 +637,9 @@ export type RequestMessage =
 	| RequestResetUncommittedChanges
 	| RequestRevertCommit
 	| RequestSaveRepoState
-	| RequestViewDiff;
+	| RequestViewDiff
+	| RequestViewDiffWithWorkingFile
+	| RequestViewFileAtRevision;
 
 export type ResponseMessage =
 	ResponseAddTag
@@ -622,6 +665,7 @@ export type ResponseMessage =
 	| ResponseLoadRepos
 	| ResponseMergeBranch
 	| ResponseMergeCommit
+	| ResponseOpenFile
 	| ResponsePopStash
 	| ResponsePullBranch
 	| ResponsePushBranch
@@ -633,4 +677,6 @@ export type ResponseMessage =
 	| ResponseResetToCommit
 	| ResponseResetUncommittedChanges
 	| ResponseRevertCommit
-	| ResponseViewDiff;
+	| ResponseViewDiff
+	| ResponseViewDiffWithWorkingFile
+	| ResponseViewFileAtRevision;

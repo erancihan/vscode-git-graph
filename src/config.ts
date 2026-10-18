@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ColumnVisibility, CommitOrdering, ContextMenuActionsVisibility, DateFormat, DateType, DialogDefaults, GitResetMode, GraphStyle, KeyboardShortcuts, SquashMessageFormat, TabIconColourTheme } from './types';
+import { ColumnVisibility, CommitDetailsViewConfig, CommitOrdering, ContextMenuActionsVisibility, DateFormat, DateType, DialogDefaults, GitResetMode, GraphStyle, KeyboardShortcuts, SquashMessageFormat, TabIconColourTheme } from './types';
 
 const DEFAULT_GRAPH_COLOURS = ['#0085d9', '#d9008f', '#00d90a', '#d98500', '#a300d9', '#ff0000', '#00d9cc', '#e138e8', '#85d900', '#dc5b23', '#6f24d6', '#ffcc00'];
 const GRAPH_COLOUR_REGEX = /^\s*(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|rgb[a]?\s*\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\))\s*$/;
@@ -24,6 +24,13 @@ class Config {
 
 	public autoCenterCommitDetailsView() {
 		return this.getBoolean('commitDetailsView.autoCenter', 'autoCenterCommitDetailsView', true);
+	}
+
+	public commitDetailsView(): CommitDetailsViewConfig {
+		return {
+			fileViewType: this.getEnum('commitDetailsView.fileView.type', 'defaultFileViewType', ['File Tree', 'File List'], 'File Tree') === 'File List' ? 'list' : 'tree',
+			compactFolders: this.getBoolean('commitDetailsView.fileView.fileTree.compactFolders', 'commitDetailsViewFileTreeCompactFolders', true)
+		};
 	}
 
 	/* Date */

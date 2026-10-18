@@ -269,6 +269,12 @@ export class GitGraphView {
 						status: await this.dataSource.pushBranch(msg.repo, msg.branchName, msg.remote, msg.setUpstream, msg.mode)
 					});
 					break;
+				case 'openFile':
+					this.sendMessage({
+						command: 'openFile',
+						success: await openFile(msg.repo, msg.filePath)
+					});
+					break;
 				case 'pushTag':
 					this.sendMessage({
 						command: 'pushTag',
@@ -311,7 +317,19 @@ export class GitGraphView {
 				case 'viewDiff':
 					this.sendMessage({
 						command: 'viewDiff',
-						success: await this.viewDiff(msg.repo, msg.commitHash, msg.oldFilePath, msg.newFilePath, msg.type)
+						success: await viewDiff(msg.repo, msg.commitHash, msg.oldFilePath, msg.newFilePath, msg.type)
+					});
+					break;
+				case 'viewDiffWithWorkingFile':
+					this.sendMessage({
+						command: 'viewDiffWithWorkingFile',
+						success: await viewDiffWithWorkingFile(msg.repo, msg.commitHash, msg.filePath)
+					});
+					break;
+				case 'viewFileAtRevision':
+					this.sendMessage({
+						command: 'viewFileAtRevision',
+						success: await viewFileAtRevision(msg.repo, msg.commitHash, msg.filePath)
 					});
 					break;
 			}
@@ -344,6 +362,7 @@ export class GitGraphView {
 		const config = getConfig(), nonce = getNonce();
 		const viewState: GitGraphViewState = {
 			autoCenterCommitDetailsView: config.autoCenterCommitDetailsView(),
+			commitDetailsView: config.commitDetailsView(),
 			contextMenuActionsVisibility: config.contextMenuActionsVisibility(),
 			dateFormat: config.dateFormat(),
 			defaultColumnVisibility: config.defaultColumnVisibility(),
@@ -433,16 +452,42 @@ export class GitGraphView {
 		});
 	}
 
-	private viewDiff(repo: string, commitHash: string, oldFilePath: string, newFilePath: string, type: GitFileChangeType) {
-		const abbrevHash = abbrevCommit(commitHash);
-		const pathComponents = newFilePath.split('/');
-		const title = pathComponents[pathComponents.length - 1] + ' (' + (type === 'A' ? 'Added in ' + abbrevHash : type === 'D' ? 'Deleted in ' + abbrevHash : abbrevCommit(commitHash) + '^ ↔ ' + abbrevCommit(commitHash)) + ')';
-		return new Promise<boolean>((resolve) => {
-			vscode.commands.executeCommand('vscode.diff', encodeDiffDocUri(repo, oldFilePath, commitHash + '^'), encodeDiffDocUri(repo, newFilePath, commitHash), title, { preview: true })
-				.then(() => resolve(true))
-				.then(() => resolve(false));
-		});
-	}
+}
+
+/* File actions */
+
+/** Open the Visual Studio Code diff of a file change in a commit. */
+function viewDiff(repo: string, commitHash: string, oldFilePath: string, newFilePath: string, type: GitFileChangeType) {
+	const abbrevHash = abbrevCommit(commitHash);
+	const title = fileName(newFilePath) + ' (' + (type === 'A' ? 'Added in ' + abbrevHash : type === 'D' ? 'Deleted in ' + abbrevHash : abbrevHash + '^ ↔ ' + abbrevHash) + ')';
+	return runToBoolean(vscode.commands.executeCommand('vscode.diff', encodeDiffDocUri(repo, oldFilePath, commitHash + '^'), encodeDiffDocUri(repo, newFilePath, commitHash), title, { preview: true }));
+}
+
+/** Open the Visual Studio Code diff between a file at a commit and the file in the working tree. */
+function viewDiffWithWorkingFile(repo: string, commitHash: string, filePath: string) {
+	const title = fileName(filePath) + ' (' + abbrevCommit(commitHash) + ' ↔ Working File)';
+	return runToBoolean(vscode.commands.executeCommand('vscode.diff', encodeDiffDocUri(repo, filePath, commitHash), vscode.Uri.file(path.join(repo, filePath)), title, { preview: true }));
+}
+
+/** Open the content of a file as it was at a commit, read-only. */
+function viewFileAtRevision(repo: string, commitHash: string, filePath: string) {
+	return runToBoolean(vscode.window.showTextDocument(encodeDiffDocUri(repo, filePath, commitHash), { preview: true }));
+}
+
+/** Open the file from the working tree. */
+function openFile(repo: string, filePath: string) {
+	return runToBoolean(vscode.window.showTextDocument(vscode.Uri.file(path.join(repo, filePath)), { preview: true }));
+}
+
+function fileName(filePath: string) {
+	const pathComponents = filePath.split('/');
+	return pathComponents[pathComponents.length - 1];
+}
+
+function runToBoolean(thenable: Thenable<unknown>) {
+	return new Promise<boolean>((resolve) => {
+		thenable.then(() => resolve(true), () => resolve(false));
+	});
 }
 
 function getNonce() {

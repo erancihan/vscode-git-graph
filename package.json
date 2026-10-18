@@ -75,6 +75,24 @@
 					"default": true,
 					"description": "Automatically center the commit details view when it is opened."
 				},
+				"git-graph.commitDetailsView.fileView.fileTree.compactFolders": {
+					"type": "boolean",
+					"default": true,
+					"description": "In the file tree, show a folder that only contains one other folder on one line, for example \"src/web/graph\"."
+				},
+				"git-graph.commitDetailsView.fileView.type": {
+					"type": "string",
+					"enum": [
+						"File Tree",
+						"File List"
+					],
+					"enumDescriptions": [
+						"Show the changed files as a tree of folders",
+						"Show the changed files as a flat list with their paths"
+					],
+					"default": "File Tree",
+					"description": "Default view of the changed files in the Commit Details View. The view can be switched with the buttons above the files."
+				},
 				"git-graph.contextMenuActionsVisibility": {
 					"type": "object",
 					"default": {},

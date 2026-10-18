@@ -255,6 +255,36 @@ svg.openFolderIcon, svg.closedFolderIcon, svg.fileIcon{
 .gitFolder{
 	cursor:pointer;
 }
+#commitDetailsFileViewSwitch{
+	position:absolute;
+	top:4px;
+	right:8px;
+	line-height:16px;
+}
+.fileViewTypeBtn{
+	display:inline-block;
+	width:18px;
+	height:18px;
+	margin-left:2px;
+	border-radius:3px;
+	text-align:center;
+	cursor:pointer;
+	opacity:0.6;
+}
+.fileViewTypeBtn svg{
+	fill:var(--vscode-editor-foreground);
+	vertical-align:middle;
+}
+.fileViewTypeBtn:hover, .fileViewTypeBtn.active{
+	opacity:1;
+	background-color:rgba(128,128,128,0.2);
+}
+.gitFileList{
+	margin-top:14px;
+}
+.gitFileDirectory{
+	opacity:0.6;
+}
 .gitFile{
 	color:var(--vscode-gitDecoration-modifiedResourceForeground);
 }

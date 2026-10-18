@@ -152,6 +152,16 @@ describe('Config.contextMenuActionsVisibility', () => {
 	});
 });
 
+describe('Config.commitDetailsView', () => {
+	it('defaults to the file tree with compact folders and reads the flat fallbacks', () => {
+		expect(getConfig().commitDetailsView()).toEqual({ fileViewType: 'tree', compactFolders: true });
+		setConfig({ 'defaultFileViewType': 'File List', 'commitDetailsViewFileTreeCompactFolders': false });
+		expect(getConfig().commitDetailsView()).toEqual({ fileViewType: 'list', compactFolders: false });
+		setConfig({ 'commitDetailsView.fileView.type': 'File Tree', 'defaultFileViewType': 'File List' });
+		expect(getConfig().commitDetailsView().fileViewType).toBe('tree');
+	});
+});
+
 describe('Config.defaultColumnVisibility', () => {
 	it('shows every column by default and reads the setting leniently', () => {
 		expect(getConfig().defaultColumnVisibility()).toEqual({ date: true, author: true, commit: true });

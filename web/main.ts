@@ -19,6 +19,7 @@ class GitGraphView {
 	private maxCommits: number;
 	private scrollToHeadPending: boolean;
 	private lastStashScrolledTo: number = -1;
+	private fileViewType: GG.FileViewType;
 
 	private tableElem: HTMLElement;
 	private footerElem: HTMLElement;
@@ -36,6 +37,7 @@ class GitGraphView {
 		this.maxCommits = config.initialLoadCommits;
 		this.showRemoteBranches = config.showRemoteBranches;
 		this.scrollToHeadPending = config.scrollToHeadOnLoad && prevState === null;
+		this.fileViewType = prevState !== null && prevState.fileViewType ? prevState.fileViewType : config.commitDetailsView.fileViewType;
 		this.graph = new Graph('commitGraph', this.config);
 		this.tableElem = document.getElementById('commitTable')!;
 		this.registerTableListeners();
@@ -309,7 +311,8 @@ class GitGraphView {
 			moreCommitsAvailable: this.moreCommitsAvailable,
 			maxCommits: this.maxCommits,
 			showRemoteBranches: this.showRemoteBranches,
-			expandedCommit: this.expandedCommit
+			expandedCommit: this.expandedCommit,
+			fileViewType: this.fileViewType
 		});
 	}
 
@@ -1072,7 +1075,10 @@ class GitGraphView {
 		if (typeof this.avatars[commitDetails.email] === 'string') html += '<span class="commitDetailsSummaryAvatar"><img src="' + this.avatars[commitDetails.email] + '"></span>';
 		html += '</span></span><br><br>';
 		html += escapeHtml(commitDetails.body).replace(/\n/g, '<br>') + '</div>';
-		html += '<div id="commitDetailsFiles">' + generateGitFileTreeHtml(fileTree, commitDetails.fileChanges) + '</table></div>';
+		html += '<div id="commitDetailsFiles"><div id="commitDetailsFileViewSwitch">'
+			+ '<span class="fileViewTypeBtn' + (this.fileViewType === 'tree' ? ' active' : '') + '" data-type="tree" title="File Tree">' + svgIcons.fileTree + '</span>'
+			+ '<span class="fileViewTypeBtn' + (this.fileViewType === 'list' ? ' active' : '') + '" data-type="list" title="File List">' + svgIcons.fileList + '</span>'
+			+ '</div>' + (this.fileViewType === 'tree' ? generateGitFileTreeHtml(fileTree, commitDetails.fileChanges, this.config.commitDetailsView.compactFolders) : generateGitFileListHtml(commitDetails.fileChanges)) + '</div>';
 		html += '<div id="commitDetailsClose">' + svgIcons.close + '</div>';
 		html += '</td>';
 
@@ -1114,6 +1120,52 @@ class GitGraphView {
 			if (this.expandedCommit === null || !sourceElem.classList.contains('gitDiffPossible')) return;
 			sendMessage({ command: 'viewDiff', repo: this.currentRepo!, commitHash: this.expandedCommit.hash, oldFilePath: decodeURIComponent(sourceElem.dataset.oldfilepath!), newFilePath: decodeURIComponent(sourceElem.dataset.newfilepath!), type: <GG.GitFileChangeType>sourceElem.dataset.type });
 		});
+		addListenerToClass('gitFile', 'contextmenu', (e) => {
+			e.stopPropagation();
+			const sourceElem = <HTMLElement>(<Element>e.target).closest('.gitFile')!;
+			if (this.expandedCommit === null) return;
+			const hash = this.expandedCommit.hash, type = <GG.GitFileChangeType>sourceElem.dataset.type;
+			const oldFilePath = decodeURIComponent(sourceElem.dataset.oldfilepath!), newFilePath = decodeURIComponent(sourceElem.dataset.newfilepath!);
+			const existsAtCommit = type !== 'D';
+			showContextMenu(<MouseEvent>e, [
+				{
+					title: 'View Diff',
+					visible: sourceElem.classList.contains('gitDiffPossible'),
+					onClick: () => sendMessage({ command: 'viewDiff', repo: this.currentRepo!, commitHash: hash, oldFilePath: oldFilePath, newFilePath: newFilePath, type: type })
+				},
+				{
+					title: 'View File at this Revision',
+					visible: existsAtCommit,
+					onClick: () => sendMessage({ command: 'viewFileAtRevision', repo: this.currentRepo!, commitHash: hash, filePath: newFilePath })
+				},
+				{
+					title: 'View Diff with Working File',
+					visible: existsAtCommit,
+					onClick: () => sendMessage({ command: 'viewDiffWithWorkingFile', repo: this.currentRepo!, commitHash: hash, filePath: newFilePath })
+				},
+				{
+					title: 'Open File',
+					visible: existsAtCommit,
+					onClick: () => sendMessage({ command: 'openFile', repo: this.currentRepo!, filePath: newFilePath })
+				},
+				null,
+				{
+					title: 'Copy Absolute File Path to Clipboard',
+					onClick: () => sendMessage({ command: 'copyToClipboard', type: 'File Path', data: this.currentRepo + '/' + newFilePath })
+				},
+				{
+					title: 'Copy Relative File Path to Clipboard',
+					onClick: () => sendMessage({ command: 'copyToClipboard', type: 'File Path', data: newFilePath })
+				}
+			], sourceElem);
+		});
+		addListenerToClass('fileViewTypeBtn', 'click', (e) => {
+			const type = <GG.FileViewType>(<HTMLElement>(<Element>e.target).closest('.fileViewTypeBtn')!).dataset.type;
+			if (type === this.fileViewType || this.expandedCommit === null || this.expandedCommit.commitDetails === null || this.expandedCommit.fileTree === null) return;
+			this.fileViewType = type;
+			this.saveState();
+			this.showCommitDetails(this.expandedCommit.commitDetails, this.expandedCommit.fileTree);
+		});
 	}
 }
 
@@ -1121,6 +1173,7 @@ let contextMenu = document.getElementById('contextMenu')!, contextMenuSource: HT
 let dialog = document.getElementById('dialog')!, dialogBacking = document.getElementById('dialogBacking')!, dialogMenuSource: HTMLElement | null = null;
 const gitGraph = new GitGraphView(viewState.repos, viewState.lastActiveRepo, {
 	autoCenterCommitDetailsView: viewState.autoCenterCommitDetailsView,
+	commitDetailsView: viewState.commitDetailsView,
 	contextMenuActionsVisibility: viewState.contextMenuActionsVisibility,
 	defaultColumnVisibility: viewState.defaultColumnVisibility,
 	dialogDefaults: viewState.dialogDefaults,
@@ -1253,8 +1306,17 @@ window.addEventListener('message', event => {
 		case 'revertCommit':
 			refreshGraphOrDisplayError(msg.status, 'Unable to Revert Commit');
 			break;
+		case 'openFile':
+			if (msg.success === false) showErrorDialog('Unable to open file', null, null);
+			break;
 		case 'viewDiff':
 			if (msg.success === false) showErrorDialog('Unable to view diff of file', null, null);
+			break;
+		case 'viewDiffWithWorkingFile':
+			if (msg.success === false) showErrorDialog('Unable to view diff with the working file', null, null);
+			break;
+		case 'viewFileAtRevision':
+			if (msg.success === false) showErrorDialog('Unable to view the file at this revision', null, null);
 			break;
 	}
 });
@@ -1334,19 +1396,46 @@ function generateGitFileTree(gitFiles: GG.GitFileChange[]) {
 	}
 	return files;
 }
-function generateGitFileTreeHtml(folder: GitFolder, gitFiles: GG.GitFileChange[]) {
-	let html = (folder.name !== '' ? '<span class="gitFolder" data-folderpath="' + encodeURIComponent(folder.folderPath) + '"><span class="gitFolderIcon">' + (folder.open ? svgIcons.openFolder : svgIcons.closedFolder) + '</span><span class="gitFolderName">' + folder.name + '</span></span>' : '') + '<ul class="gitFolderContents' + (!folder.open ? ' hidden' : '') + '">', keys = Object.keys(folder.contents), i, gitFile, gitFolder;
-	keys.sort((a, b) => folder.contents[a].type === 'folder' && folder.contents[b].type === 'file' ? -1 : folder.contents[a].type === 'file' && folder.contents[b].type === 'folder' ? 1 : folder.contents[a].name < folder.contents[b].name ? -1 : folder.contents[a].name > folder.contents[b].name ? 1 : 0);
+function generateGitFileTreeHtml(folder: GitFolder, gitFiles: GG.GitFileChange[], compactFolders: boolean) {
+	// With compact folders, a chain of folders that each only contain one folder is shown on one line
+	let displayName = folder.name, deepest = folder;
+	if (compactFolders) {
+		let keys = Object.keys(deepest.contents);
+		while (deepest.name !== '' && keys.length === 1 && deepest.contents[keys[0]].type === 'folder') {
+			deepest = <GitFolder>deepest.contents[keys[0]];
+			displayName += '/' + deepest.name;
+			keys = Object.keys(deepest.contents);
+		}
+	}
+	let html = (folder.name !== '' ? '<span class="gitFolder" data-folderpath="' + encodeURIComponent(deepest.folderPath) + '"><span class="gitFolderIcon">' + (deepest.open ? svgIcons.openFolder : svgIcons.closedFolder) + '</span><span class="gitFolderName">' + escapeHtml(displayName) + '</span></span>' : '') + '<ul class="gitFolderContents' + (!deepest.open ? ' hidden' : '') + '">', keys = Object.keys(deepest.contents), i, gitFile, gitFolder;
+	keys.sort((a, b) => deepest.contents[a].type === 'folder' && deepest.contents[b].type === 'file' ? -1 : deepest.contents[a].type === 'file' && deepest.contents[b].type === 'folder' ? 1 : deepest.contents[a].name < deepest.contents[b].name ? -1 : deepest.contents[a].name > deepest.contents[b].name ? 1 : 0);
 	for (i = 0; i < keys.length; i++) {
-		if (folder.contents[keys[i]].type === 'folder') {
-			gitFolder = <GitFolder>folder.contents[keys[i]];
-			html += '<li' + (!gitFolder.open ? ' class="closed"' : '') + '>' + generateGitFileTreeHtml(gitFolder, gitFiles) + '</li>';
+		if (deepest.contents[keys[i]].type === 'folder') {
+			gitFolder = <GitFolder>deepest.contents[keys[i]];
+			html += '<li' + (!gitFolder.open ? ' class="closed"' : '') + '>' + generateGitFileTreeHtml(gitFolder, gitFiles, compactFolders) + '</li>';
 		} else {
-			gitFile = gitFiles[(<GitFile>(folder.contents[keys[i]])).index];
-			html += '<li class="gitFile ' + gitFile.type + (gitFile.additions !== null && gitFile.deletions !== null ? ' gitDiffPossible' : '') + '" data-oldfilepath="' + encodeURIComponent(gitFile.oldFilePath) + '" data-newfilepath="' + encodeURIComponent(gitFile.newFilePath) + '" data-type="' + gitFile.type + '"' + (gitFile.additions === null || gitFile.deletions === null ? ' title="This is a binary file, unable to view diff."' : '') + '><span class="gitFileIcon">' + svgIcons.file + '</span>' + folder.contents[keys[i]].name + (gitFile.type === 'R' ? ' <span class="gitFileRename" title="' + escapeHtml(gitFile.oldFilePath + ' was renamed to ' + gitFile.newFilePath) + '">R</span>' : '') + (gitFile.type !== 'A' && gitFile.type !== 'D' && gitFile.additions !== null && gitFile.deletions !== null ? '<span class="gitFileAddDel">(<span class="gitFileAdditions" title="' + gitFile.additions + ' addition' + (gitFile.additions !== 1 ? 's' : '') + '">+' + gitFile.additions + '</span>|<span class="gitFileDeletions" title="' + gitFile.deletions + ' deletion' + (gitFile.deletions !== 1 ? 's' : '') + '">-' + gitFile.deletions + '</span>)</span>' : '') + '</li>';
+			gitFile = gitFiles[(<GitFile>(deepest.contents[keys[i]])).index];
+			html += generateGitFileHtml(gitFile, escapeHtml(deepest.contents[keys[i]].name));
 		}
 	}
 	return html + '</ul>';
+}
+function generateGitFileListHtml(gitFiles: GG.GitFileChange[]) {
+	const indexes = gitFiles.map((_, i) => i).sort((a, b) => gitFiles[a].newFilePath < gitFiles[b].newFilePath ? -1 : gitFiles[a].newFilePath > gitFiles[b].newFilePath ? 1 : 0);
+	let html = '<ul class="gitFolderContents gitFileList">';
+	for (let i = 0; i < indexes.length; i++) {
+		const gitFile = gitFiles[indexes[i]], slash = gitFile.newFilePath.lastIndexOf('/');
+		const label = slash > -1 ? '<span class="gitFileDirectory">' + escapeHtml(gitFile.newFilePath.substring(0, slash + 1)) + '</span>' + escapeHtml(gitFile.newFilePath.substring(slash + 1)) : escapeHtml(gitFile.newFilePath);
+		html += generateGitFileHtml(gitFile, label);
+	}
+	return html + '</ul>';
+}
+function generateGitFileHtml(gitFile: GG.GitFileChange, labelHtml: string) {
+	const diffPossible = gitFile.additions !== null && gitFile.deletions !== null;
+	return '<li class="gitFile ' + gitFile.type + (diffPossible ? ' gitDiffPossible' : '') + '" data-oldfilepath="' + encodeURIComponent(gitFile.oldFilePath) + '" data-newfilepath="' + encodeURIComponent(gitFile.newFilePath) + '" data-type="' + gitFile.type + '"' + (!diffPossible ? ' title="This is a binary file, unable to view diff."' : '') + '><span class="gitFileIcon">' + svgIcons.file + '</span>' + labelHtml
+		+ (gitFile.type === 'R' ? ' <span class="gitFileRename" title="' + escapeHtml(gitFile.oldFilePath + ' was renamed to ' + gitFile.newFilePath) + '">R</span>' : '')
+		+ (gitFile.type !== 'A' && gitFile.type !== 'D' && diffPossible ? '<span class="gitFileAddDel">(<span class="gitFileAdditions" title="' + gitFile.additions + ' addition' + (gitFile.additions !== 1 ? 's' : '') + '">+' + gitFile.additions + '</span>|<span class="gitFileDeletions" title="' + gitFile.deletions + ' deletion' + (gitFile.deletions !== 1 ? 's' : '') + '">-' + gitFile.deletions + '</span>)</span>' : '')
+		+ '</li>';
 }
 function alterGitFileTree(folder: GitFolder, folderPath: string, open: boolean) {
 	let path = folderPath.split('/'), i, cur = folder;
