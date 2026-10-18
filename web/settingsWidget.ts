@@ -98,6 +98,14 @@ class SettingsWidget {
 				+ '<option value="true"' + (value === true ? ' selected' : '') + '>' + t('Yes') + '</option>'
 				+ '<option value="false"' + (value === false ? ' selected' : '') + '>' + t('No') + '</option></select></td></tr>';
 		}
+		const onLoad = state.onLoad, mode = onLoad === null ? '' : onLoad.showCheckedOutBranch ? (onLoad.showSpecificBranches.length > 0 ? 'head+list' : 'head') : 'list';
+		html += '<tr><td>' + t('Branches shown on load') + '</td><td><select id="settingsOnLoad">'
+			+ '<option value=""' + (mode === '' ? ' selected' : '') + '>' + t('Default (from the extension settings)') + '</option>'
+			+ '<option value="head"' + (mode === 'head' ? ' selected' : '') + '>' + t('The checked-out branch') + '</option>'
+			+ '<option value="head+list"' + (mode === 'head+list' ? ' selected' : '') + '>' + t('The checked-out branch and these branches') + '</option>'
+			+ '<option value="list"' + (mode === 'list' ? ' selected' : '') + '>' + t('These branches') + '</option></select>'
+			+ '<input id="settingsOnLoadBranches" type="text" value="' + escapeHtml(onLoad !== null ? onLoad.showSpecificBranches.join(', ') : '') + '" placeholder="' + t('Branch names separated by commas') + '"' + (mode === 'head+list' || mode === 'list' ? '' : ' disabled') + '>'
+			+ '<span class="settingsHint">' + t('Used when the repository opens without a remembered branch selection. Names of custom glob patterns are accepted too.') + '</span></td></tr>';
 		html += '</table>';
 
 		// Remotes
@@ -170,6 +178,16 @@ class SettingsWidget {
 			this.view.saveRepoState(repo, state);
 			this.render();
 		});
+		const onLoadSelect = <HTMLSelectElement>document.getElementById('settingsOnLoad')!, onLoadInput = <HTMLInputElement>document.getElementById('settingsOnLoadBranches')!;
+		const saveOnLoad = () => {
+			const state = this.view.getRepoState(repo), mode = onLoadSelect.value;
+			const branches = mode === 'head+list' || mode === 'list' ? onLoadInput.value.split(',').map((name) => name.trim()).filter((name) => name !== '' && name[0] !== '-') : [];
+			state.onLoad = mode === '' || (mode === 'list' && branches.length === 0) ? null : { showCheckedOutBranch: mode !== 'list', showSpecificBranches: branches };
+			this.view.saveRepoState(repo, state);
+			this.render();
+		};
+		onLoadSelect.addEventListener('change', saveOnLoad);
+		onLoadInput.addEventListener('change', saveOnLoad);
 		addListenerToClass('settingsOverride', 'change', (e) => {
 			const select = <HTMLSelectElement>e.target, key = <OverrideKey>select.dataset.key, state = this.view.getRepoState(repo);
 			state[key] = select.value === '' ? null : select.value === 'true';

@@ -1031,6 +1031,9 @@ svg.openFolderIcon, svg.closedFolderIcon, svg.fileIcon{
 .settingsBtn:hover{
 	background-color:rgba(128,128,128,0.2);
 }
+#settingsOnLoadBranches{
+	margin-top:4px;
+}
 .settingsHint{
 	display:block;
 	font-size:11px;
