@@ -8,6 +8,14 @@ export interface GitCommitNode {
 	date: number;
 	message: string;
 	refs: GitRef[];
+	stash: GitStash | null;
+}
+
+/** A stash entry. The stash commit is shown as a row above `baseHash`, the commit it was created from. */
+export interface GitStash {
+	selector: string; // e.g. "stash@{0}"
+	baseHash: string;
+	untrackedFilesHash: string | null;
 }
 
 export interface GitCommit {
@@ -17,6 +25,7 @@ export interface GitCommit {
 	email: string;
 	date: number;
 	message: string;
+	stash?: GitStash;
 }
 
 export interface GitCommitDetails {
@@ -33,7 +42,7 @@ export interface GitCommitDetails {
 export interface GitRef {
 	hash: string;
 	name: string;
-	type: 'head' | 'tag' | 'remote';
+	type: 'head' | 'tag' | 'remote' | 'stash';
 }
 
 export interface GitRefData {
@@ -55,21 +64,25 @@ export interface ContextMenuActionsVisibility {
 	branch: { checkout: boolean, rename: boolean, delete: boolean, merge: boolean, rebase: boolean, push: boolean, copyName: boolean };
 	commit: { addTag: boolean, createBranch: boolean, checkout: boolean, cherrypick: boolean, revert: boolean, drop: boolean, merge: boolean, rebase: boolean, reset: boolean, copyHash: boolean };
 	remoteBranch: { checkout: boolean, delete: boolean, fetch: boolean, pull: boolean, copyName: boolean };
+	stash: { apply: boolean, createBranch: boolean, pop: boolean, drop: boolean, copyName: boolean, copyHash: boolean };
 	tag: { delete: boolean, push: boolean, copyName: boolean };
-	uncommittedChanges: { reset: boolean, clean: boolean };
+	uncommittedChanges: { reset: boolean, clean: boolean, stash: boolean };
 }
 
 export interface DialogDefaults {
 	addTag: { type: 'annotated' | 'lightweight' };
+	applyStash: { reinstateIndex: boolean };
 	cherryPick: { noCommit: boolean, recordOrigin: boolean };
 	createBranch: { checkOut: boolean };
 	deleteBranch: { forceDelete: boolean };
 	fetchIntoLocalBranch: { forceFetch: boolean };
 	merge: { noFastForward: boolean, noCommit: boolean, squashCommits: boolean };
+	popStash: { reinstateIndex: boolean };
 	pullBranch: { noFastForward: boolean, squashCommits: boolean };
 	rebase: { ignoreDate: boolean };
 	resetCurrentBranchToCommit: { mode: GitResetMode };
 	resetUncommittedChanges: { mode: 'mixed' | 'hard' };
+	stashUncommittedChanges: { includeUntracked: boolean };
 	general: { referenceInputSpaceSubstitution: string | null };
 }
 
@@ -455,6 +468,60 @@ export interface ResponseCleanUntrackedFiles {
 	status: GitCommandStatus;
 }
 
+export interface RequestApplyStash {
+	command: 'applyStash';
+	repo: string;
+	selector: string;
+	reinstateIndex: boolean;
+}
+export interface ResponseApplyStash {
+	command: 'applyStash';
+	status: GitCommandStatus;
+}
+
+export interface RequestPopStash {
+	command: 'popStash';
+	repo: string;
+	selector: string;
+	reinstateIndex: boolean;
+}
+export interface ResponsePopStash {
+	command: 'popStash';
+	status: GitCommandStatus;
+}
+
+export interface RequestDropStash {
+	command: 'dropStash';
+	repo: string;
+	selector: string;
+}
+export interface ResponseDropStash {
+	command: 'dropStash';
+	status: GitCommandStatus;
+}
+
+export interface RequestBranchFromStash {
+	command: 'branchFromStash';
+	repo: string;
+	selector: string;
+	branchName: string;
+}
+export interface ResponseBranchFromStash {
+	command: 'branchFromStash';
+	status: GitCommandStatus;
+}
+
+export interface RequestPushStash {
+	command: 'pushStash';
+	repo: string;
+	message: string;
+	includeUntracked: boolean;
+}
+export interface ResponsePushStash {
+	command: 'pushStash';
+	status: GitCommandStatus;
+}
+
 export interface RequestSaveRepoState {
 	command: 'saveRepoState';
 	repo: string;
@@ -476,6 +543,8 @@ export interface ResponseViewDiff {
 
 export type RequestMessage =
 	RequestAddTag
+	| RequestApplyStash
+	| RequestBranchFromStash
 	| RequestCheckoutBranch
 	| RequestCheckoutCommit
 	| RequestCherrypickCommit
@@ -487,6 +556,7 @@ export type RequestMessage =
 	| RequestDeleteRemoteBranch
 	| RequestDeleteTag
 	| RequestDropCommit
+	| RequestDropStash
 	| RequestFetch
 	| RequestFetchAvatar
 	| RequestFetchIntoLocalBranch
@@ -495,8 +565,10 @@ export type RequestMessage =
 	| RequestLoadRepos
 	| RequestMergeBranch
 	| RequestMergeCommit
+	| RequestPopStash
 	| RequestPullBranch
 	| RequestPushBranch
+	| RequestPushStash
 	| RequestPushTag
 	| RequestRebase
 	| RequestRenameBranch
@@ -508,6 +580,8 @@ export type RequestMessage =
 
 export type ResponseMessage =
 	ResponseAddTag
+	| ResponseApplyStash
+	| ResponseBranchFromStash
 	| ResponseCheckoutBranch
 	| ResponseCheckoutCommit
 	| ResponseCherrypickCommit
@@ -519,6 +593,7 @@ export type ResponseMessage =
 	| ResponseDeleteRemoteBranch
 	| ResponseDeleteTag
 	| ResponseDropCommit
+	| ResponseDropStash
 	| ResponseFetch
 	| ResponseFetchAvatar
 	| ResponseFetchIntoLocalBranch
@@ -527,8 +602,10 @@ export type ResponseMessage =
 	| ResponseLoadRepos
 	| ResponseMergeBranch
 	| ResponseMergeCommit
+	| ResponsePopStash
 	| ResponsePullBranch
 	| ResponsePushBranch
+	| ResponsePushStash
 	| ResponsePushTag
 	| ResponseRebase
 	| ResponseRefresh

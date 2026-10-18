@@ -94,6 +94,36 @@ export class GitGraphView {
 			this.logger.log('Received request from the webview: ' + msg.command);
 			this.repoFileWatcher.mute();
 			switch (msg.command) {
+				case 'applyStash':
+					this.sendMessage({
+						command: 'applyStash',
+						status: await this.dataSource.applyStash(msg.repo, msg.selector, msg.reinstateIndex)
+					});
+					break;
+				case 'branchFromStash':
+					this.sendMessage({
+						command: 'branchFromStash',
+						status: await this.dataSource.branchFromStash(msg.repo, msg.selector, msg.branchName)
+					});
+					break;
+				case 'dropStash':
+					this.sendMessage({
+						command: 'dropStash',
+						status: await this.dataSource.dropStash(msg.repo, msg.selector)
+					});
+					break;
+				case 'popStash':
+					this.sendMessage({
+						command: 'popStash',
+						status: await this.dataSource.popStash(msg.repo, msg.selector, msg.reinstateIndex)
+					});
+					break;
+				case 'pushStash':
+					this.sendMessage({
+						command: 'pushStash',
+						status: await this.dataSource.pushStash(msg.repo, msg.message, msg.includeUntracked)
+					});
+					break;
 				case 'addTag':
 					this.sendMessage({
 						command: 'addTag',

@@ -300,7 +300,7 @@ class GitGraphView {
 			for (j = 0; j < this.commits[i].refs.length; j++) {
 				refName = escapeHtml(this.commits[i].refs[j].name);
 				refActive = this.commits[i].refs[j].type === 'head' && this.commits[i].refs[j].name === this.gitBranchHead;
-				refHtml = '<span class="gitRef ' + this.commits[i].refs[j].type + (refActive ? ' active' : '') + '" data-name="' + refName + '">' + (this.commits[i].refs[j].type === 'tag' ? svgIcons.tag : svgIcons.branch) + refName + '</span>';
+				refHtml = '<span class="gitRef ' + this.commits[i].refs[j].type + (refActive ? ' active' : '') + '" data-name="' + refName + '">' + (this.commits[i].refs[j].type === 'tag' ? svgIcons.tag : this.commits[i].refs[j].type === 'stash' ? svgIcons.stash : svgIcons.branch) + refName + '</span>';
 				refs = refActive ? refHtml + refs : refs + refHtml;
 			}
 			html += '<tr ' + (this.commits[i].hash !== '*' ? 'class="commit" data-hash="' + this.commits[i].hash + '"' : 'class="unsavedChanges"') + ' data-id="' + i + '" data-color="' + this.graph.getVertexColour(i) + '"><td></td><td>' + (this.commits[i].hash === this.commitHead ? '<span class="commitHeadDot"></span>' : '') + refs + (this.commits[i].hash === currentHash ? '<b>' + message + '</b>' : message) + '</td><td title="' + date.title + '">' + date.value + '</td><td title="' + escapeHtml(this.commits[i].author + ' <' + this.commits[i].email + '>') + '">' + (this.config.fetchAvatars ? '<span class="avatar" data-email="' + escapeHtml(this.commits[i].email) + '">' + (typeof this.avatars[this.commits[i].email] === 'string' ? '<img class="avatarImg" src="' + this.avatars[this.commits[i].email] + '">' : '') + '</span>' : '') + escapeHtml(this.commits[i].author) + '</td><td title="' + escapeHtml(this.commits[i].hash) + '">' + abbrevCommit(this.commits[i].hash) + '</td></tr>';
@@ -349,6 +349,11 @@ class GitGraphView {
 			e.stopPropagation();
 			const sourceElem = <HTMLElement>(<Element>e.target).closest('.commit')!;
 			const hash = sourceElem.dataset.hash!, visibility = this.config.contextMenuActionsVisibility.commit;
+			const stash = this.commits[this.commitLookup[hash]].stash;
+			if (stash !== null) {
+				this.showStashContextMenu(<MouseEvent>e, hash, stash, sourceElem);
+				return;
+			}
 			showContextMenu(<MouseEvent>e, [
 				{
 					title: 'Add Tag' + ELLIPSIS,
@@ -495,6 +500,18 @@ class GitGraphView {
 			const sourceElem = <HTMLElement>(<Element>e.target).closest('.unsavedChanges')!, visibility = this.config.contextMenuActionsVisibility.uncommittedChanges;
 			showContextMenu(<MouseEvent>e, [
 				{
+					title: 'Stash uncommitted changes' + ELLIPSIS,
+					visible: visibility.stash,
+					onClick: () => {
+						showFormDialog('Stash the <b>uncommitted changes</b>:', [
+							{ type: 'text', name: 'Message: ', default: '', placeholder: 'Optional' },
+							{ type: 'checkbox', name: 'Include Untracked', value: this.config.dialogDefaults.stashUncommittedChanges.includeUntracked }
+						], 'Yes, stash', (values) => {
+							sendMessage({ command: 'pushStash', repo: this.currentRepo!, message: values[0], includeUntracked: values[1] === 'checked' });
+						}, sourceElem);
+					}
+				},
+				{
 					title: 'Reset uncommitted changes' + ELLIPSIS,
 					visible: visibility.reset,
 					onClick: () => {
@@ -521,6 +538,11 @@ class GitGraphView {
 			e.stopPropagation();
 			const sourceElem = <HTMLElement>(<Element>e.target).closest('.gitRef')!;
 			let refName = unescapeHtml(sourceElem.dataset.name!), menu: ContextMenuElement[], copyType: string;
+			if (sourceElem.classList.contains('stash')) {
+				const row = <HTMLElement>sourceElem.closest('.commit')!, hash = row.dataset.hash!;
+				this.showStashContextMenu(<MouseEvent>e, hash, this.commits[this.commitLookup[hash]].stash!, row);
+				return;
+			}
 			if (sourceElem.classList.contains('tag')) {
 				menu = [{
 					title: 'Delete Tag' + ELLIPSIS,
@@ -673,6 +695,7 @@ class GitGraphView {
 			e.stopPropagation();
 			hideDialogAndContextMenu();
 			const sourceElem = <HTMLElement>(<Element>e.target).closest('.gitRef')!;
+			if (sourceElem.classList.contains('stash') || sourceElem.classList.contains('tag')) return;
 			this.checkoutBranchAction(sourceElem, unescapeHtml(sourceElem.dataset.name!));
 		});
 	}
@@ -685,6 +708,59 @@ class GitGraphView {
 		this.graph.clear();
 		this.tableElem.innerHTML = '<h2 id="loadingHeader">' + svgIcons.loading + 'Loading ...</h2>';
 		this.footerElem.innerHTML = '';
+	}
+	/** Context menu of a stash row or label. */
+	private showStashContextMenu(e: MouseEvent, hash: string, stash: GG.GitStash, sourceElem: HTMLElement) {
+		const visibility = this.config.contextMenuActionsVisibility.stash, name = stash.selector;
+		showContextMenu(e, [
+			{
+				title: 'Apply Stash' + ELLIPSIS,
+				visible: visibility.apply,
+				onClick: () => {
+					showCheckboxDialog('Are you sure you want to apply the stash <b><i>' + escapeHtml(name) + '</i></b>?', 'Reinstate Index', this.config.dialogDefaults.applyStash.reinstateIndex, 'Yes, apply', (reinstateIndex) => {
+						sendMessage({ command: 'applyStash', repo: this.currentRepo!, selector: name, reinstateIndex: reinstateIndex });
+					}, sourceElem);
+				}
+			},
+			{
+				title: 'Create Branch from Stash' + ELLIPSIS,
+				visible: visibility.createBranch,
+				onClick: () => {
+					showRefInputDialog('Enter the name of the branch you would like to create from the stash <b><i>' + escapeHtml(name) + '</i></b>:', '', 'Create Branch', (branchName) => {
+						sendMessage({ command: 'branchFromStash', repo: this.currentRepo!, selector: name, branchName: branchName });
+					}, sourceElem);
+				}
+			},
+			{
+				title: 'Pop Stash' + ELLIPSIS,
+				visible: visibility.pop,
+				onClick: () => {
+					showCheckboxDialog('Are you sure you want to pop the stash <b><i>' + escapeHtml(name) + '</i></b>?', 'Reinstate Index', this.config.dialogDefaults.popStash.reinstateIndex, 'Yes, pop', (reinstateIndex) => {
+						sendMessage({ command: 'popStash', repo: this.currentRepo!, selector: name, reinstateIndex: reinstateIndex });
+					}, sourceElem);
+				}
+			},
+			{
+				title: 'Drop Stash' + ELLIPSIS,
+				visible: visibility.drop,
+				onClick: () => {
+					showConfirmationDialog('Are you sure you want to drop the stash <b><i>' + escapeHtml(name) + '</i></b>?', () => {
+						sendMessage({ command: 'dropStash', repo: this.currentRepo!, selector: name });
+					}, sourceElem);
+				}
+			},
+			null,
+			{
+				title: 'Copy Stash Name to Clipboard',
+				visible: visibility.copyName,
+				onClick: () => sendMessage({ command: 'copyToClipboard', type: 'Stash Name', data: name })
+			},
+			{
+				title: 'Copy Stash Hash to Clipboard',
+				visible: visibility.copyHash,
+				onClick: () => sendMessage({ command: 'copyToClipboard', type: 'Stash Hash', data: hash })
+			}
+		], sourceElem);
 	}
 	/** Merge dialog shared by the commit and branch menus: no-fast-forward, squash and no-commit options. */
 	private showMergeDialog(message: string, actioned: (options: GG.MergeOptions) => void) {
@@ -954,6 +1030,21 @@ window.addEventListener('message', event => {
 	switch (msg.command) {
 		case 'addTag':
 			refreshGraphOrDisplayError(msg.status, 'Unable to Add Tag');
+			break;
+		case 'applyStash':
+			refreshGraphOrDisplayError(msg.status, 'Unable to Apply Stash');
+			break;
+		case 'branchFromStash':
+			refreshGraphOrDisplayError(msg.status, 'Unable to Create Branch from Stash');
+			break;
+		case 'dropStash':
+			refreshGraphOrDisplayError(msg.status, 'Unable to Drop Stash');
+			break;
+		case 'popStash':
+			refreshGraphOrDisplayError(msg.status, 'Unable to Pop Stash');
+			break;
+		case 'pushStash':
+			refreshGraphOrDisplayError(msg.status, 'Unable to Stash Uncommitted Changes');
 			break;
 		case 'checkoutBranch':
 			refreshGraphOrDisplayError(msg.status, 'Unable to Checkout Branch');
@@ -1239,7 +1330,7 @@ function showFormDialog(message: string, inputs: DialogInput[], actionName: stri
 		if (input.type === 'select') {
 			html += '<select id="dialogInput' + i + '">';
 			for (let j = 0; j < input.options.length; j++) {
-				html += '<option value="' + input.options[j].value + '"' + (input.options[j].value === input.default ? ' selected' : '') + '>' + input.options[j].name + '</option>';
+				html += '<option value="' + escapeHtml(input.options[j].value) + '"' + (input.options[j].value === input.default ? ' selected' : '') + '>' + escapeHtml(input.options[j].name) + '</option>';
 			}
 			html += '</select>';
 		} else if (input.type === 'checkbox') {

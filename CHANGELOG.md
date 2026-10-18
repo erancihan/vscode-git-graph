@@ -8,6 +8,8 @@
 * The "action running" dialog closes by itself when the action succeeds.
 * "Create Branch" has a "Check out" option. The merge dialogs have "Squash Commits" and "No Commit" options (`git-graph.dialog.merge.squashMessageFormat` picks the squash commit message). "Cherry Pick" has "Record Origin" and "No Commit" options.
 * New "Drop Commit" action on non-merge commits, and a context menu on the "Uncommitted Changes" row with "Reset uncommitted changes" (mixed or hard) and "Clean untracked files" (optionally directories).
+* Fixed: commit messages shown in the parent selector of the cherry pick and revert dialogs were inserted as HTML. They are now escaped.
+* Stashes are shown on the graph as rows above the commit they were created from (`git-graph.repository.showStashes`). A stash row has Apply, Pop, Drop, Create Branch from Stash, and copy actions. The "Uncommitted Changes" row has "Stash uncommitted changes" with a message and an "Include Untracked" option. New `git-graph.dialog.applyStash.reinstateIndex`, `dialog.popStash.reinstateIndex` and `dialog.stashUncommittedChanges.includeUntracked` defaults, and a `stash` menu in `git-graph.contextMenuActionsVisibility`.
 * New settings `git-graph.repository.sign.commits` and `git-graph.repository.sign.tags`: sign the commits and annotated tags that Git Graph creates.
 
 ## 2.1.0 - 2026-10-18

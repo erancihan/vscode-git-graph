@@ -2,7 +2,7 @@ import * as cp from 'child_process';
 import { getConfig } from './config';
 import { findGitExecutable } from './gitExecutable';
 import { Logger } from './logger';
-import { CherryPickOptions, GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChangeType, GitPushBranchMode, GitRebaseType, GitRefData, GitResetMode, GitUnsavedChanges, MergeOptions } from './types';
+import { CherryPickOptions, GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChangeType, GitPushBranchMode, GitRebaseType, GitRefData, GitResetMode, GitStash, GitUnsavedChanges, MergeOptions } from './types';
 import { getPathFromStr } from './utils';
 
 const eolRegex = /\r\n|\r|\n/g;
@@ -86,12 +86,25 @@ export class DataSource {
 	}
 
 	public async getCommits(repo: string, branch: string, maxCommits: number, showRemoteBranches: boolean) {
-		const [commits, refData] = await Promise.all([
+		const [commits, refData, stashes] = await Promise.all([
 			this.getGitLog(repo, branch, maxCommits + 1, showRemoteBranches),
-			this.getRefs(repo, showRemoteBranches)
+			this.getRefs(repo, showRemoteBranches),
+			getConfig().showStashes() ? this.getStashes(repo) : Promise.resolve(<GitStashEntry[]>[])
 		]);
 		const moreCommitsAvailable = commits.length === maxCommits + 1;
 		if (moreCommitsAvailable) commits.pop();
+
+		// Insert each stash as a row directly above the commit it was created from (newest stash on top)
+		if (stashes.length > 0) {
+			const positions: { [hash: string]: number } = {};
+			for (let i = 0; i < commits.length; i++) positions[commits[i].hash] = i;
+			for (let i = stashes.length - 1; i >= 0; i--) {
+				const stash = stashes[i], baseIndex = positions[stash.baseHash];
+				if (typeof baseIndex !== 'number') continue;
+				commits.splice(baseIndex, 0, { hash: stash.hash, parentHashes: [stash.baseHash], author: stash.author, email: stash.email, date: stash.date, message: stash.message, stash: { selector: stash.selector, baseHash: stash.baseHash, untrackedFilesHash: stash.untrackedFilesHash } });
+				for (let j = baseIndex; j < commits.length; j++) positions[commits[j].hash] = j;
+			}
+		}
 
 		if (refData.head !== null) {
 			for (let i = 0; i < commits.length; i++) {
@@ -110,7 +123,8 @@ export class DataSource {
 
 		for (let i = 0; i < commits.length; i++) {
 			commitLookup[commits[i].hash] = i;
-			commitNodes.push({ hash: commits[i].hash, parentHashes: commits[i].parentHashes, author: commits[i].author, email: commits[i].email, date: commits[i].date, message: commits[i].message, refs: [] });
+			const stash = commits[i].stash || null;
+			commitNodes.push({ hash: commits[i].hash, parentHashes: commits[i].parentHashes, author: commits[i].author, email: commits[i].email, date: commits[i].date, message: commits[i].message, refs: stash !== null ? [{ hash: commits[i].hash, name: stash.selector, type: 'stash' }] : [], stash: stash });
 		}
 		for (let i = 0; i < refData.refs.length; i++) {
 			if (typeof commitLookup[refData.refs[i].hash] === 'number') {
@@ -318,6 +332,68 @@ export class DataSource {
 		return this.runGitCommand(directories ? ['clean', '-f', '-d'] : ['clean', '-f'], repo);
 	}
 
+	/* Stashes */
+
+	/** The stash entries, newest first. An empty list when the repository has no stash. */
+	private getStashes(repo: string) {
+		const args = ['reflog', 'show', '--format=' + ['%H', '%P', '%gD', '%an', '%ae', '%ct', '%s'].join(gitLogSeparator), 'refs/stash', '--'];
+		return this.spawnGit(args, repo, (stdout) => {
+			const lines = stdout.split(eolRegex), stashes: GitStashEntry[] = [];
+			for (let i = 0; i < lines.length - 1; i++) {
+				const line = lines[i].split(gitLogSeparator);
+				if (line.length !== 7) continue;
+				const parents = line[1].split(' ');
+				if (parents.length < 2) continue;
+				stashes.push({
+					hash: line[0],
+					baseHash: parents[0],
+					untrackedFilesHash: parents.length > 2 ? parents[2] : null,
+					selector: line[2].startsWith('refs/') ? line[2].substring(5) : line[2],
+					author: line[3],
+					email: line[4],
+					date: parseInt(line[5]),
+					message: line[6]
+				});
+			}
+			return stashes;
+		}, false).catch((): GitStashEntry[] => []);
+	}
+
+	public applyStash(repo: string, selector: string, reinstateIndex: boolean) {
+		if (!isStashSelector(selector)) return rejectArguments();
+		const args = ['stash', 'apply'];
+		if (reinstateIndex) args.push('--index');
+		args.push(selector);
+		return this.runGitCommand(args, repo);
+	}
+
+	public popStash(repo: string, selector: string, reinstateIndex: boolean) {
+		if (!isStashSelector(selector)) return rejectArguments();
+		const args = ['stash', 'pop'];
+		if (reinstateIndex) args.push('--index');
+		args.push(selector);
+		return this.runGitCommand(args, repo);
+	}
+
+	public dropStash(repo: string, selector: string) {
+		if (!isStashSelector(selector)) return rejectArguments();
+		return this.runGitCommand(['stash', 'drop', selector], repo);
+	}
+
+	/** Create a branch at the commit the stash was created from, check it out, and apply the stash. */
+	public branchFromStash(repo: string, selector: string, branchName: string) {
+		if (!isStashSelector(selector) || !isSafeRefName(branchName)) return rejectArguments();
+		return this.runGitCommand(['stash', 'branch', branchName, selector], repo);
+	}
+
+	/** Stash the uncommitted changes, with an optional message, and optionally the untracked files. */
+	public pushStash(repo: string, message: string, includeUntracked: boolean) {
+		const args = ['stash', 'push'];
+		if (includeUntracked) args.push('--include-untracked');
+		if (message !== '') args.push('--message', message);
+		return this.runGitCommand(args, repo);
+	}
+
 	/* Remote actions */
 
 	/** Fetch from one remote, or from all remotes when `remote` is null. */
@@ -515,6 +591,20 @@ export class DataSource {
  */
 function isSafeRefName(name: string) {
 	return name !== '' && name[0] !== '-' && !/[\x00-\x1f\x7f]/.test(name);
+}
+
+/** Stash selectors have the form "stash@{N}". */
+function isStashSelector(selector: string) {
+	return /^stash@\{\d+\}$/.test(selector);
+}
+
+/** A stash as read from the reflog of refs/stash. */
+interface GitStashEntry extends GitStash {
+	hash: string;
+	author: string;
+	email: string;
+	date: number;
+	message: string;
 }
 
 /** Commit hashes are hexadecimal (SHA-1 or SHA-256), abbreviated to at least 4 characters. */

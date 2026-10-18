@@ -57,8 +57,9 @@ class Config {
 			branch: read('branch', { checkout: true, rename: true, delete: true, merge: true, rebase: true, push: true, copyName: true }),
 			commit: read('commit', { addTag: true, createBranch: true, checkout: true, cherrypick: true, revert: true, drop: true, merge: true, rebase: true, reset: true, copyHash: true }),
 			remoteBranch: read('remoteBranch', { checkout: true, delete: true, fetch: true, pull: true, copyName: true }),
+			stash: read('stash', { apply: true, createBranch: true, pop: true, drop: true, copyName: true, copyHash: true }),
 			tag: read('tag', { delete: true, push: true, copyName: true }),
-			uncommittedChanges: read('uncommittedChanges', { reset: true, clean: true })
+			uncommittedChanges: read('uncommittedChanges', { reset: true, clean: true, stash: true })
 		};
 	}
 
@@ -70,6 +71,9 @@ class Config {
 		return {
 			addTag: {
 				type: this.getEnum('dialog.addTag.type', null, ['Annotated', 'Lightweight'], 'Annotated') === 'Lightweight' ? 'lightweight' : 'annotated'
+			},
+			applyStash: {
+				reinstateIndex: this.getBoolean('dialog.applyStash.reinstateIndex', null, false)
 			},
 			cherryPick: {
 				noCommit: this.getBoolean('dialog.cherryPick.noCommit', null, false),
@@ -89,6 +93,9 @@ class Config {
 				noCommit: this.getBoolean('dialog.merge.noCommit', null, false),
 				squashCommits: this.getBoolean('dialog.merge.squashCommits', null, false)
 			},
+			popStash: {
+				reinstateIndex: this.getBoolean('dialog.popStash.reinstateIndex', null, false)
+			},
 			pullBranch: {
 				noFastForward: this.getBoolean('dialog.pullBranch.noFastForward', null, false),
 				squashCommits: this.getBoolean('dialog.pullBranch.squashCommits', null, false)
@@ -101,6 +108,9 @@ class Config {
 			},
 			resetUncommittedChanges: {
 				mode: this.getEnum('dialog.resetUncommittedChanges.mode', null, ['Mixed', 'Hard'], 'Mixed') === 'Hard' ? 'hard' : 'mixed'
+			},
+			stashUncommittedChanges: {
+				includeUntracked: this.getBoolean('dialog.stashUncommittedChanges.includeUntracked', null, false)
 			},
 			general: {
 				referenceInputSpaceSubstitution: substitution === 'Hyphen' ? '-' : substitution === 'Underscore' ? '_' : null
@@ -171,6 +181,10 @@ class Config {
 
 	public showRemoteHeads() {
 		return this.getBoolean('repository.showRemoteHeads', null, true);
+	}
+
+	public showStashes() {
+		return this.getBoolean('repository.showStashes', null, true);
 	}
 
 	public showTags() {

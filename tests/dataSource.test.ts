@@ -233,6 +233,93 @@ describe('DataSource history actions', () => {
 	});
 });
 
+describe('DataSource stashes', () => {
+	let repo: string;
+	let dataSource: DataSource;
+	let base: string;
+
+	beforeAll(() => {
+		repo = fs.mkdtempSync(path.join(os.tmpdir(), 'git-graph-stash-'));
+		git(repo, ['init', '-q', '-b', 'master']);
+		git(repo, ['config', 'user.name', 'Test Committer']);
+		git(repo, ['config', 'user.email', 'committer@example.com']);
+		git(repo, ['config', 'commit.gpgsign', 'false']);
+		commit(repo, 'a.txt', 'one\n', 'First commit');
+		base = commit(repo, 'b.txt', 'two\n', 'Second commit');
+		dataSource = new DataSource(new Logger());
+	});
+
+	afterEach(() => {
+		delete configurationValues['git-graph'];
+	});
+
+	afterAll(() => {
+		fs.rmSync(repo, { recursive: true, force: true });
+	});
+
+	it('loads without stashes when the repository has none', async () => {
+		const result = await dataSource.getCommits(repo, '', 10, false);
+		expect(result.commits.every(c => c.stash === null)).toBe(true);
+	});
+
+	it('stashes the uncommitted changes with a message and untracked files', async () => {
+		fs.writeFileSync(path.join(repo, 'a.txt'), 'changed\n');
+		fs.writeFileSync(path.join(repo, 'new.txt'), 'new\n');
+		expect(await dataSource.pushStash(repo, 'My "stash" message', true)).toBeNull();
+		expect(git(repo, ['status', '--porcelain'])).toBe('');
+		expect(git(repo, ['stash', 'list'])).toContain('My "stash" message');
+	});
+
+	it('shows the stash as a row above its base commit', async () => {
+		const result = await dataSource.getCommits(repo, '', 10, false);
+		const stashIndex = result.commits.findIndex(c => c.stash !== null);
+		expect(stashIndex).toBeGreaterThan(-1);
+		const row = result.commits[stashIndex];
+		expect(row.stash).toEqual({ selector: 'stash@{0}', baseHash: base, untrackedFilesHash: expect.stringMatching(/^[0-9a-f]{40}$/) });
+		expect(row.parentHashes).toEqual([base]);
+		expect(row.refs).toEqual([{ hash: row.hash, name: 'stash@{0}', type: 'stash' }]);
+		expect(row.message).toContain('My "stash" message');
+		expect(result.commits[stashIndex + 1].hash).toBe(base);
+	});
+
+	it('hides stashes when the setting is off', async () => {
+		configurationValues['git-graph'] = { 'repository.showStashes': false };
+		const result = await dataSource.getCommits(repo, '', 10, false);
+		expect(result.commits.every(c => c.stash === null)).toBe(true);
+	});
+
+	it('applies, pops and drops stashes', async () => {
+		expect(await dataSource.applyStash(repo, 'stash@{0}', false)).toBeNull();
+		expect(fs.readFileSync(path.join(repo, 'a.txt'), 'utf8')).toBe('changed\n');
+		expect(git(repo, ['stash', 'list']).split('\n')).toHaveLength(1);
+		git(repo, ['reset', '-q', '--hard']);
+		git(repo, ['clean', '-f', '-q']);
+		expect(await dataSource.popStash(repo, 'stash@{0}', true)).toBeNull();
+		expect(fs.existsSync(path.join(repo, 'new.txt'))).toBe(true);
+		expect(git(repo, ['stash', 'list'])).toBe('');
+		expect(await dataSource.pushStash(repo, '', false)).toBeNull();
+		expect(await dataSource.dropStash(repo, 'stash@{0}')).toBeNull();
+		expect(git(repo, ['stash', 'list'])).toBe('');
+		git(repo, ['clean', '-f', '-q']);
+	});
+
+	it('creates a branch from a stash', async () => {
+		fs.writeFileSync(path.join(repo, 'a.txt'), 'branch me\n');
+		expect(await dataSource.pushStash(repo, 'for branch', false)).toBeNull();
+		expect(await dataSource.branchFromStash(repo, 'stash@{0}', 'from-stash')).toBeNull();
+		expect(git(repo, ['rev-parse', '--abbrev-ref', 'HEAD'])).toBe('from-stash');
+		expect(fs.readFileSync(path.join(repo, 'a.txt'), 'utf8')).toBe('branch me\n');
+		git(repo, ['reset', '-q', '--hard']);
+		git(repo, ['checkout', '-q', 'master']);
+	});
+
+	it('rejects selectors that are not stash references', async () => {
+		expect(await dataSource.applyStash(repo, '--index', false)).toMatch(/not a valid/i);
+		expect(await dataSource.dropStash(repo, 'HEAD')).toMatch(/not a valid/i);
+		expect(await dataSource.branchFromStash(repo, 'stash@{0}', '--track')).toMatch(/not a valid/i);
+	});
+});
+
 describe('DataSource remote actions', () => {
 	let repo: string, remote: string, other: string;
 	let dataSource: DataSource;
