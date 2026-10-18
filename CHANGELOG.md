@@ -1,6 +1,8 @@
 # Change Log
 
-## Unreleased
+## 2.4.3 - 2026-10-18
+
+Completes the Repository Settings widget (issue #18) and hardens the shared settings file after the security reviews.
 
 * Dialog defaults from upstream: the Add Tag dialog can push the new tag to a remote (`git-graph.dialog.addTag.pushToRemote`), fetching one remote from the Repository Settings widget asks about pruning branches and tags (`git-graph.dialog.fetchRemote.prune`, `pruneTags`), a squash pull is committed with a default message or git's SQUASH_MSG (`git-graph.dialog.pullBranch.squashMessageFormat`), and `git-graph.repository.onLoad.showSpecificBranches` selects branches on load for every repository without its own setting.
 * Repository Settings: the user details follow `include` and `includeIf` directives of the git configuration (`git config --includes`); no global `.gitconfig` is required.
