@@ -17,7 +17,7 @@ Work is tracked in GitHub milestones. Each theme has a tracking issue labeled `t
 3. No account, no telemetry, no network calls except the ones the user enables (avatars, issue links).
 4. Each milestone ships as a Marketplace and Open VSX release. Small releases are preferred over large ones.
 
-## Where we stand (2.4.0)
+## Where we stand (2.4.1)
 
 Shipped in 2.0.x: the Git Graph 1.4.6 feature set, a current toolchain (TypeScript 5, ESLint, Node 20, VS Code 1.74 or later), CI, release pipeline, two bug fixes.
 
@@ -31,7 +31,9 @@ Shipped in 2.3.0 (milestone "Integrations"): Repository Settings widget (custom 
 
 Shipped in 2.4.0 (milestone "Beyond upstream", first release): sticky header; reword and amend the checked-out commit; author and path filters; bisect from the graph; drag-and-drop merge, rebase and cherry pick.
 
-Still open in 2.4: interactive rebase editor (#30), worktrees (#33), multi-language UI (#32), conflict help (#35), CI status column (#39).
+Shipped in 2.4.1: worktrees (list, add, open, remove, prune) and conflict help (operation bar with Continue / Skip / Abort).
+
+Still open in 2.4: interactive rebase editor (#30), multi-language UI (#32), CI status column (#39), conflict prediction, one uncommitted-changes row per worktree.
 
 Still missing versus Git Graph 1.30: export and import of repository settings, `git config` includes, initial branches per repository, pull request configuration stored per repository, and the smaller presentation items listed in `docs/UPSTREAM_GAP.md`. Missing versus the field: see the ranked table in `docs/COMPETITORS.md`, section 3 (milestone 2.4).
 
