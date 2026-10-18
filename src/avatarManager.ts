@@ -6,11 +6,13 @@ import * as url from 'url';
 import { DataSource } from './dataSource';
 import { ExtensionState } from './extensionState';
 import { GitGraphView } from './gitGraphView';
+import { Logger } from './logger';
 import { AvatarCache } from './types';
 
 export class AvatarManager {
 	private readonly dataSource: DataSource;
 	private readonly extensionState: ExtensionState;
+	private readonly logger: Logger;
 	private readonly avatarStorageFolder: string;
 	private view: GitGraphView | null = null;
 	private avatars: AvatarCache;
@@ -21,9 +23,10 @@ export class AvatarManager {
 	private githubTimeout: number = 0;
 	private gitLabTimeout: number = 0;
 
-	constructor(dataSource: DataSource, extensionState: ExtensionState) {
+	constructor(dataSource: DataSource, extensionState: ExtensionState, logger: Logger) {
 		this.dataSource = dataSource;
 		this.extensionState = extensionState;
+		this.logger = logger;
 		this.avatarStorageFolder = this.extensionState.getAvatarStoragePath();
 		this.avatars = this.extensionState.getAvatarCache();
 		this.queue = new AvatarRequestQueue(() => {
@@ -155,6 +158,7 @@ export class AvatarManager {
 					}
 				} else if (res.statusCode === 403) {
 					// Rate limit reached, try again after timeout
+					this.logger.log('GitHub API rate limit reached, avatar requests are deferred until ' + new Date(this.githubTimeout).toISOString());
 					this.queue.addItem(avatarRequest, this.githubTimeout, false);
 					return;
 				} else if (res.statusCode === 422 && avatarRequest.commits.length > avatarRequest.attempts + 1 && avatarRequest.attempts < 4) {
@@ -163,14 +167,16 @@ export class AvatarManager {
 					return;
 				} else if (res.statusCode! >= 500) {
 					// If server error, try again after 10 minutes
+					this.logger.logError('GitHub API responded with HTTP ' + res.statusCode + ', avatar requests are deferred for 10 minutes');
 					this.githubTimeout = t + 600000;
 					this.queue.addItem(avatarRequest, this.githubTimeout, false);
 					return;
 				}
 				this.fetchFromGravatar(avatarRequest); // Fallback to Gravatar
 			});
-		}).on('error', () => {
+		}).on('error', (e) => {
 			// If connection error, try again after 5 minutes
+			this.logger.logError('GitHub API request failed: ' + e.message + '. Avatar requests are deferred for 5 minutes');
 			this.githubTimeout = t + 300000;
 			this.queue.addItem(avatarRequest, this.githubTimeout, false);
 		});
@@ -206,18 +212,21 @@ export class AvatarManager {
 					}
 				} else if (res.statusCode === 429) {
 					// Rate limit reached, try again after timeout
+					this.logger.log('GitLab API rate limit reached, avatar requests are deferred until ' + new Date(this.gitLabTimeout).toISOString());
 					this.queue.addItem(avatarRequest, this.gitLabTimeout, false);
 					return;
 				} else if (res.statusCode! >= 500) {
 					// If server error, try again after 10 minutes
+					this.logger.logError('GitLab API responded with HTTP ' + res.statusCode + ', avatar requests are deferred for 10 minutes');
 					this.gitLabTimeout = t + 600000;
 					this.queue.addItem(avatarRequest, this.gitLabTimeout, false);
 					return;
 				}
 				this.fetchFromGravatar(avatarRequest); // Fallback to Gravatar
 			});
-		}).on('error', () => {
+		}).on('error', (e) => {
 			// If connection error, try again after 5 minutes
+			this.logger.logError('GitLab API request failed: ' + e.message + '. Avatar requests are deferred for 5 minutes');
 			this.gitLabTimeout = t + 300000;
 			this.queue.addItem(avatarRequest, this.gitLabTimeout, false);
 		});
@@ -247,13 +256,16 @@ export class AvatarManager {
 					if (res.statusCode === 200) { // If success response, save the image to the avatar folder
 						const format = res.headers['content-type']!.split('/')[1];
 						fs.writeFile(this.avatarStorageFolder + '/' + hash + '.' + format, Buffer.concat(imageBufferArray), err => {
+							if (err) this.logger.logError('Unable to save avatar image: ' + err.message);
 							resolve(err ? null : hash + '.' + format);
 						});
 					} else {
+						if (res.statusCode !== 404) this.logger.logError('Avatar download from ' + imgUrl.hostname + ' responded with HTTP ' + res.statusCode);
 						resolve(null);
 					}
 				});
-			}).on('error', () => {
+			}).on('error', (e) => {
+				this.logger.logError('Avatar download from ' + imgUrl.hostname + ' failed: ' + e.message);
 				resolve(null);
 			});
 		});

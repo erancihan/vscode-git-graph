@@ -43,7 +43,7 @@ class Config {
 
 	public maxDepthOfRepoSearch() {
 		return this.workspaceConfiguration.get('maxDepthOfRepoSearch', 0);
-	} 
+	}
 
 	public showCurrentBranchByDefault() {
 		return this.workspaceConfiguration.get('showCurrentBranchByDefault', false);
@@ -61,9 +61,15 @@ class Config {
 		return this.workspaceConfiguration.get('tabIconColourTheme', 'colour');
 	}
 
-	public gitPath(): string {
-		const path = vscode.workspace.getConfiguration('git').get('path', null);
-		return path !== null ? path : 'git';
+	/**
+	 * Candidates for the git executable, from the `git.path` setting of the built-in Git extension.
+	 * The setting is a string or an array of strings. An empty list means "use `git` from PATH".
+	 */
+	public gitPaths(): string[] {
+		const path = vscode.workspace.getConfiguration('git').get<string | string[] | null>('path', null);
+		if (typeof path === 'string') return [path];
+		if (Array.isArray(path)) return path.filter((p): p is string => typeof p === 'string');
+		return [];
 	}
 }
 
