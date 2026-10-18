@@ -22,6 +22,8 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
         * Stashes
     * View commit details and file changes by clicking on a commit
         * Open the Visual Studio Code diff of a file change by clicking on it in the commit details view
+        * Right-click a file for more: view the file at that revision, diff with the working file, open the file, copy its path
+        * Switch between the file tree and a flat file list
     * Perform Git actions by right clicking on a commit, branch, tag, stash, or the uncommitted changes:
         * Create, checkout, rename, delete, merge, rebase on, and push branches
         * Delete remote branches, fetch a remote branch into a local branch, pull a remote branch into the current branch
@@ -43,6 +45,8 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
 This extension contributes the following settings:
 
 * `git-graph.commitDetailsView.autoCenter`: Automatically center the commit details view when it is opened.
+* `git-graph.commitDetailsView.fileView.fileTree.compactFolders`: Show a folder that only contains one folder on one line. Default: true.
+* `git-graph.commitDetailsView.fileView.type`: Default file view in the commit details: `File Tree` or `File List`. Default: `File Tree`.
 * `git-graph.contextMenuActionsVisibility`: Hide individual context menu actions, for example `{"commit": {"reset": false}}`. Menus: `branch`, `commit`, `remoteBranch`, `tag`.
 * `git-graph.date.format`: Specifies the date format used in the date column of the graph.
 * `git-graph.date.type`: Specifies whether the author date or the commit date is displayed.

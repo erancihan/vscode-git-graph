@@ -11,6 +11,7 @@ declare global {
 
 	interface Config {
 		autoCenterCommitDetailsView: boolean;
+		commitDetailsView: GG.CommitDetailsViewConfig;
 		contextMenuActionsVisibility: GG.ContextMenuActionsVisibility;
 		defaultColumnVisibility: GG.ColumnVisibility;
 		dialogDefaults: GG.DialogDefaults;
@@ -133,6 +134,7 @@ declare global {
 		maxCommits: number;
 		showRemoteBranches: boolean;
 		expandedCommit: ExpandedCommit | null;
+		fileViewType: GG.FileViewType;
 	}
 }
 

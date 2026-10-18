@@ -9,6 +9,9 @@
 * "Create Branch" has a "Check out" option. The merge dialogs have "Squash Commits" and "No Commit" options (`git-graph.dialog.merge.squashMessageFormat` picks the squash commit message). "Cherry Pick" has "Record Origin" and "No Commit" options.
 * New "Drop Commit" action on non-merge commits, and a context menu on the "Uncommitted Changes" row with "Reset uncommitted changes" (mixed or hard) and "Clean untracked files" (optionally directories).
 * Fixed: commit messages shown in the parent selector of the cherry pick and revert dialogs were inserted as HTML. They are now escaped.
+* Commit Details View: right-click a file for "View Diff", "View File at this Revision", "View Diff with Working File", "Open File", and copying the absolute or relative path. The changed files can be shown as a tree or as a flat list (buttons above the files, default from `git-graph.commitDetailsView.fileView.type`). Folders that only contain one folder are shown on one line (`git-graph.commitDetailsView.fileView.fileTree.compactFolders`).
+* Fixed: file and folder names in the commit details were inserted as HTML. They are now escaped.
+* Fixed: a failure to open a diff was reported as success.
 * Columns: the Date, Author and Commit columns can be hidden. The default comes from `git-graph.defaultColumnVisibility`; right-click a column header to change it for one repository. Column resizing works with any set of visible columns.
 * Muting: `git-graph.repository.commits.mute.mergeCommits` and `git-graph.repository.commits.mute.commitsThatAreNotAncestorsOfHead` show those rows with a muted colour.
 * Loading options: `git-graph.repository.onlyFollowFirstParent` (`--first-parent`), `git-graph.repository.includeCommitsMentionedByReflogs` (`--reflog` with "Show All"), `git-graph.repository.onLoad.scrollToHead`.
