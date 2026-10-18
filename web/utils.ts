@@ -155,3 +155,19 @@ function sendMessage(msg: GG.RequestMessage) {
 function getVSCodeStyle(name: string) {
 	return document.documentElement.style.getPropertyValue(name);
 }
+/**
+ * Translate a user-facing string. The key is the English text; the translation comes from the
+ * bundle of the current display language that the extension put in the view state (`l10n`),
+ * which VS Code loads from `l10n/bundle.l10n.<locale>.json`. `{0}`, `{1}`, ... are replaced by the
+ * arguments. Translations may contain the same HTML markup as the English text.
+ */
+function t(key: string, ...args: (string | number)[]): string {
+	const bundle = viewState.l10n;
+	let text = key;
+	if (bundle !== null && typeof bundle === 'object' && Object.prototype.hasOwnProperty.call(bundle, key)) {
+		const value = bundle[key];
+		if (typeof value === 'string') text = value;
+		else if (value !== null && typeof value === 'object' && typeof value.message === 'string') text = value.message;
+	}
+	return args.length === 0 ? text : text.replace(/\{(\d+)\}/g, (match, index) => typeof args[parseInt(index)] !== 'undefined' ? String(args[parseInt(index)]) : match);
+}

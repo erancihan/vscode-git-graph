@@ -10,7 +10,7 @@ import { RepoFileWatcher } from './repoFileWatcher';
 import { buildPullRequestUrl, detectPullRequestProvider, parseRemoteUrl } from './remoteUrl';
 import { RepoManager, defaultRepoState } from './repoManager';
 import { runGitCommandInTerminal } from './terminal';
-import { GitArchiveType, GitCommandStatus, GitFileChangeType, GitGraphViewState, GitRebaseType, GitRepoSet, GitRepoState, PullRequestProvider, RequestMessage, ResponseMessage } from './types';
+import { GitArchiveType, GitCommandStatus, GitFileChangeType, GitGraphViewState, GitRebaseType, L10nBundle, GitRepoSet, GitRepoState, PullRequestProvider, RequestMessage, ResponseMessage } from './types';
 import { abbrevCommit, copyToClipboard } from './utils';
 
 export class GitGraphView {
@@ -556,7 +556,7 @@ export class GitGraphView {
 		const safeName = ref.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'archive';
 		const uri = await vscode.window.showSaveDialog({
 			defaultUri: vscode.Uri.file(path.join(repo, safeName + '.zip')),
-			saveLabel: 'Create Archive',
+			saveLabel: vscode.l10n.t('Create Archive'),
 			filters: { 'ZIP Archive': ['zip'], 'TAR Archive': ['tar'] }
 		});
 		if (!uri) return null;
@@ -564,7 +564,7 @@ export class GitGraphView {
 		const status = await this.dataSource.archive(repo, ref, outputPath, type);
 		if (status === null) {
 			this.logger.log('Created archive of ' + ref + ' at ' + outputPath);
-			vscode.window.showInformationMessage('Git Graph: Archive of "' + ref + '" saved to ' + outputPath);
+			vscode.window.showInformationMessage(vscode.l10n.t('Git Graph: Archive of "{0}" saved to {1}', ref, outputPath));
 		}
 		return status;
 	}
@@ -589,14 +589,14 @@ export class GitGraphView {
 		const name = (newBranch !== null ? newBranch : ref).replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'worktree';
 		const uri = await vscode.window.showSaveDialog({
 			defaultUri: vscode.Uri.file(path.join(path.dirname(repo), path.basename(repo) + '-' + name)),
-			saveLabel: 'Create Worktree',
-			title: 'Choose the folder of the new worktree'
+			saveLabel: vscode.l10n.t('Create Worktree'),
+			title: vscode.l10n.t('Choose the folder of the new worktree')
 		});
 		if (!uri) return null;
 		const status = await this.dataSource.addWorktree(repo, uri.fsPath, ref, newBranch);
 		if (status === null) {
 			this.logger.log('Created worktree at ' + uri.fsPath + ' for ' + ref);
-			const choice = await vscode.window.showInformationMessage('Git Graph: Worktree created at ' + uri.fsPath + '.', 'Add to Git Graph', 'Open in New Window');
+			const choice = await vscode.window.showInformationMessage(vscode.l10n.t('Git Graph: Worktree created at {0}.', uri.fsPath), vscode.l10n.t('Add to Git Graph'), vscode.l10n.t('Open in New Window'));
 			if (choice === 'Add to Git Graph') await this.openWorktree(uri.fsPath, false);
 			else if (choice === 'Open in New Window') await this.openWorktree(uri.fsPath, true);
 		}
@@ -644,6 +644,7 @@ export class GitGraphView {
 	private getHtmlForWebview() {
 		const config = getConfig(), nonce = getNonce();
 		const viewState: GitGraphViewState = {
+			l10n: vscode.l10n.bundle !== undefined ? <L10nBundle>vscode.l10n.bundle : null,
 			autoCenterCommitDetailsView: config.autoCenterCommitDetailsView(),
 			codeReviews: this.extensionState.getCodeReviews(),
 			commitDetailsView: config.commitDetailsView(),
@@ -681,13 +682,13 @@ export class GitGraphView {
 		if (numRepos > 0) {
 			body = `<body style="${colorVars}">
 			<div id="controls">
-				<span id="repoControl"><span class="unselectable">Repo: </span><div id="repoSelect" class="dropdown"></div></span>
-				<span id="branchControl"><span class="unselectable">Branch: </span><div id="branchSelect" class="dropdown"></div></span>
-				<label id="showRemoteBranchesControl"><input type="checkbox" id="showRemoteBranchesCheckbox" value="1"${viewState.showRemoteBranches ? ' checked' : ''}>Show Remote Branches</label>
-				<div id="fetchBtn" class="roundedBtn" style="display:none" title="Fetch from Remote(s)">Fetch</div>
-				<div id="refreshBtn" class="roundedBtn">Refresh</div>
-				<div id="filterBtn" class="roundedBtn" title="Filter commits by author or path"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" viewBox="0 0 14 16"><path fill-rule="evenodd" d="M1 2h12l-4.5 6v5l-3 1.5V8L1 2z"/></svg></div>
-				<div id="settingsBtn" class="roundedBtn" title="Repository Settings"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" viewBox="0 0 14 16"><path fill-rule="evenodd" d="M14 8.77v-1.6l-1.94-.64-.45-1.09.88-1.84-1.13-1.13-1.81.91-1.09-.45-.69-1.92h-1.6l-.63 1.94-1.11.45-1.84-.88-1.13 1.13.91 1.81-.45 1.09L0 7.23v1.59l1.94.64.45 1.09-.88 1.84 1.13 1.13 1.81-.91 1.09.45.69 1.92h1.59l.63-1.94 1.11-.45 1.84.88 1.13-1.13-.92-1.81.47-1.09L14 8.75v.02zM7 11c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/></svg></div>
+				<span id="repoControl"><span class="unselectable">${vscode.l10n.t('Repo: ')}</span><div id="repoSelect" class="dropdown"></div></span>
+				<span id="branchControl"><span class="unselectable">${vscode.l10n.t('Branch: ')}</span><div id="branchSelect" class="dropdown"></div></span>
+				<label id="showRemoteBranchesControl"><input type="checkbox" id="showRemoteBranchesCheckbox" value="1"${viewState.showRemoteBranches ? ' checked' : ''}>${vscode.l10n.t('Show Remote Branches')}</label>
+				<div id="fetchBtn" class="roundedBtn" style="display:none" title="${vscode.l10n.t('Fetch from Remote(s)')}">${vscode.l10n.t('Fetch')}</div>
+				<div id="refreshBtn" class="roundedBtn">${vscode.l10n.t('Refresh')}</div>
+				<div id="filterBtn" class="roundedBtn" title="${vscode.l10n.t('Filter commits by author or path')}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" viewBox="0 0 14 16"><path fill-rule="evenodd" d="M1 2h12l-4.5 6v5l-3 1.5V8L1 2z"/></svg></div>
+				<div id="settingsBtn" class="roundedBtn" title="${vscode.l10n.t('Repository Settings')}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" viewBox="0 0 14 16"><path fill-rule="evenodd" d="M14 8.77v-1.6l-1.94-.64-.45-1.09.88-1.84-1.13-1.13-1.81.91-1.09-.45-.69-1.92h-1.6l-.63 1.94-1.11.45-1.84-.88-1.13 1.13.91 1.81-.45 1.09L0 7.23v1.59l1.94.64.45 1.09-.88 1.84 1.13 1.13 1.81-.91 1.09.45.69 1.92h1.59l.63-1.94 1.11-.45 1.84.88 1.13-1.13-.92-1.81.47-1.09L14 8.75v.02zM7 11c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/></svg></div>
 			</div>
 			<div id="filterBar"></div>
 			<div id="bisectBar"></div>

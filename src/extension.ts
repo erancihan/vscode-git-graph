@@ -21,7 +21,7 @@ export function activate(context: vscode.ExtensionContext) {
 	extensionState.pruneCodeReviews();
 	const dataSource = new DataSource(logger);
 	const askpass = new AskpassManager(context.extensionPath, (prompt, isPassword) => {
-		return Promise.resolve(vscode.window.showInputBox({ prompt: 'Git Graph: ' + prompt, password: isPassword, ignoreFocusOut: true })).then((value) => typeof value === 'string' ? value : null);
+		return Promise.resolve(vscode.window.showInputBox({ prompt: vscode.l10n.t('Git Graph: {0}', prompt), password: isPassword, ignoreFocusOut: true })).then((value) => typeof value === 'string' ? value : null);
 	}, logger);
 	dataSource.setEnvironmentProvider(() => getConfig().integratedAskpass() ? askpass.getEnvironment() : {});
 	dataSource.setExtensionPath(context.extensionPath);
@@ -39,13 +39,13 @@ export function activate(context: vscode.ExtensionContext) {
 			GitGraphView.createOrShow(context.extensionPath, dataSource, extensionState, avatarManager, repoManager, logger, loadRepo);
 		}),
 		vscode.commands.registerCommand('git-graph.addGitRepository', async () => {
-			const uris = await vscode.window.showOpenDialog({ canSelectFiles: false, canSelectFolders: true, canSelectMany: false, openLabel: 'Add Repository', title: 'Select a Git repository to add to Git Graph' });
+			const uris = await vscode.window.showOpenDialog({ canSelectFiles: false, canSelectFolders: true, canSelectMany: false, openLabel: vscode.l10n.t('Add Repository'), title: vscode.l10n.t('Select a Git repository to add to Git Graph') });
 			if (!uris || uris.length === 0) return;
 			const path = getPathFromUri(uris[0]);
 			const error = await repoManager.registerRepo(path);
 			if (error === null) {
 				logger.log('Added repository: ' + path);
-				vscode.window.showInformationMessage('The repository "' + path + '" was added to Git Graph.');
+				vscode.window.showInformationMessage(vscode.l10n.t('The repository "{0}" was added to Git Graph.', path));
 			} else {
 				vscode.window.showErrorMessage(error);
 			}
@@ -53,33 +53,33 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.commands.registerCommand('git-graph.removeGitRepository', async () => {
 			const repos = Object.keys(repoManager.getRepos());
 			if (repos.length === 0) {
-				vscode.window.showInformationMessage('Git Graph does not know any repository in this workspace.');
+				vscode.window.showInformationMessage(vscode.l10n.t('Git Graph does not know any repository in this workspace.'));
 				return;
 			}
-			const picked = await vscode.window.showQuickPick(repos.map((path) => ({ label: path.substring(path.lastIndexOf('/') + 1), description: path, path: path })), { placeHolder: 'Select the repository to remove from Git Graph' });
+			const picked = await vscode.window.showQuickPick(repos.map((path) => ({ label: path.substring(path.lastIndexOf('/') + 1), description: path, path: path })), { placeHolder: vscode.l10n.t('Select the repository to remove from Git Graph') });
 			if (!picked) return;
 			repoManager.ignoreRepo(picked.path);
 			logger.log('Removed repository: ' + picked.path);
-			vscode.window.showInformationMessage('The repository "' + picked.path + '" was removed from Git Graph. Use "Git Graph: Add Git Repository..." to add it again.');
+			vscode.window.showInformationMessage(vscode.l10n.t('The repository "{0}" was removed from Git Graph. Use "Git Graph: Add Git Repository..." to add it again.', picked.path));
 		}),
 		vscode.commands.registerCommand('git-graph.clearAvatarCache', () => {
 			const count = avatarManager.clearCache();
-			vscode.window.showInformationMessage('Git Graph: The avatar cache was cleared (' + count + ' avatar' + (count !== 1 ? 's' : '') + ' removed).');
+			vscode.window.showInformationMessage(count === 1 ? vscode.l10n.t('Git Graph: The avatar cache was cleared (1 avatar removed).') : vscode.l10n.t('Git Graph: The avatar cache was cleared ({0} avatars removed).', count));
 		}),
 		vscode.commands.registerCommand('git-graph.endAllWorkspaceCodeReviews', () => {
 			const count = extensionState.endAllCodeReviews();
 			GitGraphView.notifyCodeReviewsEnded();
-			vscode.window.showInformationMessage('Git Graph: Ended ' + count + ' code review' + (count !== 1 ? 's' : '') + ' in this workspace.');
+			vscode.window.showInformationMessage(count === 1 ? vscode.l10n.t('Git Graph: Ended 1 code review in this workspace.') : vscode.l10n.t('Git Graph: Ended {0} code reviews in this workspace.', count));
 		}),
 		vscode.commands.registerCommand('git-graph.fetch', async () => {
-			const repo = await pickRepo(repoManager, 'Select the repository to fetch');
+			const repo = await pickRepo(repoManager, vscode.l10n.t('Select the repository to fetch'));
 			if (repo === null) return;
 			const config = getConfig();
 			const status = await dataSource.fetch(repo, null, config.fetchAndPrune(), config.fetchAndPruneTags());
 			if (status === null) {
-				vscode.window.showInformationMessage('Git Graph: Fetched from the remote(s) of "' + repo + '".');
+				vscode.window.showInformationMessage(vscode.l10n.t('Git Graph: Fetched from the remote(s) of "{0}".', repo));
 			} else {
-				vscode.window.showErrorMessage('Git Graph: Unable to fetch: ' + status);
+				vscode.window.showErrorMessage(vscode.l10n.t('Git Graph: Unable to fetch: {0}', status));
 			}
 		}),
 		vscode.commands.registerCommand('git-graph.version', async () => {
@@ -91,19 +91,19 @@ export function activate(context: vscode.ExtensionContext) {
 				'OS: ' + os.type() + ' ' + os.release() + ' ' + os.arch()
 			];
 			logger.log('Version information: ' + info.join('; '));
-			const choice = await vscode.window.showInformationMessage(info.join('  |  '), 'Copy');
+			const choice = await vscode.window.showInformationMessage(info.join('  |  '), vscode.l10n.t('Copy'));
 			if (choice === 'Copy') {
 				if (await copyToClipboard(info.join('\n'))) {
-					vscode.window.showInformationMessage('Git Graph: Version information copied to the clipboard.');
+					vscode.window.showInformationMessage(vscode.l10n.t('Git Graph: Version information copied to the clipboard.'));
 				} else {
-					vscode.window.showErrorMessage('Git Graph: Unable to copy the version information to the clipboard.');
+					vscode.window.showErrorMessage(vscode.l10n.t('Git Graph: Unable to copy the version information to the clipboard.'));
 				}
 			}
 		}),
 		vscode.commands.registerCommand('git-graph.openFile', (uri?: vscode.Uri) => {
 			const target = uri || (vscode.window.activeTextEditor ? vscode.window.activeTextEditor.document.uri : null);
 			if (!target || target.scheme !== DiffDocProvider.scheme) {
-				vscode.window.showErrorMessage('Git Graph: This command opens the working file of a file that Git Graph shows at a revision.');
+				vscode.window.showErrorMessage(vscode.l10n.t('Git Graph: This command opens the working file of a file that Git Graph shows at a revision.'));
 				return;
 			}
 			const request = decodeDiffDocUri(target);
@@ -136,7 +136,7 @@ export function activate(context: vscode.ExtensionContext) {
 async function pickRepo(repoManager: RepoManager, placeHolder: string): Promise<string | null> {
 	const repos = Object.keys(repoManager.getRepos());
 	if (repos.length === 0) {
-		vscode.window.showInformationMessage('Git Graph does not know any repository in this workspace.');
+		vscode.window.showInformationMessage(vscode.l10n.t('Git Graph does not know any repository in this workspace.'));
 		return null;
 	}
 	if (repos.length === 1) return repos[0];

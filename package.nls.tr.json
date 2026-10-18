@@ -1,0 +1,13 @@
+{
+	"displayName": "Git Graph Community",
+	"description": "Deponuzun Git grafiğini görüntüleyin ve Git eylemlerini grafikten gerçekleştirin. Git Graph'ın topluluk tarafından sürdürülen MIT çatalı.",
+	"command.view.title": "Git Grafiğini Görüntüle (git log)",
+	"command.clearAvatarCache.title": "Avatar Önbelleğini Temizle",
+	"command.addGitRepository.title": "Git Deposu Ekle...",
+	"command.removeGitRepository.title": "Git Deposunu Kaldır...",
+	"command.fetch.title": "Uzak(lar)dan Getir",
+	"command.version.title": "Sürüm Bilgilerini Al",
+	"command.endAllWorkspaceCodeReviews.title": "Çalışma Alanındaki Tüm Kod İncelemelerini Bitir",
+	"command.openFile.title": "Dosyayı Aç",
+	"config.title": "Git Graph"
+}
