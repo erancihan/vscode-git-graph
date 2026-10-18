@@ -263,6 +263,8 @@ export class DataSource {
 	}
 
 	private getRefs(repo: string, showRemoteBranches: boolean) {
+		const config = getConfig();
+		const showTags = config.showTags(), showRemoteHeads = config.showRemoteHeads();
 		const args = ['show-ref'];
 		if (!showRemoteBranches) args.push('--heads', '--tags');
 		args.push('-d', '--head');
@@ -279,8 +281,18 @@ export class DataSource {
 				if (ref.startsWith('refs/heads/')) {
 					refData.refs.push({ hash: hash, name: ref.substring(11), type: 'head' });
 				} else if (ref.startsWith('refs/tags/')) {
-					refData.refs.push({ hash: hash, name: (ref.endsWith('^{}') ? ref.substring(10, ref.length - 3) : ref.substring(10)), type: 'tag' });
+					if (!showTags) continue;
+					if (ref.endsWith('^{}')) {
+						// Dereferenced annotated tag: it points at the commit, so replace the tag object entry
+						const tagName = ref.substring(10, ref.length - 3);
+						const tagObjectEntry = refData.refs.findIndex(r => r.type === 'tag' && r.name === tagName);
+						if (tagObjectEntry > -1) refData.refs.splice(tagObjectEntry, 1);
+						refData.refs.push({ hash: hash, name: tagName, type: 'tag' });
+					} else {
+						refData.refs.push({ hash: hash, name: ref.substring(10), type: 'tag' });
+					}
 				} else if (ref.startsWith('refs/remotes/')) {
+					if (!showRemoteHeads && ref.endsWith('/HEAD')) continue;
 					refData.refs.push({ hash: hash, name: ref.substring(13), type: 'remote' });
 				} else if (ref === 'HEAD') {
 					refData.head = hash;
@@ -291,12 +303,15 @@ export class DataSource {
 	}
 
 	private getGitLog(repo: string, branch: string, num: number, showRemoteBranches: boolean) {
-		const args = ['log', '--max-count=' + num, '--format=' + this.gitLogFormat, '--date-order'];
+		const config = getConfig();
+		const args = ['log', '--max-count=' + num, '--format=' + this.gitLogFormat, '--' + config.commitOrdering() + '-order'];
 		if (branch !== '') {
 			if (!isSafeRefName(branch)) return Promise.resolve(<GitCommit[]>[]);
 			args.push(branch);
 		} else {
-			args.push('--branches', '--tags');
+			// HEAD is listed explicitly so that a detached HEAD is part of the graph
+			args.push('HEAD', '--branches');
+			if (config.showCommitsOnlyReferencedByTags()) args.push('--tags');
 			if (showRemoteBranches) args.push('--remotes');
 		}
 		args.push('--');

@@ -44,7 +44,13 @@ This extension contributes the following settings:
 * `git-graph.repository.commits.fetchAvatars`: Fetch avatars of commit authors and committers. Default: false.
 * `git-graph.repository.commits.initialLoad`: Specifies the number of commits to load initially.
 * `git-graph.repository.commits.loadMore`: Specifies the number of commits to load when the "Load More Commits" button is pressed.
+* `git-graph.repository.commits.loadMoreAutomatically`: Load more commits automatically when the view is scrolled to the bottom. Default: false.
+* `git-graph.repository.commits.order`: Order of commits on the graph: `date`, `author-date` or `topo`. Default: `date`.
 * `git-graph.repository.onLoad.showCheckedOutBranch`: Show only the checked-out branch when Git Graph is opened. Default: false.
+* `git-graph.repository.showCommitsOnlyReferencedByTags`: Show commits that are only reachable from tags when "Show All" is selected. Default: true.
+* `git-graph.repository.showRemoteBranches`: Default state of the "Show Remote Branches" checkbox. Default: true.
+* `git-graph.repository.showRemoteHeads`: Show remote HEAD references such as `origin/HEAD`. Default: true.
+* `git-graph.repository.showTags`: Show tags on the graph. Default: true.
 * `git-graph.repository.showUncommittedChanges`: Show uncommitted changes. Set to false to decrease load time on large repositories.
 * `git-graph.showStatusBarItem`: Show a Status Bar item that opens Git Graph when clicked.
 * `git-graph.tabIconColourTheme`: Specifies the colour theme of the icon displayed on the Git Graph tab.

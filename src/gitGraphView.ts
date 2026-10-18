@@ -265,8 +265,10 @@ export class GitGraphView {
 			initialLoadCommits: config.initialLoadCommits(),
 			lastActiveRepo: this.extensionState.getLastActiveRepo(),
 			loadMoreCommits: config.loadMoreCommits(),
+			loadMoreCommitsAutomatically: config.loadMoreCommitsAutomatically(),
 			repos: this.repoManager.getRepos(),
-			showCurrentBranchByDefault: config.showCurrentBranchByDefault()
+			showCurrentBranchByDefault: config.showCurrentBranchByDefault(),
+			showRemoteBranches: config.showRemoteBranches()
 		};
 
 		let body, numRepos = Object.keys(viewState.repos).length, colorVars = '', colorParams = '';
@@ -279,7 +281,7 @@ export class GitGraphView {
 			<div id="controls">
 				<span id="repoControl"><span class="unselectable">Repo: </span><div id="repoSelect" class="dropdown"></div></span>
 				<span id="branchControl"><span class="unselectable">Branch: </span><div id="branchSelect" class="dropdown"></div></span>
-				<label id="showRemoteBranchesControl"><input type="checkbox" id="showRemoteBranchesCheckbox" value="1" checked>Show Remote Branches</label>
+				<label id="showRemoteBranchesControl"><input type="checkbox" id="showRemoteBranchesCheckbox" value="1"${viewState.showRemoteBranches ? ' checked' : ''}>Show Remote Branches</label>
 				<div id="refreshBtn" class="roundedBtn">Refresh</div>
 			</div>
 			<div id="content">
