@@ -70,6 +70,34 @@ export type GitRepoSet = { [repo: string]: GitRepoState };
 export interface GitRepoState {
 	columnWidths: number[] | null;
 	columnVisibility: ColumnVisibility | null; // null => use the default from the settings
+	/** Custom name shown in the repository dropdown. null => the folder name. */
+	name: string | null;
+	/** Remotes whose branches are hidden from the graph and the branch dropdown. */
+	hideRemotes: string[];
+	// Per-repository overrides of the settings. null => use the setting.
+	showTags: boolean | null;
+	showStashes: boolean | null;
+	includeCommitsMentionedByReflogs: boolean | null;
+	onlyFollowFirstParent: boolean | null;
+}
+
+export interface GitRemoteDetails {
+	name: string;
+	url: string | null;
+	pushUrl: string | null; // null => the fetch url is used for pushing
+}
+
+/** `user.name` and `user.email` from the repository's local configuration and from the global configuration. */
+export interface GitUserDetails {
+	localName: string | null;
+	localEmail: string | null;
+	globalName: string | null;
+	globalEmail: string | null;
+}
+
+export interface GitRepoSettings {
+	remotes: GitRemoteDetails[];
+	user: GitUserDetails;
 }
 
 export interface ColumnVisibility {
@@ -623,6 +651,77 @@ export interface ResponseOpenExternalDiff {
 	status: GitCommandStatus;
 }
 
+export interface RequestGetRepoSettings {
+	command: 'getRepoSettings';
+	repo: string;
+}
+export interface ResponseGetRepoSettings {
+	command: 'getRepoSettings';
+	settings: GitRepoSettings | null;
+}
+
+export interface RequestAddRemote {
+	command: 'addRemote';
+	repo: string;
+	name: string;
+	url: string;
+	pushUrl: string | null;
+	fetch: boolean;
+}
+export interface ResponseAddRemote {
+	command: 'addRemote';
+	status: GitCommandStatus;
+}
+
+export interface RequestEditRemote {
+	command: 'editRemote';
+	repo: string;
+	nameOld: string;
+	nameNew: string;
+	url: string;
+	pushUrl: string | null;
+}
+export interface ResponseEditRemote {
+	command: 'editRemote';
+	status: GitCommandStatus;
+}
+
+export interface RequestDeleteRemote {
+	command: 'deleteRemote';
+	repo: string;
+	name: string;
+}
+export interface ResponseDeleteRemote {
+	command: 'deleteRemote';
+	status: GitCommandStatus;
+}
+
+export interface RequestPruneRemote {
+	command: 'pruneRemote';
+	repo: string;
+	name: string;
+}
+export interface ResponsePruneRemote {
+	command: 'pruneRemote';
+	status: GitCommandStatus;
+}
+
+export interface RequestSetUserDetails {
+	command: 'setUserDetails';
+	repo: string;
+	name: string;
+	email: string;
+	useGlobally: boolean;
+}
+export interface ResponseSetUserDetails {
+	command: 'setUserDetails';
+	status: GitCommandStatus;
+}
+
+export interface RequestOpenExtensionSettings {
+	command: 'openExtensionSettings';
+}
+
 export interface RequestOpenFile {
 	command: 'openFile';
 	repo: string;
@@ -714,6 +813,13 @@ export type RequestMessage =
 	| RequestSaveRepoState
 	| RequestViewDiff
 	| RequestArchive
+	| RequestGetRepoSettings
+	| RequestAddRemote
+	| RequestEditRemote
+	| RequestDeleteRemote
+	| RequestPruneRemote
+	| RequestSetUserDetails
+	| RequestOpenExtensionSettings
 	| RequestOpenExternalDiff
 	| RequestViewDiffWithWorkingFile
 	| RequestViewFileAtRevision;
@@ -758,6 +864,12 @@ export type ResponseMessage =
 	| ResponseSelectRepo
 	| ResponseViewDiff
 	| ResponseArchive
+	| ResponseGetRepoSettings
+	| ResponseAddRemote
+	| ResponseEditRemote
+	| ResponseDeleteRemote
+	| ResponsePruneRemote
+	| ResponseSetUserDetails
 	| ResponseOpenExternalDiff
 	| ResponseViewDiffWithWorkingFile
 	| ResponseViewFileAtRevision;

@@ -2,7 +2,7 @@ import * as cp from 'child_process';
 import { getConfig } from './config';
 import { findGitExecutable } from './gitExecutable';
 import { Logger } from './logger';
-import { CherryPickOptions, GitArchiveType, GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChange, GitFileChangeType, GitPushBranchMode, GitRebaseType, GitRefData, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitUnsavedChanges, MergeOptions } from './types';
+import { CherryPickOptions, GitArchiveType, GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChange, GitFileChangeType, GitPushBranchMode, GitRebaseType, GitRefData, GitRemoteDetails, GitRepoSettings, GitRepoState, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitUnsavedChanges, GitUserDetails, MergeOptions } from './types';
 import { getPathFromStr } from './utils';
 
 const eolRegex = /\r\n|\r|\n/g;
@@ -73,7 +73,7 @@ export class DataSource {
 		};
 	}
 
-	public getBranches(repo: string, showRemoteBranches: boolean) {
+	public getBranches(repo: string, showRemoteBranches: boolean, hideRemotes: string[] = []) {
 		const args = ['branch'];
 		if (showRemoteBranches) args.push('-a');
 		return this.spawnGit(args, repo, (stdout) => {
@@ -82,6 +82,7 @@ export class DataSource {
 			for (let i = 0; i < lines.length - 1; i++) {
 				const name = lines[i].substring(2).split(' -> ')[0];
 				if (name.match(headRegex) !== null) continue;
+				if (hideRemotes.some((remote) => name.startsWith('remotes/' + remote + '/'))) continue;
 
 				if (lines[i][0] === '*') {
 					branchData.head = name;
@@ -98,11 +99,12 @@ export class DataSource {
 	 * Load commits. `branches` lists branch names, "HEAD", or "--glob=<pattern>" entries; an empty list
 	 * shows all branches (and tags and remotes according to the settings).
 	 */
-	public async getCommits(repo: string, branches: string[], maxCommits: number, showRemoteBranches: boolean) {
+	public async getCommits(repo: string, branches: string[], maxCommits: number, showRemoteBranches: boolean, repoState: GitRepoState | null = null) {
+		const options = resolveLoadOptions(repoState);
 		const [commits, refData, stashes] = await Promise.all([
-			this.getGitLog(repo, branches, maxCommits + 1, showRemoteBranches),
-			this.getRefs(repo, showRemoteBranches),
-			getConfig().showStashes() ? this.getStashes(repo) : Promise.resolve(<GitStashEntry[]>[])
+			this.getGitLog(repo, branches, maxCommits + 1, showRemoteBranches, options),
+			this.getRefs(repo, showRemoteBranches, options),
+			options.showStashes ? this.getStashes(repo) : Promise.resolve(<GitStashEntry[]>[])
 		]);
 		const moreCommitsAvailable = commits.length === maxCommits + 1;
 		if (moreCommitsAvailable) commits.pop();
@@ -211,6 +213,92 @@ export class DataSource {
 	/** Names of the configured remotes. */
 	public getRemotes(repo: string) {
 		return this.spawnGit(['remote'], repo, (stdout) => stdout.split(eolRegex).filter((line) => line !== '')).catch((): string[] => []);
+	}
+
+	/** The remotes with their fetch and push URLs. */
+	public async getRemoteDetails(repo: string): Promise<GitRemoteDetails[]> {
+		const names = await this.getRemotes(repo);
+		const details: { [name: string]: GitRemoteDetails } = {};
+		for (const name of names) details[name] = { name: name, url: null, pushUrl: null };
+		const lines = await this.spawnGit(['config', '--get-regexp', '^remote\\..*\\.(url|pushurl)$'], repo, (stdout) => stdout.split(eolRegex)).catch((): string[] => []);
+		for (const line of lines) {
+			const space = line.indexOf(' ');
+			if (space < 0) continue;
+			const key = line.substring(0, space), value = line.substring(space + 1);
+			const isPush = key.endsWith('.pushurl'), name = key.substring(7, key.length - (isPush ? 8 : 4));
+			if (typeof details[name] === 'undefined') continue;
+			if (isPush) details[name].pushUrl = value; else details[name].url = value;
+		}
+		return names.map((name) => details[name]);
+	}
+
+	public async addRemote(repo: string, name: string, url: string, pushUrl: string | null, fetch: boolean): Promise<GitCommandStatus> {
+		if (!isSafeRefName(name) || !isSafeUrl(url) || (pushUrl !== null && !isSafeUrl(pushUrl))) return rejectArguments();
+		let status = await this.runGitCommand(['remote', 'add', name, url], repo);
+		if (status === null && pushUrl !== null) status = await this.runGitCommand(['remote', 'set-url', '--push', name, pushUrl], repo);
+		if (status === null && fetch) status = await this.fetch(repo, name, false, false);
+		return status;
+	}
+
+	public async editRemote(repo: string, nameOld: string, nameNew: string, url: string, pushUrl: string | null): Promise<GitCommandStatus> {
+		if (!isSafeRefName(nameOld) || !isSafeRefName(nameNew) || !isSafeUrl(url) || (pushUrl !== null && !isSafeUrl(pushUrl))) return rejectArguments();
+		let status: GitCommandStatus = null;
+		if (nameOld !== nameNew) status = await this.runGitCommand(['remote', 'rename', nameOld, nameNew], repo);
+		if (status === null) status = await this.runGitCommand(['remote', 'set-url', nameNew, url], repo);
+		if (status === null) {
+			if (pushUrl !== null) {
+				status = await this.runGitCommand(['remote', 'set-url', '--push', nameNew, pushUrl], repo);
+			} else {
+				// Removing a push url that is not set is not an error
+				await this.runGitCommand(['config', '--unset', 'remote.' + nameNew + '.pushurl'], repo, false);
+			}
+		}
+		return status;
+	}
+
+	public deleteRemote(repo: string, name: string) {
+		if (!isSafeRefName(name)) return rejectArguments();
+		return this.runGitCommand(['remote', 'remove', name], repo);
+	}
+
+	public pruneRemote(repo: string, name: string) {
+		if (!isSafeRefName(name)) return rejectArguments();
+		return this.runGitCommand(['remote', 'prune', name], repo);
+	}
+
+	/** `user.name` and `user.email` from the local and the global configuration (null when not set). */
+	public async getUserDetails(repo: string): Promise<GitUserDetails> {
+		const read = (scope: string, key: string) => this.spawnGit(['config', scope, '--get', key], repo, (stdout) => stdout.split(eolRegex)[0], false).catch((): string | null => null);
+		const [localName, localEmail, globalName, globalEmail] = await Promise.all([read('--local', 'user.name'), read('--local', 'user.email'), read('--global', 'user.name'), read('--global', 'user.email')]);
+		return { localName, localEmail, globalName, globalEmail };
+	}
+
+	/**
+	 * Set `user.name` and `user.email` for the repository, or globally. An empty local value removes
+	 * the local setting so the global one applies again.
+	 */
+	public async setUserDetails(repo: string, name: string, email: string, useGlobally: boolean): Promise<GitCommandStatus> {
+		if (!isSafeConfigValue(name) || !isSafeConfigValue(email)) return rejectArguments();
+		const scope = useGlobally ? '--global' : '--local';
+		for (const [key, value] of [['user.name', name], ['user.email', email]]) {
+			let status: GitCommandStatus = null;
+			if (value.trim() === '') {
+				if (useGlobally) return 'The global ' + key + ' cannot be empty.';
+				const isSet = await this.spawnGit(['config', scope, '--get', key], repo, () => true, false).catch(() => false);
+				if (isSet) status = await this.runGitCommand(['config', scope, '--unset', key], repo);
+			} else {
+				status = await this.runGitCommand(['config', scope, key, value.trim()], repo);
+			}
+			if (status !== null) return status;
+		}
+		return null;
+	}
+
+	/** Everything the Repository Settings widget shows: remotes and user details. */
+	public async getRepoSettings(repo: string): Promise<GitRepoSettings | null> {
+		if (!await this.isGitRepository(repo)) return null;
+		const [remotes, user] = await Promise.all([this.getRemoteDetails(repo), this.getUserDetails(repo)]);
+		return { remotes, user };
 	}
 
 	/**
@@ -525,9 +613,8 @@ export class DataSource {
 		return this.runGitCommand(['reset', '--' + resetMode, commitHash], repo);
 	}
 
-	private getRefs(repo: string, showRemoteBranches: boolean) {
-		const config = getConfig();
-		const showTags = config.showTags(), showRemoteHeads = config.showRemoteHeads();
+	private getRefs(repo: string, showRemoteBranches: boolean, options: LoadOptions = resolveLoadOptions(null)) {
+		const showTags = options.showTags, showRemoteHeads = getConfig().showRemoteHeads(), hideRemotes = options.hideRemotes;
 		const args = ['show-ref'];
 		if (!showRemoteBranches) args.push('--heads', '--tags');
 		args.push('-d', '--head');
@@ -556,7 +643,9 @@ export class DataSource {
 					}
 				} else if (ref.startsWith('refs/remotes/')) {
 					if (!showRemoteHeads && ref.endsWith('/HEAD')) continue;
-					refData.refs.push({ hash: hash, name: ref.substring(13), type: 'remote' });
+					const name = ref.substring(13);
+					if (hideRemotes.some((remote) => name.startsWith(remote + '/'))) continue;
+					refData.refs.push({ hash: hash, name: name, type: 'remote' });
 				} else if (ref === 'HEAD') {
 					refData.head = hash;
 				}
@@ -565,10 +654,10 @@ export class DataSource {
 		}).catch((): GitRefData => ({ head: null, refs: [] }));
 	}
 
-	private getGitLog(repo: string, branches: string[], num: number, showRemoteBranches: boolean) {
+	private getGitLog(repo: string, branches: string[], num: number, showRemoteBranches: boolean, options: LoadOptions = resolveLoadOptions(null)) {
 		const config = getConfig(), formats = this.getFormats();
 		const args = ['log', '--max-count=' + num, '--format=' + formats.log, '--' + config.commitOrdering() + '-order'];
-		if (config.onlyFollowFirstParent()) args.push('--first-parent');
+		if (options.onlyFollowFirstParent) args.push('--first-parent');
 		if (branches.length > 0) {
 			for (const branch of branches) {
 				if (isGlobSelector(branch)) {
@@ -583,8 +672,12 @@ export class DataSource {
 			// HEAD is listed explicitly so that a detached HEAD is part of the graph
 			args.push('HEAD', '--branches');
 			if (config.showCommitsOnlyReferencedByTags()) args.push('--tags');
-			if (showRemoteBranches) args.push('--remotes');
-			if (config.includeCommitsMentionedByReflogs()) args.push('--reflog');
+			if (showRemoteBranches) {
+				// --exclude applies to the --remotes that follows it
+				for (const remote of options.hideRemotes) args.push('--exclude=' + remote + '/*');
+				args.push('--remotes');
+			}
+			if (options.includeCommitsMentionedByReflogs) args.push('--reflog');
 		}
 		args.push('--');
 
@@ -614,8 +707,8 @@ export class DataSource {
 	 * Run a git command that changes the repository. Resolves to `null` on success, or to the error
 	 * message that should be shown to the user.
 	 */
-	private runGitCommand(args: string[], repo: string): Promise<GitCommandStatus> {
-		return this.spawnGit(args, repo, () => null).catch((error: string) => error);
+	private runGitCommand(args: string[], repo: string, logFailure = true): Promise<GitCommandStatus> {
+		return this.spawnGit(args, repo, () => null, logFailure).catch((error: string) => error);
 	}
 
 	/**
@@ -672,6 +765,37 @@ export class DataSource {
  * A reference name supplied by the user or read from the repository must never be mistaken for a
  * git option. Git itself rejects names that start with "-", so refusing them loses nothing.
  */
+/** Options for loading a repository: the settings, overridden by the repository state where it is set. */
+interface LoadOptions {
+	hideRemotes: string[];
+	showTags: boolean;
+	showStashes: boolean;
+	includeCommitsMentionedByReflogs: boolean;
+	onlyFollowFirstParent: boolean;
+}
+
+export function resolveLoadOptions(state: GitRepoState | null): LoadOptions {
+	const config = getConfig();
+	const pick = (override: boolean | null | undefined, setting: boolean) => typeof override === 'boolean' ? override : setting;
+	return {
+		hideRemotes: state !== null && Array.isArray(state.hideRemotes) ? state.hideRemotes.filter(isSafeRefName) : [],
+		showTags: pick(state !== null ? state.showTags : null, config.showTags()),
+		showStashes: pick(state !== null ? state.showStashes : null, config.showStashes()),
+		includeCommitsMentionedByReflogs: pick(state !== null ? state.includeCommitsMentionedByReflogs : null, config.includeCommitsMentionedByReflogs()),
+		onlyFollowFirstParent: pick(state !== null ? state.onlyFollowFirstParent : null, config.onlyFollowFirstParent())
+	};
+}
+
+/** A remote URL or path: anything that git accepts, as long as it cannot be mistaken for an option. */
+export function isSafeUrl(url: string) {
+	return url.trim() !== '' && !url.startsWith('-') && !/[\r\n\0]/.test(url);
+}
+
+/** A git config value: no leading dash (would be read as an option) and no control characters. */
+export function isSafeConfigValue(value: string) {
+	return !value.startsWith('-') && !/[\r\n\0]/.test(value);
+}
+
 const SIGNATURE_STATUSES: GitSignatureStatus[] = ['G', 'B', 'U', 'X', 'Y', 'R', 'E', 'N'];
 
 /** Builds the signature record from the `%G?`, `%GS` and `%GK` placeholders. Unknown status codes are treated as "could not be checked". */

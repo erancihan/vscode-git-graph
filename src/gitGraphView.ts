@@ -7,9 +7,9 @@ import { encodeDiffDocUri } from './diffDocProvider';
 import { ExtensionState } from './extensionState';
 import { Logger } from './logger';
 import { RepoFileWatcher } from './repoFileWatcher';
-import { RepoManager } from './repoManager';
+import { RepoManager, defaultRepoState } from './repoManager';
 import { runGitCommandInTerminal } from './terminal';
-import { GitArchiveType, GitCommandStatus, GitFileChangeType, GitGraphViewState, GitRebaseType, GitRepoSet, RequestMessage, ResponseMessage } from './types';
+import { GitArchiveType, GitCommandStatus, GitFileChangeType, GitGraphViewState, GitRebaseType, GitRepoSet, GitRepoState, RequestMessage, ResponseMessage } from './types';
 import { abbrevCommit, copyToClipboard } from './utils';
 
 export class GitGraphView {
@@ -228,7 +228,7 @@ export class GitGraphView {
 					});
 					break;
 				case 'loadBranches':
-					let branchData = await this.dataSource.getBranches(msg.repo, msg.showRemoteBranches), isRepo = true;
+					let branchData = await this.dataSource.getBranches(msg.repo, msg.showRemoteBranches, this.getRepoState(msg.repo).hideRemotes), isRepo = true;
 					if (branchData.error) {
 						// If an error occurred, check to make sure the repo still exists
 						isRepo = await this.dataSource.isGitRepository(msg.repo);
@@ -250,7 +250,7 @@ export class GitGraphView {
 				case 'loadCommits':
 					this.sendMessage({
 						command: 'loadCommits',
-						... await this.dataSource.getCommits(msg.repo, msg.branches, msg.maxCommits, msg.showRemoteBranches),
+						... await this.dataSource.getCommits(msg.repo, msg.branches, msg.maxCommits, msg.showRemoteBranches, this.getRepoState(msg.repo)),
 						hard: msg.hard
 					});
 					break;
@@ -283,6 +283,45 @@ export class GitGraphView {
 						command: 'pushBranch',
 						status: await this.dataSource.pushBranchToRemotes(msg.repo, msg.branchName, msg.remotes, msg.setUpstream, msg.mode)
 					});
+					break;
+				case 'getRepoSettings':
+					this.sendMessage({
+						command: 'getRepoSettings',
+						settings: await this.dataSource.getRepoSettings(msg.repo)
+					});
+					break;
+				case 'addRemote':
+					this.sendMessage({
+						command: 'addRemote',
+						status: await this.dataSource.addRemote(msg.repo, msg.name, msg.url, msg.pushUrl, msg.fetch)
+					});
+					break;
+				case 'editRemote':
+					this.sendMessage({
+						command: 'editRemote',
+						status: await this.dataSource.editRemote(msg.repo, msg.nameOld, msg.nameNew, msg.url, msg.pushUrl)
+					});
+					break;
+				case 'deleteRemote':
+					this.sendMessage({
+						command: 'deleteRemote',
+						status: await this.dataSource.deleteRemote(msg.repo, msg.name)
+					});
+					break;
+				case 'pruneRemote':
+					this.sendMessage({
+						command: 'pruneRemote',
+						status: await this.dataSource.pruneRemote(msg.repo, msg.name)
+					});
+					break;
+				case 'setUserDetails':
+					this.sendMessage({
+						command: 'setUserDetails',
+						status: await this.dataSource.setUserDetails(msg.repo, msg.name, msg.email, msg.useGlobally)
+					});
+					break;
+				case 'openExtensionSettings':
+					vscode.commands.executeCommand('workbench.action.openSettings', '@ext:erancihan.vscode-git-graph');
 					break;
 				case 'archive':
 					this.sendMessage({
@@ -414,6 +453,12 @@ export class GitGraphView {
 		return status;
 	}
 
+	/** The stored state of a repository (defaults when the repository is unknown). */
+	private getRepoState(repo: string): GitRepoState {
+		const repos = this.repoManager.getRepos();
+		return typeof repos[repo] !== 'undefined' ? repos[repo] : defaultRepoState();
+	}
+
 	private getHtmlForWebview() {
 		const config = getConfig(), nonce = getNonce();
 		const viewState: GitGraphViewState = {
@@ -456,6 +501,7 @@ export class GitGraphView {
 				<label id="showRemoteBranchesControl"><input type="checkbox" id="showRemoteBranchesCheckbox" value="1"${viewState.showRemoteBranches ? ' checked' : ''}>Show Remote Branches</label>
 				<div id="fetchBtn" class="roundedBtn" style="display:none" title="Fetch from Remote(s)">Fetch</div>
 				<div id="refreshBtn" class="roundedBtn">Refresh</div>
+				<div id="settingsBtn" class="roundedBtn" title="Repository Settings"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" viewBox="0 0 14 16"><path fill-rule="evenodd" d="M14 8.77v-1.6l-1.94-.64-.45-1.09.88-1.84-1.13-1.13-1.81.91-1.09-.45-.69-1.92h-1.6l-.63 1.94-1.11.45-1.84-.88-1.13 1.13.91 1.81-.45 1.09L0 7.23v1.59l1.94.64.45 1.09-.88 1.84 1.13 1.13 1.81-.91 1.09.45.69 1.92h1.59l.63-1.94 1.11-.45 1.84.88 1.13-1.13-.92-1.81.47-1.09L14 8.75v.02zM7 11c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/></svg></div>
 			</div>
 			<div id="content">
 				<div id="commitGraph"></div>

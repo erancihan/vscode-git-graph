@@ -27,6 +27,7 @@ export class RepoManager {
 		this.extensionState = extensionState;
 		this.statusBarItem = statusBarItem;
 		this.repos = extensionState.getRepos();
+		for (const repo of Object.keys(this.repos)) this.repos[repo] = normaliseRepoState(this.repos[repo]);
 		this.maxDepthOfRepoSearch = getConfig().maxDepthOfRepoSearch();
 		this.startupTasks();
 
@@ -174,7 +175,7 @@ export class RepoManager {
 	}
 
 	private addRepo(repo: string) {
-		this.repos[repo] = { columnWidths: null, columnVisibility: null };
+		this.repos[repo] = defaultRepoState();
 		this.extensionState.saveRepos(this.repos);
 	}
 	private removeRepo(repo: string) {
@@ -220,7 +221,7 @@ export class RepoManager {
 		});
 	}
 	public setRepoState(repo: string, state: GitRepoState) {
-		this.repos[repo] = state;
+		this.repos[repo] = normaliseRepoState(state);
 		this.extensionState.saveRepos(this.repos);
 	}
 
@@ -380,4 +381,21 @@ function doesPathExist(path: string) {
 	return new Promise<boolean>(resolve => {
 		fs.stat(path, err => resolve(!err));
 	});
+}
+export function defaultRepoState(): GitRepoState {
+	return { columnWidths: null, columnVisibility: null, name: null, hideRemotes: [], showTags: null, showStashes: null, includeCommitsMentionedByReflogs: null, onlyFollowFirstParent: null };
+}
+
+/** Fills the fields that older versions did not store, and drops values of the wrong type. */
+export function normaliseRepoState(state: Partial<GitRepoState> | null | undefined): GitRepoState {
+	const result = defaultRepoState();
+	if (!state || typeof state !== 'object') return result;
+	if (Array.isArray(state.columnWidths)) result.columnWidths = state.columnWidths;
+	if (state.columnVisibility && typeof state.columnVisibility === 'object') result.columnVisibility = state.columnVisibility;
+	if (typeof state.name === 'string' && state.name.trim() !== '') result.name = state.name.trim();
+	if (Array.isArray(state.hideRemotes)) result.hideRemotes = state.hideRemotes.filter((remote): remote is string => typeof remote === 'string');
+	for (const key of <const>['showTags', 'showStashes', 'includeCommitsMentionedByReflogs', 'onlyFollowFirstParent']) {
+		if (typeof state[key] === 'boolean') result[key] = <boolean>state[key];
+	}
+	return result;
 }

@@ -503,7 +503,7 @@ svg.openFolderIcon, svg.closedFolderIcon, svg.fileIcon{
 	left:0;
 	right:0;
 	top:0;
-	padding:4px 96px 4px 0;
+	padding:4px 130px 4px 0;
 	border-bottom:1px solid rgba(128,128,128,0.5);
 	line-height:32px;
 	text-align:center;
@@ -521,7 +521,7 @@ svg.openFolderIcon, svg.closedFolderIcon, svg.fileIcon{
 	width:14px;
 	vertical-align:text-top;
 }
-#refreshBtn, #fetchBtn{
+#refreshBtn, #fetchBtn, #settingsBtn{
 	position:absolute;
 	right:8px;
 	top:50%;
@@ -530,6 +530,19 @@ svg.openFolderIcon, svg.closedFolderIcon, svg.fileIcon{
 	line-height:22px;
 	border-radius:11px;
 	margin-top:-12px;
+}
+#refreshBtn{
+	right:42px;
+}
+#settingsBtn{
+	width:24px;
+	right:8px;
+}
+#settingsBtn svg{
+	width:14px;
+	height:14px;
+	vertical-align:middle;
+	fill:currentColor;
 }
 #loadMoreCommitsBtn{
 	width:180px;
@@ -782,4 +795,178 @@ svg.openFolderIcon, svg.closedFolderIcon, svg.fileIcon{
 }
 #commitTable tr.commit.findCurrent td{
 	background-color:var(--vscode-editor-findMatchBackground, rgba(168,165,38,0.6));
+}
+
+/* Repository Settings widget */
+#settingsWidgetBacking{
+	display:none;
+}
+#settingsWidgetBacking.active{
+	display:block;
+	position:fixed;
+	left:0;
+	top:0;
+	right:0;
+	bottom:0;
+	background-color:rgba(0,0,0,0.3);
+	z-index:7;
+}
+#settingsWidget{
+	display:none;
+}
+#settingsWidget.active{
+	display:flex;
+	flex-direction:column;
+	position:fixed;
+	left:50%;
+	top:50%;
+	transform:translate(-50%, -50%);
+	width:640px;
+	max-width:calc(100% - 32px);
+	max-height:85%;
+	background-color:var(--vscode-menu-background);
+	color:var(--vscode-menu-foreground);
+	border:1px solid rgba(128,128,128,0.5);
+	border-radius:5px;
+	box-shadow:0 0 30px 5px var(--vscode-widget-shadow);
+	z-index:8;
+	font-size:13px;
+	text-align:left;
+}
+#settingsWidgetHeader{
+	display:flex;
+	align-items:center;
+	padding:8px 12px;
+	border-bottom:1px solid rgba(128,128,128,0.3);
+	line-height:24px;
+}
+#settingsWidgetHeader .settingsTitle{
+	font-weight:700;
+	margin-right:10px;
+}
+#settingsWidgetHeader .settingsRepoPath{
+	flex:1 1 auto;
+	min-width:0;
+	overflow:hidden;
+	text-overflow:ellipsis;
+	white-space:nowrap;
+	opacity:0.8;
+}
+#settingsWidgetClose{
+	width:24px;
+	height:24px;
+	cursor:pointer;
+	flex:0 0 auto;
+}
+#settingsWidgetClose svg{
+	width:24px;
+	height:24px;
+	fill:var(--vscode-menu-foreground);
+	fill-opacity:0.6;
+}
+#settingsWidgetClose:hover svg{
+	fill-opacity:1;
+}
+#settingsWidgetBody{
+	flex:1 1 auto;
+	overflow-y:auto;
+	padding:4px 12px 8px 12px;
+}
+#settingsWidgetBody h3{
+	font-size:13px;
+	margin:12px 0 6px 0;
+	padding-bottom:3px;
+	border-bottom:1px solid rgba(128,128,128,0.2);
+}
+#settingsWidgetBody p{
+	margin:4px 0;
+}
+.settingsTable{
+	width:100%;
+	border-collapse:collapse;
+}
+.settingsTable td, .settingsTable th{
+	padding:3px 6px 3px 0;
+	vertical-align:middle;
+	text-align:left;
+}
+.settingsTable th{
+	font-weight:700;
+	opacity:0.8;
+}
+.settingsTable td:first-child{
+	white-space:nowrap;
+	width:1%;
+	padding-right:12px;
+}
+.settingsTable input[type=text], .settingsTable select{
+	width:100%;
+	box-sizing:border-box;
+	padding:3px 5px;
+	background-color:var(--vscode-input-background);
+	color:var(--vscode-input-foreground);
+	border:1px solid var(--vscode-input-border, rgba(128,128,128,0.4));
+	border-radius:3px;
+	font-size:13px;
+}
+.settingsTable input[type=text]:focus, .settingsTable select:focus{
+	outline:1px solid var(--vscode-focusBorder);
+}
+.settingsRemotes .settingsRemoteUrl{
+	max-width:260px;
+	overflow:hidden;
+	text-overflow:ellipsis;
+	white-space:nowrap;
+	user-select:text;
+}
+.settingsRemotes .settingsRemoteName{
+	font-weight:700;
+}
+.settingsRemoteActions{
+	white-space:nowrap;
+	text-align:right;
+}
+.settingsBtn{
+	display:inline-block;
+	margin-left:6px;
+	padding:1px 7px;
+	border:1px solid rgba(128,128,128,0.5);
+	border-radius:9px;
+	cursor:pointer;
+	font-size:12px;
+	line-height:16px;
+}
+.settingsBtn:hover{
+	background-color:rgba(128,128,128,0.2);
+}
+.settingsHint{
+	display:block;
+	font-size:11px;
+	opacity:0.7;
+	margin-top:2px;
+}
+.settingsRow{
+	margin:6px 0;
+}
+.settingsRow .roundedBtn{
+	display:inline-block;
+	padding:0 12px;
+	height:24px;
+	line-height:24px;
+	border-radius:12px;
+	margin-right:8px;
+}
+#settingsWidgetFooter{
+	display:flex;
+	justify-content:flex-end;
+	gap:8px;
+	padding:8px 12px;
+	border-top:1px solid rgba(128,128,128,0.3);
+}
+#settingsWidgetFooter .roundedBtn{
+	display:inline-block;
+	padding:0 14px;
+	height:24px;
+	line-height:24px;
+	border-radius:12px;
 }
