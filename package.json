@@ -442,6 +442,28 @@
 					},
 					"additionalProperties": false
 				},
+				"git-graph.customEmojiShortcodeMappings": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"shortcode": {
+								"type": "string",
+								"description": "%config.customEmojiShortcodeMappings.items.shortcode.description%"
+							},
+							"emoji": {
+								"type": "string",
+								"description": "%config.customEmojiShortcodeMappings.items.emoji.description%"
+							}
+						},
+						"required": [
+							"shortcode",
+							"emoji"
+						]
+					},
+					"default": [],
+					"markdownDescription": "%config.customEmojiShortcodeMappings.markdownDescription%"
+				},
 				"git-graph.customBranchGlobPatterns": {
 					"type": "array",
 					"items": {

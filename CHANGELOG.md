@@ -1,5 +1,9 @@
 # Change Log
 
+## Unreleased
+
+* Polish: emoji shortcodes such as `:tada:` and `:bug:` render in commit messages (built-in gitmoji and GitHub names plus `git-graph.customEmojiShortcodeMappings`); the Add Tag dialog shows the latest tag as a hint; creating or renaming a branch to a name that already exists is refused before git runs; the row of HEAD flashes briefly after "scroll to HEAD"; the HEAD dot has a tooltip.
+
 ## 2.5.0 - 2026-10-18
 
 Parity polish from the upstream settings and commands audit: the remaining dialog defaults, file encoding and editor group, presentation settings, code review commands, and menus that survive a refresh.

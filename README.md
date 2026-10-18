@@ -78,6 +78,7 @@ This extension contributes the following settings:
 * `git-graph.commitDetailsView.fileView.type`: Default file view in the commit details: `File Tree` or `File List`. Default: `File Tree`.
 * `git-graph.contextMenuActionsVisibility`: Hide individual context menu actions, for example `{"commit": {"reset": false}}`. Menus: `branch`, `commit`, `remoteBranch`, `tag`.
 * `git-graph.customPullRequestProviders`: Pull request providers for hosts other than GitHub, GitLab and Bitbucket, for example `[{"name": "Gitea", "templateUrl": "https://gitea.example.com/$destinationOwner/$destinationRepo/compare/$destinationBranch...$sourceOwner:$sourceBranch"}]`.
+* `git-graph.customEmojiShortcodeMappings`: Extra `:shortcode:` to emoji pairs for commit messages, added to the built-in gitmoji and GitHub names, for example `[{"shortcode": ":release:", "emoji": "🚀"}]`. Default: `[]`.
 * `git-graph.customBranchGlobPatterns`: Named glob patterns offered in the Branch dropdown, for example `[{"name": "Features", "glob": "heads/feature/*"}]`.
 * `git-graph.date.format`: Specifies the date format used in the date column of the graph.
 * `git-graph.date.type`: Specifies whether the author date or the commit date is displayed.

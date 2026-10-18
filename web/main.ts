@@ -549,7 +549,7 @@ class GitGraphView {
 		this.updateGraphWidthVariable();
 		this.updateControlsHeightVariable();
 		for (i = 0; i < this.commits.length; i++) {
-			const message = linkifyMessage(this.commits[i].message, issueLinking, false, this.config.markdown), date = getCommitDate(this.commits[i].date), labels = this.renderRefLabels(this.commits[i]);
+			const message = linkifyMessage(this.commits[i].message, issueLinking, false, this.config.markdown, this.config.emojiShortcodes), date = getCommitDate(this.commits[i].date), labels = this.renderRefLabels(this.commits[i]);
 			const graphCell = branchesInGraph && labels.branches !== '' ? '<td><span class="gitRefsGraph">' + labels.branches + '</span></td>' : '<td></td>';
 			const refs = (branchesInGraph ? '' : labels.branches) + (tagsOnRight ? '' : labels.tags);
 			const bisectMark = this.commits[i].bisect || null;
@@ -559,7 +559,7 @@ class GitGraphView {
 				(this.config.muteMergeCommits && this.commits[i].parentHashes.length > 1 && this.commits[i].stash === null) ||
 				(ancestorsOfHead !== null && !ancestorsOfHead[this.commits[i].hash])
 			);
-			html += '<tr ' + (worktreeRow !== null ? 'class="worktreeChanges" data-worktree="' + escapeHtml(worktreeRow.path) + '" title="' + escapeHtml(worktreeRow.path) + '"' : this.commits[i].hash !== '*' ? 'class="commit' + (muted ? ' mute' : '') + (bisectMark !== null ? ' bisect' + bisectMark : '') + '" data-hash="' + this.commits[i].hash + '" draggable="true"' : 'class="unsavedChanges"') + ' data-id="' + i + '" data-color="' + this.graph.getVertexColour(i) + '"">' + graphCell + '<td>' + (tagsOnRight && labels.tags !== '' ? '<div class="descriptionCell"><span class="descriptionMain">' : '') + (this.commits[i].hash === this.commitHead ? '<span class="commitHeadDot"></span>' : '') + refs + (this.commits[i].hash === currentHash ? '<b>' + message + '</b>' : message) + (tagsOnRight && labels.tags !== '' ? '</span><span class="gitRefsRight">' + labels.tags + '</span></div>' : '') + '</td><td class="colDate" title="' + date.title + '">' + date.value + '</td><td class="colAuthor" title="' + escapeHtml(this.commits[i].author + ' <' + this.commits[i].email + '>') + '">' + (this.config.fetchAvatars ? '<span class="avatar" data-email="' + escapeHtml(this.commits[i].email) + '">' + (typeof this.avatars[this.commits[i].email] === 'string' ? '<img class="avatarImg" src="' + this.avatars[this.commits[i].email] + '">' : '') + '</span>' : '') + escapeHtml(this.commits[i].author) + '</td><td class="colCommit" title="' + escapeHtml(this.commits[i].hash) + '">' + this.ciStatusHtml(this.commits[i].hash) + bisectBadge + signatureIconHtml(this.commits[i].signature) + abbrevCommit(this.commits[i].hash) + '</td></tr>';
+			html += '<tr ' + (worktreeRow !== null ? 'class="worktreeChanges" data-worktree="' + escapeHtml(worktreeRow.path) + '" title="' + escapeHtml(worktreeRow.path) + '"' : this.commits[i].hash !== '*' ? 'class="commit' + (muted ? ' mute' : '') + (bisectMark !== null ? ' bisect' + bisectMark : '') + '" data-hash="' + this.commits[i].hash + '" draggable="true"' : 'class="unsavedChanges"') + ' data-id="' + i + '" data-color="' + this.graph.getVertexColour(i) + '"">' + graphCell + '<td>' + (tagsOnRight && labels.tags !== '' ? '<div class="descriptionCell"><span class="descriptionMain">' : '') + (this.commits[i].hash === this.commitHead ? '<span class="commitHeadDot" title="' + t('Checked-out commit (HEAD)') + '"></span>' : '') + refs + (this.commits[i].hash === currentHash ? '<b>' + message + '</b>' : message) + (tagsOnRight && labels.tags !== '' ? '</span><span class="gitRefsRight">' + labels.tags + '</span></div>' : '') + '</td><td class="colDate" title="' + date.title + '">' + date.value + '</td><td class="colAuthor" title="' + escapeHtml(this.commits[i].author + ' <' + this.commits[i].email + '>') + '">' + (this.config.fetchAvatars ? '<span class="avatar" data-email="' + escapeHtml(this.commits[i].email) + '">' + (typeof this.avatars[this.commits[i].email] === 'string' ? '<img class="avatarImg" src="' + this.avatars[this.commits[i].email] + '">' : '') + '</span>' : '') + escapeHtml(this.commits[i].author) + '</td><td class="colCommit" title="' + escapeHtml(this.commits[i].hash) + '">' + this.ciStatusHtml(this.commits[i].hash) + bisectBadge + signatureIconHtml(this.commits[i].signature) + abbrevCommit(this.commits[i].hash) + '</td></tr>';
 		}
 		this.tableElem.innerHTML = '<table>' + html + '</table>';
 		this.footerElem.innerHTML = this.moreCommitsAvailable ? '<div id="loadMoreCommitsBtn" class="roundedBtn">' + t('Load More Commits') + '</div>' : '';
@@ -633,8 +633,9 @@ class GitGraphView {
 					title: t('Add Tag') + ELLIPSIS,
 					visible: visibility.addTag,
 					onClick: () => {
+						const latestTag = this.getLatestTagName();
 						const inputs: DialogInput[] = [
-							{ type: 'text-ref', name: t('Name: '), default: '' },
+							{ type: 'text-ref', name: t('Name: '), default: '', placeholder: latestTag !== null ? t('Latest tag: {0}', latestTag) : undefined },
 							{ type: 'select', name: t('Type: '), default: this.config.dialogDefaults.addTag.type, options: [{ name: t('Annotated'), value: 'annotated' }, { name: t('Lightweight'), value: 'lightweight' }] },
 							{ type: 'text', name: t('Message: '), default: '', placeholder: t('Optional') }
 						];
@@ -659,6 +660,10 @@ class GitGraphView {
 							{ type: 'text-ref', name: t('Name: '), default: '' },
 							{ type: 'checkbox', name: t('Check out'), value: this.config.dialogDefaults.createBranch.checkOut }
 						], t('Create Branch'), (values) => {
+							if (this.branchExists(values[0])) {
+								showErrorDialog(t('Unable to Create Branch'), t('A branch named "{0}" already exists.', escapeHtml(values[0])), null);
+								return;
+							}
 							sendMessage({ command: 'createBranch', repo: this.currentRepo!, branchName: values[0], commitHash: hash, checkout: values[1] === 'checked' });
 						}, sourceElem);
 					}
@@ -942,6 +947,10 @@ class GitGraphView {
 						visible: this.config.contextMenuActionsVisibility.branch.rename,
 						onClick: () => {
 							showRefInputDialog(t('Enter the new name for branch <b><i>{0}</i></b>:', escapeHtml(refName)), refName, t('Rename Branch'), (newName) => {
+								if (newName !== refName && this.branchExists(newName)) {
+									showErrorDialog(t('Unable to Rename Branch'), t('A branch named "{0}" already exists.', escapeHtml(newName)), null);
+									return;
+								}
 								sendMessage({ command: 'renameBranch', repo: this.currentRepo!, oldName: refName, newName: newName });
 							}, null);
 						}
@@ -1776,6 +1785,25 @@ class GitGraphView {
 	private scrollToHead() {
 		if (this.commitHead === null || typeof this.commitLookup[this.commitHead] !== 'number') return;
 		this.scrollToRow(this.commitLookup[this.commitHead]);
+		const row = this.getRowElemByHash(this.commitHead);
+		if (row !== null) {
+			row.classList.remove('flash');
+			void row.offsetWidth; // restart the animation when the row is flashed again
+			row.classList.add('flash');
+			setTimeout(() => row.classList.remove('flash'), 1600);
+		}
+	}
+	/** True when a local branch of this name exists (the dropdown's list of local branches is complete). */
+	private branchExists(name: string) {
+		return this.gitBranches.indexOf(name) > -1;
+	}
+	/** The name of the newest tag among the loaded commits, or null. */
+	private getLatestTagName(): string | null {
+		for (let i = 0; i < this.commits.length; i++) {
+			const tag = this.commits[i].refs.find((ref) => ref.type === 'tag');
+			if (tag !== undefined) return tag.name;
+		}
+		return null;
 	}
 	/** Scroll to the next (delta 1) or previous (delta -1) stash, cycling through them. */
 	private scrollToStash(delta: number) {
@@ -2000,7 +2028,7 @@ class GitGraphView {
 		html += '</span>';
 		if (typeof this.avatars[commitDetails.email] === 'string') html += '<span class="commitDetailsSummaryAvatar"><img src="' + this.avatars[commitDetails.email] + '"></span>';
 		html += '</span></span><br><br>';
-		html += linkifyMessage(commitDetails.body, compileIssueLinking(this.getIssueLinkingConfig()), true, this.config.markdown).replace(/\n/g, '<br>') + '</div>';
+		html += linkifyMessage(commitDetails.body, compileIssueLinking(this.getIssueLinkingConfig()), true, this.config.markdown, this.config.emojiShortcodes).replace(/\n/g, '<br>') + '</div>';
 		html += this.generateDetailsFilesHtml(fileTree, commitDetails.fileChanges, review);
 		html += '<div id="commitDetailsClose">' + svgIcons.close + '</div>';
 		this.renderDetailsElem(html, this.expandedCommit.srcElem);
@@ -2247,6 +2275,7 @@ const gitGraph = new GitGraphView(viewState.repos, viewState.lastActiveRepo, {
 	showCurrentBranchByDefault: viewState.showCurrentBranchByDefault,
 	graphUncommittedChanges: viewState.graphUncommittedChanges,
 	markdown: viewState.markdown,
+	emojiShortcodes: viewState.emojiShortcodes,
 	onLoadBranches: viewState.onLoadBranches,
 	showRemoteBranches: viewState.showRemoteBranches,
 	stickyHeader: viewState.stickyHeader
@@ -2719,7 +2748,7 @@ function showFormDialog(message: string, inputs: DialogInput[], actionName: stri
 			html += '<textarea id="dialogInput' + i + '" rows="6"' + (input.placeholder !== null ? ' placeholder="' + escapeHtml(input.placeholder) + '"' : '') + '>' + escapeHtml(input.default) + '</textarea>';
 		} else {
 			// Defaults can come from the repository (for example a branch name in the rename dialog), so they are escaped
-			html += '<input id="dialogInput' + i + '" type="text" value="' + escapeHtml(input.default) + '"' + (input.type === 'text' && input.placeholder !== null ? ' placeholder="' + escapeHtml(input.placeholder) + '"' : '') + '/>';
+			html += '<input id="dialogInput' + i + '" type="text" value="' + escapeHtml(input.default) + '"' + ((input.type === 'text' || input.type === 'text-ref') && typeof input.placeholder === 'string' ? ' placeholder="' + escapeHtml(input.placeholder) + '"' : '') + '/>';
 			if (input.type === 'text-ref') textRefInput = i;
 		}
 		html += '</td></tr>';

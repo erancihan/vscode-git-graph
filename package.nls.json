@@ -213,5 +213,8 @@
 	"config.graph.uncommittedChanges.enumDescriptions.1": "The checked-out commit keeps the open circle; the uncommitted changes row is drawn in grey.",
 	"config.markdown.description": "Render inline Markdown in commit messages: **bold**, *italic*, `code` and ~~strikethrough~~.",
 	"command.endSpecificWorkspaceCodeReview.title": "End a Specific Code Review in Workspace...",
-	"command.resumeWorkspaceCodeReview.title": "Resume a Specific Code Review in Workspace..."
+	"command.resumeWorkspaceCodeReview.title": "Resume a Specific Code Review in Workspace...",
+	"config.customEmojiShortcodeMappings.markdownDescription": "Extra emoji shortcodes for commit messages, added to the built-in list (gitmoji and common GitHub names), for example `[{\"shortcode\": \":release:\", \"emoji\": \"🚀\"}]`.",
+	"config.customEmojiShortcodeMappings.items.shortcode.description": "The shortcode, with or without the surrounding colons.",
+	"config.customEmojiShortcodeMappings.items.emoji.description": "The emoji that replaces the shortcode."
 }

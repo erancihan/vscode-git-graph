@@ -719,6 +719,7 @@ export class GitGraphView {
 			loadViewTo: GitGraphView.pendingLoadViewTo,
 			graphUncommittedChanges: config.graphUncommittedChanges(),
 			markdown: config.markdown(),
+			emojiShortcodes: config.customEmojiShortcodeMappings(),
 			onLoadBranches: config.onLoadShowSpecificBranches(),
 			showRemoteBranches: config.showRemoteBranches(),
 			stickyHeader: config.stickyHeader()

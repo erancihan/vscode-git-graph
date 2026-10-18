@@ -269,6 +269,8 @@ export interface GitGraphViewState {
 	loadViewTo: LoadViewTo | null;
 	graphUncommittedChanges: 'uncommitted' | 'head';
 	markdown: boolean;
+	/** Custom `:shortcode:` to emoji pairs (the webview adds the built-in list). */
+	emojiShortcodes: { [shortcode: string]: string };
 	/** `git-graph.repository.onLoad.showSpecificBranches`: selected when a repository opens without its own on-load setting. */
 	onLoadBranches: string[];
 	showRemoteBranches: boolean;
