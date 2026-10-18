@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Askpass: when git needs a user name, password or passphrase during fetch, pull or push and no credential helper answers, Git Graph shows an input box instead of failing. The helper (`resources/askpass.sh` and `out/askpassMain.js`) talks to the extension over a local pipe with a per-session nonce; nothing is stored. `git-graph.integratedAskpass` (default true) turns it off. Git never falls back to a terminal prompt (`GIT_TERMINAL_PROMPT=0`), so actions no longer hang.
+
 * Security: the view state inlined into the webview is escaped so repository data (paths, messages, names) cannot close the script element; code review messages are accepted for known repositories only, review ids and shapes are validated, and keys that could reach `Object.prototype` are refused when reading or writing stored reviews.
 
 * Accessibility and theming: `git-graph.commitDetailsView.fileView.showChangeTypeLetters` shows A / M / D / R letters before file names so colour is not the only cue; row highlights, dialog inputs, selects, checkboxes and text selection follow the editor theme colours (list, input, dropdown, checkbox and selection colours); high contrast themes get their contrast border on labels, buttons, dialogs, menus and widgets; keyboard focus is visible on buttons and labels.

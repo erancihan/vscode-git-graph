@@ -330,6 +330,11 @@ class Config {
 		return this.getNonNegativeInteger('maxDepthOfRepoSearch', null, 0);
 	}
 
+	/** Let git ask for credentials through Git Graph when no credential helper answers. */
+	public integratedAskpass() {
+		return this.getBoolean('integratedAskpass', null, true);
+	}
+
 	/** Shell used by the terminals Git Graph opens (interactive rebase). Empty string: the default shell. */
 	public integratedTerminalShell() {
 		const shell = this.get<unknown>('integratedTerminalShell', null, '');
