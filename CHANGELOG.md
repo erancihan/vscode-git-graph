@@ -6,6 +6,9 @@
 * "Rebase current branch on this branch" and "Rebase current branch on this Commit", with an "Ignore Date" option.
 * New `git-graph.dialog.*` defaults for the new dialogs (`fetchIntoLocalBranch.forceFetch`, `pullBranch.noFastForward`, `pullBranch.squashCommits`, `rebase.ignoreDate`) and new keys in `git-graph.contextMenuActionsVisibility` (`branch.rebase`, `branch.push`, `commit.rebase`, `remoteBranch.delete`, `remoteBranch.fetch`, `remoteBranch.pull`).
 * The "action running" dialog closes by itself when the action succeeds.
+* "Create Branch" has a "Check out" option. The merge dialogs have "Squash Commits" and "No Commit" options (`git-graph.dialog.merge.squashMessageFormat` picks the squash commit message). "Cherry Pick" has "Record Origin" and "No Commit" options.
+* New "Drop Commit" action on non-merge commits, and a context menu on the "Uncommitted Changes" row with "Reset uncommitted changes" (mixed or hard) and "Clean untracked files" (optionally directories).
+* New settings `git-graph.repository.sign.commits` and `git-graph.repository.sign.tags`: sign the commits and annotated tags that Git Graph creates.
 
 ## 2.1.0 - 2026-10-18
 

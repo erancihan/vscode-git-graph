@@ -53,19 +53,23 @@ export interface GitUnsavedChanges {
 
 export interface ContextMenuActionsVisibility {
 	branch: { checkout: boolean, rename: boolean, delete: boolean, merge: boolean, rebase: boolean, push: boolean, copyName: boolean };
-	commit: { addTag: boolean, createBranch: boolean, checkout: boolean, cherrypick: boolean, revert: boolean, merge: boolean, rebase: boolean, reset: boolean, copyHash: boolean };
+	commit: { addTag: boolean, createBranch: boolean, checkout: boolean, cherrypick: boolean, revert: boolean, drop: boolean, merge: boolean, rebase: boolean, reset: boolean, copyHash: boolean };
 	remoteBranch: { checkout: boolean, delete: boolean, fetch: boolean, pull: boolean, copyName: boolean };
 	tag: { delete: boolean, push: boolean, copyName: boolean };
+	uncommittedChanges: { reset: boolean, clean: boolean };
 }
 
 export interface DialogDefaults {
 	addTag: { type: 'annotated' | 'lightweight' };
+	cherryPick: { noCommit: boolean, recordOrigin: boolean };
+	createBranch: { checkOut: boolean };
 	deleteBranch: { forceDelete: boolean };
 	fetchIntoLocalBranch: { forceFetch: boolean };
-	merge: { noFastForward: boolean };
+	merge: { noFastForward: boolean, noCommit: boolean, squashCommits: boolean };
 	pullBranch: { noFastForward: boolean, squashCommits: boolean };
 	rebase: { ignoreDate: boolean };
 	resetCurrentBranchToCommit: { mode: GitResetMode };
+	resetUncommittedChanges: { mode: 'mixed' | 'hard' };
 	general: { referenceInputSpaceSubstitution: string | null };
 }
 
@@ -112,6 +116,9 @@ export type GitResetMode = 'soft' | 'mixed' | 'hard';
 export type CommitOrdering = 'date' | 'author-date' | 'topo';
 export type GitPushBranchMode = 'normal' | 'force' | 'force-with-lease';
 export type GitRebaseType = 'Branch' | 'Commit';
+export type SquashMessageFormat = 'Default' | 'Git SQUASH_MSG';
+export interface MergeOptions { createNewCommit: boolean; squash: boolean; noCommit: boolean; }
+export interface CherryPickOptions { parentIndex: number; recordOrigin: boolean; noCommit: boolean; }
 export type GitFileChangeType = 'A' | 'M' | 'D' | 'R';
 
 
@@ -156,6 +163,8 @@ export interface RequestCherrypickCommit {
 	repo: string;
 	commitHash: string;
 	parentIndex: number;
+	recordOrigin: boolean;
+	noCommit: boolean;
 }
 export interface ResponseCherrypickCommit {
 	command: 'cherrypickCommit';
@@ -188,6 +197,7 @@ export interface RequestCreateBranch {
 	repo: string;
 	commitHash: string;
 	branchName: string;
+	checkout: boolean;
 }
 export interface ResponseCreateBranch {
 	command: 'createBranch';
@@ -273,6 +283,8 @@ export interface RequestMergeBranch {
 	repo: string;
 	branchName: string;
 	createNewCommit: boolean;
+	squash: boolean;
+	noCommit: boolean;
 }
 export interface ResponseMergeBranch {
 	command: 'mergeBranch';
@@ -284,6 +296,8 @@ export interface RequestMergeCommit {
 	repo: string;
 	commitHash: string;
 	createNewCommit: boolean;
+	squash: boolean;
+	noCommit: boolean;
 }
 export interface ResponseMergeCommit {
 	command: 'mergeCommit';
@@ -411,6 +425,36 @@ export interface ResponseRebase {
 	status: GitCommandStatus;
 }
 
+export interface RequestDropCommit {
+	command: 'dropCommit';
+	repo: string;
+	commitHash: string;
+}
+export interface ResponseDropCommit {
+	command: 'dropCommit';
+	status: GitCommandStatus;
+}
+
+export interface RequestResetUncommittedChanges {
+	command: 'resetUncommittedChanges';
+	repo: string;
+	mode: 'mixed' | 'hard';
+}
+export interface ResponseResetUncommittedChanges {
+	command: 'resetUncommittedChanges';
+	status: GitCommandStatus;
+}
+
+export interface RequestCleanUntrackedFiles {
+	command: 'cleanUntrackedFiles';
+	repo: string;
+	directories: boolean;
+}
+export interface ResponseCleanUntrackedFiles {
+	command: 'cleanUntrackedFiles';
+	status: GitCommandStatus;
+}
+
 export interface RequestSaveRepoState {
 	command: 'saveRepoState';
 	repo: string;
@@ -435,12 +479,14 @@ export type RequestMessage =
 	| RequestCheckoutBranch
 	| RequestCheckoutCommit
 	| RequestCherrypickCommit
+	| RequestCleanUntrackedFiles
 	| RequestCommitDetails
 	| RequestCopyToClipboard
 	| RequestCreateBranch
 	| RequestDeleteBranch
 	| RequestDeleteRemoteBranch
 	| RequestDeleteTag
+	| RequestDropCommit
 	| RequestFetch
 	| RequestFetchAvatar
 	| RequestFetchIntoLocalBranch
@@ -455,6 +501,7 @@ export type RequestMessage =
 	| RequestRebase
 	| RequestRenameBranch
 	| RequestResetToCommit
+	| RequestResetUncommittedChanges
 	| RequestRevertCommit
 	| RequestSaveRepoState
 	| RequestViewDiff;
@@ -464,12 +511,14 @@ export type ResponseMessage =
 	| ResponseCheckoutBranch
 	| ResponseCheckoutCommit
 	| ResponseCherrypickCommit
+	| ResponseCleanUntrackedFiles
 	| ResponseCommitDetails
 	| ResponseCopyToClipboard
 	| ResponseCreateBranch
 	| ResponseDeleteBranch
 	| ResponseDeleteRemoteBranch
 	| ResponseDeleteTag
+	| ResponseDropCommit
 	| ResponseFetch
 	| ResponseFetchAvatar
 	| ResponseFetchIntoLocalBranch
@@ -485,5 +534,6 @@ export type ResponseMessage =
 	| ResponseRefresh
 	| ResponseRenameBranch
 	| ResponseResetToCommit
+	| ResponseResetUncommittedChanges
 	| ResponseRevertCommit
 	| ResponseViewDiff;

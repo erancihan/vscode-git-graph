@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { CommitOrdering, ContextMenuActionsVisibility, DateFormat, DateType, DialogDefaults, GitResetMode, GraphStyle, TabIconColourTheme } from './types';
+import { CommitOrdering, ContextMenuActionsVisibility, DateFormat, DateType, DialogDefaults, GitResetMode, GraphStyle, SquashMessageFormat, TabIconColourTheme } from './types';
 
 const DEFAULT_GRAPH_COLOURS = ['#0085d9', '#d9008f', '#00d90a', '#d98500', '#a300d9', '#ff0000', '#00d9cc', '#e138e8', '#85d900', '#dc5b23', '#6f24d6', '#ffcc00'];
 const GRAPH_COLOUR_REGEX = /^\s*(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|rgb[a]?\s*\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\))\s*$/;
@@ -55,9 +55,10 @@ class Config {
 		};
 		return {
 			branch: read('branch', { checkout: true, rename: true, delete: true, merge: true, rebase: true, push: true, copyName: true }),
-			commit: read('commit', { addTag: true, createBranch: true, checkout: true, cherrypick: true, revert: true, merge: true, rebase: true, reset: true, copyHash: true }),
+			commit: read('commit', { addTag: true, createBranch: true, checkout: true, cherrypick: true, revert: true, drop: true, merge: true, rebase: true, reset: true, copyHash: true }),
 			remoteBranch: read('remoteBranch', { checkout: true, delete: true, fetch: true, pull: true, copyName: true }),
-			tag: read('tag', { delete: true, push: true, copyName: true })
+			tag: read('tag', { delete: true, push: true, copyName: true }),
+			uncommittedChanges: read('uncommittedChanges', { reset: true, clean: true })
 		};
 	}
 
@@ -70,6 +71,13 @@ class Config {
 			addTag: {
 				type: this.getEnum('dialog.addTag.type', null, ['Annotated', 'Lightweight'], 'Annotated') === 'Lightweight' ? 'lightweight' : 'annotated'
 			},
+			cherryPick: {
+				noCommit: this.getBoolean('dialog.cherryPick.noCommit', null, false),
+				recordOrigin: this.getBoolean('dialog.cherryPick.recordOrigin', null, false)
+			},
+			createBranch: {
+				checkOut: this.getBoolean('dialog.createBranch.checkOut', null, false)
+			},
 			deleteBranch: {
 				forceDelete: this.getBoolean('dialog.deleteBranch.forceDelete', null, false)
 			},
@@ -77,7 +85,9 @@ class Config {
 				forceFetch: this.getBoolean('dialog.fetchIntoLocalBranch.forceFetch', null, false)
 			},
 			merge: {
-				noFastForward: this.getBoolean('dialog.merge.noFastForward', null, true)
+				noFastForward: this.getBoolean('dialog.merge.noFastForward', null, true),
+				noCommit: this.getBoolean('dialog.merge.noCommit', null, false),
+				squashCommits: this.getBoolean('dialog.merge.squashCommits', null, false)
 			},
 			pullBranch: {
 				noFastForward: this.getBoolean('dialog.pullBranch.noFastForward', null, false),
@@ -89,10 +99,18 @@ class Config {
 			resetCurrentBranchToCommit: {
 				mode: <GitResetMode>this.getEnum('dialog.resetCurrentBranchToCommit.mode', null, ['Soft', 'Mixed', 'Hard'], 'Mixed').toLowerCase()
 			},
+			resetUncommittedChanges: {
+				mode: this.getEnum('dialog.resetUncommittedChanges.mode', null, ['Mixed', 'Hard'], 'Mixed') === 'Hard' ? 'hard' : 'mixed'
+			},
 			general: {
 				referenceInputSpaceSubstitution: substitution === 'Hyphen' ? '-' : substitution === 'Underscore' ? '_' : null
 			}
 		};
+	}
+
+	/** Message of the commit that a squash merge creates. */
+	public squashMessageFormat(): SquashMessageFormat {
+		return this.getEnum<SquashMessageFormat>('dialog.merge.squashMessageFormat', null, ['Default', 'Git SQUASH_MSG'], 'Default');
 	}
 
 	/* Graph */
@@ -161,6 +179,14 @@ class Config {
 
 	public showUncommittedChanges() {
 		return this.getBoolean('repository.showUncommittedChanges', 'showUncommittedChanges', true);
+	}
+
+	public signCommits() {
+		return this.getBoolean('repository.sign.commits', null, false);
+	}
+
+	public signTags() {
+		return this.getBoolean('repository.sign.tags', null, false);
 	}
 
 	public showUntrackedFiles() {

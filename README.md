@@ -40,14 +40,21 @@ This extension contributes the following settings:
 * `git-graph.date.format`: Specifies the date format used in the date column of the graph.
 * `git-graph.date.type`: Specifies whether the author date or the commit date is displayed.
 * `git-graph.dialog.addTag.type`: Default tag type in the "Add Tag" dialog: `Annotated` or `Lightweight`.
+* `git-graph.dialog.cherryPick.noCommit`: Default state of "No Commit" in the "Cherry Pick" dialog. Default: false.
+* `git-graph.dialog.cherryPick.recordOrigin`: Default state of "Record Origin" in the "Cherry Pick" dialog. Default: false.
+* `git-graph.dialog.createBranch.checkOut`: Default state of "Check out" in the "Create Branch" dialog. Default: false.
 * `git-graph.dialog.deleteBranch.forceDelete`: Default state of "Force Delete" in the "Delete Branch" dialog. Default: false.
 * `git-graph.dialog.fetchIntoLocalBranch.forceFetch`: Default state of "Force Fetch" in the "Fetch into local branch" dialog. Default: false.
 * `git-graph.dialog.general.referenceInputSpaceSubstitution`: Replace spaces typed into branch and tag names with `Hyphen` or `Underscore`. Default: `None`.
+* `git-graph.dialog.merge.noCommit`: Default state of "No Commit" in the merge dialogs. Default: false.
 * `git-graph.dialog.merge.noFastForward`: Default state of "Create a new commit even if fast-forward is possible" in the merge dialogs. Default: true.
+* `git-graph.dialog.merge.squashCommits`: Default state of "Squash Commits" in the merge dialogs. Default: false.
+* `git-graph.dialog.merge.squashMessageFormat`: Message of the squash commit: `Default` ("Merge branch 'name'") or `Git SQUASH_MSG`. Default: `Default`.
 * `git-graph.dialog.pullBranch.noFastForward`: Default state of "Create a new commit even if fast-forward is possible" in the "Pull into current branch" dialog. Default: false.
 * `git-graph.dialog.pullBranch.squashCommits`: Default state of "Squash Commits" in the "Pull into current branch" dialog. Default: false.
 * `git-graph.dialog.rebase.ignoreDate`: Default state of "Ignore Date" in the rebase dialogs. Default: true.
 * `git-graph.dialog.resetCurrentBranchToCommit.mode`: Default reset mode: `Soft`, `Mixed` or `Hard`. Default: `Mixed`.
+* `git-graph.dialog.resetUncommittedChanges.mode`: Default reset mode in the "Reset uncommitted changes" dialog: `Mixed` or `Hard`. Default: `Mixed`.
 * `git-graph.graph.colours`: Specifies the colours used on the graph.
 * `git-graph.graph.style`: Specifies the style of the graph.
 * `git-graph.maxDepthOfRepoSearch`: Specifies the maximum depth of subfolders to search when discovering repositories in the workspace. Default: 0.
@@ -59,6 +66,8 @@ This extension contributes the following settings:
 * `git-graph.repository.commits.loadMoreAutomatically`: Load more commits automatically when the view is scrolled to the bottom. Default: false.
 * `git-graph.repository.commits.order`: Order of commits on the graph: `date`, `author-date` or `topo`. Default: `date`.
 * `git-graph.repository.onLoad.showCheckedOutBranch`: Show only the checked-out branch when Git Graph is opened. Default: false.
+* `git-graph.repository.sign.commits`: Sign the commits Git Graph creates with the signing key of your git configuration. Default: false.
+* `git-graph.repository.sign.tags`: Sign the annotated tags Git Graph creates. Default: false.
 * `git-graph.repository.showCommitsOnlyReferencedByTags`: Show commits that are only reachable from tags when "Show All" is selected. Default: true.
 * `git-graph.repository.showRemoteBranches`: Default state of the "Show Remote Branches" checkbox. Default: true.
 * `git-graph.repository.showRemoteHeads`: Show remote HEAD references such as `origin/HEAD`. Default: true.

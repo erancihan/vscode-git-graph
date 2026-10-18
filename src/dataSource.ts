@@ -2,7 +2,7 @@ import * as cp from 'child_process';
 import { getConfig } from './config';
 import { findGitExecutable } from './gitExecutable';
 import { Logger } from './logger';
-import { GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChangeType, GitPushBranchMode, GitRebaseType, GitRefData, GitResetMode, GitUnsavedChanges } from './types';
+import { CherryPickOptions, GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChangeType, GitPushBranchMode, GitRebaseType, GitRefData, GitResetMode, GitUnsavedChanges, MergeOptions } from './types';
 import { getPathFromStr } from './utils';
 
 const eolRegex = /\r\n|\r|\n/g;
@@ -190,7 +190,7 @@ export class DataSource {
 		if (lightweight) {
 			args.push(tagName);
 		} else {
-			args.push('-a', tagName, '-m', message);
+			args.push(getConfig().signTags() ? '-s' : '-a', tagName, '-m', message);
 		}
 		args.push(commitHash);
 		return this.runGitCommand(args, repo);
@@ -206,9 +206,9 @@ export class DataSource {
 		return this.runGitCommand(['push', 'origin', 'refs/tags/' + tagName], repo);
 	}
 
-	public createBranch(repo: string, branchName: string, commitHash: string) {
+	public createBranch(repo: string, branchName: string, commitHash: string, checkout: boolean) {
 		if (!isSafeRefName(branchName) || !isCommitHash(commitHash)) return rejectArguments();
-		return this.runGitCommand(['branch', branchName, commitHash], repo);
+		return this.runGitCommand(checkout ? ['checkout', '-b', branchName, commitHash] : ['branch', branchName, commitHash], repo);
 	}
 
 	public checkoutBranch(repo: string, branchName: string, remoteBranch: string | null) {
@@ -240,32 +240,82 @@ export class DataSource {
 		return this.runGitCommand(['branch', '-m', oldName, newName], repo);
 	}
 
-	public mergeBranch(repo: string, branchName: string, createNewCommit: boolean) {
+	public mergeBranch(repo: string, branchName: string, options: MergeOptions) {
 		if (!isSafeRefName(branchName)) return rejectArguments();
-		const args = ['merge', branchName];
-		if (createNewCommit) args.push('--no-ff');
-		return this.runGitCommand(args, repo);
+		return this.merge(repo, branchName, 'Merge branch \'' + branchName + '\'', options);
 	}
 
-	public mergeCommit(repo: string, commitHash: string, createNewCommit: boolean) {
+	public mergeCommit(repo: string, commitHash: string, options: MergeOptions) {
 		if (!isCommitHash(commitHash)) return rejectArguments();
-		const args = ['merge', commitHash];
-		if (createNewCommit) args.push('--no-ff');
-		return this.runGitCommand(args, repo);
+		return this.merge(repo, commitHash, 'Merge commit \'' + commitHash + '\'', options);
 	}
 
-	public cherrypickCommit(repo: string, commitHash: string, parentIndex: number) {
+	/**
+	 * Merge `obj` into the current branch. A squash merge stages the result and, unless noCommit is
+	 * set, commits it with either a generated message or the SQUASH_MSG that git prepared.
+	 */
+	private async merge(repo: string, obj: string, defaultSquashMessage: string, options: MergeOptions): Promise<GitCommandStatus> {
+		const config = getConfig();
+		const args = ['merge', obj];
+		if (options.squash) {
+			args.push('--squash');
+		} else {
+			if (options.createNewCommit) args.push('--no-ff');
+			if (options.noCommit) args.push('--no-commit');
+			if (config.signCommits()) args.push('-S');
+		}
+		const status = await this.runGitCommand(args, repo);
+		if (status !== null || !options.squash || options.noCommit) return status;
+
+		const commitArgs = ['commit'];
+		if (config.squashMessageFormat() === 'Git SQUASH_MSG') {
+			commitArgs.push('--no-edit'); // Use .git/SQUASH_MSG, which lists the squashed commits
+		} else {
+			commitArgs.push('-m', defaultSquashMessage);
+		}
+		if (config.signCommits()) commitArgs.push('-S');
+		return this.runGitCommand(commitArgs, repo);
+	}
+
+	public cherrypickCommit(repo: string, commitHash: string, options: CherryPickOptions) {
 		if (!isCommitHash(commitHash)) return rejectArguments();
-		const args = ['cherry-pick', commitHash];
-		if (parentIndex > 0) args.push('-m', parentIndex.toString());
+		const args = ['cherry-pick'];
+		if (options.recordOrigin) args.push('-x');
+		if (options.noCommit) args.push('--no-commit');
+		if (options.parentIndex > 0) args.push('-m', options.parentIndex.toString());
+		if (getConfig().signCommits() && !options.noCommit) args.push('-S');
+		args.push(commitHash);
 		return this.runGitCommand(args, repo);
 	}
 
 	public revertCommit(repo: string, commitHash: string, parentIndex: number) {
 		if (!isCommitHash(commitHash)) return rejectArguments();
-		const args = ['revert', '--no-edit', commitHash];
+		const args = ['revert', '--no-edit'];
 		if (parentIndex > 0) args.push('-m', parentIndex.toString());
+		if (getConfig().signCommits()) args.push('-S');
+		args.push(commitHash);
 		return this.runGitCommand(args, repo);
+	}
+
+	/**
+	 * Remove a commit from the current branch's history by replaying the commits after it onto its
+	 * parent. Only valid for a non-merge commit that is an ancestor of HEAD.
+	 */
+	public dropCommit(repo: string, commitHash: string) {
+		if (!isCommitHash(commitHash)) return rejectArguments();
+		const args = ['rebase', '--onto', commitHash + '^', commitHash];
+		if (getConfig().signCommits()) args.push('-S');
+		return this.runGitCommand(args, repo);
+	}
+
+	/** Discard the uncommitted changes: `mixed` unstages everything, `hard` also resets the working tree. */
+	public resetUncommittedChanges(repo: string, mode: 'mixed' | 'hard') {
+		return this.runGitCommand(['reset', '--' + mode], repo);
+	}
+
+	/** Remove untracked files, and untracked directories when `directories` is set. */
+	public cleanUntrackedFiles(repo: string, directories: boolean) {
+		return this.runGitCommand(directories ? ['clean', '-f', '-d'] : ['clean', '-f'], repo);
 	}
 
 	/* Remote actions */

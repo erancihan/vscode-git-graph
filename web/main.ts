@@ -367,8 +367,11 @@ class GitGraphView {
 					title: 'Create Branch' + ELLIPSIS,
 					visible: visibility.createBranch,
 					onClick: () => {
-						showRefInputDialog('Enter the name of the branch you would like to create from commit <b><i>' + abbrevCommit(hash) + '</i></b>:', '', 'Create Branch', (name) => {
-							sendMessage({ command: 'createBranch', repo: this.currentRepo!, branchName: name, commitHash: hash });
+						showFormDialog('Enter the name of the branch you would like to create from commit <b><i>' + abbrevCommit(hash) + '</i></b>:', [
+							{ type: 'text-ref', name: 'Name: ', default: '' },
+							{ type: 'checkbox', name: 'Check out', value: this.config.dialogDefaults.createBranch.checkOut }
+						], 'Create Branch', (values) => {
+							sendMessage({ command: 'createBranch', repo: this.currentRepo!, branchName: values[0], commitHash: hash, checkout: values[1] === 'checked' });
 						}, sourceElem);
 					}
 				},
@@ -386,19 +389,24 @@ class GitGraphView {
 					title: 'Cherry Pick' + ELLIPSIS,
 					visible: visibility.cherrypick,
 					onClick: () => {
-						if (this.commits[this.commitLookup[hash]].parentHashes.length === 1) {
-							showConfirmationDialog('Are you sure you want to cherry pick commit <b><i>' + abbrevCommit(hash) + '</i></b>?', () => {
-								sendMessage({ command: 'cherrypickCommit', repo: this.currentRepo!, commitHash: hash, parentIndex: 0 });
-							}, sourceElem);
-						} else {
-							const options = this.commits[this.commitLookup[hash]].parentHashes.map((hash, index) => ({
-								name: abbrevCommit(hash) + (typeof this.commitLookup[hash] === 'number' ? ': ' + this.commits[this.commitLookup[hash]].message : ''),
-								value: (index + 1).toString()
-							}));
-							showSelectDialog('Are you sure you want to cherry pick merge commit <b><i>' + abbrevCommit(hash) + '</i></b>? Choose the parent hash on the main branch, to cherry pick the commit relative to:', '1', options, 'Yes, cherry pick commit', (parentIndex) => {
-								sendMessage({ command: 'cherrypickCommit', repo: this.currentRepo!, commitHash: hash, parentIndex: parseInt(parentIndex) });
-							}, sourceElem);
+						const isMerge = this.commits[this.commitLookup[hash]].parentHashes.length > 1;
+						const inputs: DialogInput[] = [
+							{ type: 'checkbox', name: 'Record Origin (add "cherry picked from commit" to the message)', value: this.config.dialogDefaults.cherryPick.recordOrigin },
+							{ type: 'checkbox', name: 'No Commit (stage the changes only)', value: this.config.dialogDefaults.cherryPick.noCommit }
+						];
+						if (isMerge) {
+							inputs.unshift({
+								type: 'select', name: 'Parent: ', default: '1',
+								options: this.commits[this.commitLookup[hash]].parentHashes.map((hash, index) => ({
+									name: abbrevCommit(hash) + (typeof this.commitLookup[hash] === 'number' ? ': ' + this.commits[this.commitLookup[hash]].message : ''),
+									value: (index + 1).toString()
+								}))
+							});
 						}
+						showFormDialog('Are you sure you want to cherry pick ' + (isMerge ? 'merge commit <b><i>' + abbrevCommit(hash) + '</i></b>? Choose the parent on the main branch, to cherry pick the commit relative to:' : 'commit <b><i>' + abbrevCommit(hash) + '</i></b>?'), inputs, 'Yes, cherry pick', (values) => {
+							const parentIndex = isMerge ? parseInt(values.shift()!) : 0;
+							sendMessage({ command: 'cherrypickCommit', repo: this.currentRepo!, commitHash: hash, parentIndex: parentIndex, recordOrigin: values[0] === 'checked', noCommit: values[1] === 'checked' });
+						}, sourceElem);
 					}
 				},
 				{
@@ -420,14 +428,24 @@ class GitGraphView {
 						}
 					}
 				},
+				{
+					title: 'Drop Commit' + ELLIPSIS,
+					visible: visibility.drop && this.commits[this.commitLookup[hash]].parentHashes.length === 1,
+					onClick: () => {
+						showConfirmationDialog('Are you sure you want to drop commit <b><i>' + abbrevCommit(hash) + '</i></b>? The commits after it on the current branch are rewritten.', () => {
+							showActionRunningDialog('Dropping Commit');
+							sendMessage({ command: 'dropCommit', repo: this.currentRepo!, commitHash: hash });
+						}, sourceElem);
+					}
+				},
 				null,
 				{
 					title: 'Merge into current branch' + ELLIPSIS,
 					visible: visibility.merge,
 					onClick: () => {
-						showCheckboxDialog('Are you sure you want to merge commit <b><i>' + abbrevCommit(hash) + '</i></b> into the current branch?', 'Create a new commit even if fast-forward is possible', this.config.dialogDefaults.merge.noFastForward, 'Yes, merge', (createNewCommit) => {
-							sendMessage({ command: 'mergeCommit', repo: this.currentRepo!, commitHash: hash, createNewCommit: createNewCommit });
-						}, null);
+						this.showMergeDialog('Are you sure you want to merge commit <b><i>' + abbrevCommit(hash) + '</i></b> into the current branch?', (options) => {
+							sendMessage({ command: 'mergeCommit', repo: this.currentRepo!, commitHash: hash, ...options });
+						});
 					}
 				},
 				{
@@ -471,6 +489,33 @@ class GitGraphView {
 			} else {
 				this.loadCommitDetails(sourceElem);
 			}
+		});
+		addDelegatedListener(this.tableElem, 'unsavedChanges', 'contextmenu', (e: Event) => {
+			e.stopPropagation();
+			const sourceElem = <HTMLElement>(<Element>e.target).closest('.unsavedChanges')!, visibility = this.config.contextMenuActionsVisibility.uncommittedChanges;
+			showContextMenu(<MouseEvent>e, [
+				{
+					title: 'Reset uncommitted changes' + ELLIPSIS,
+					visible: visibility.reset,
+					onClick: () => {
+						showSelectDialog('Are you sure you want to reset the <b>uncommitted changes</b>?', this.config.dialogDefaults.resetUncommittedChanges.mode, [
+							{ name: 'Mixed - Keep working tree, but reset index', value: 'mixed' },
+							{ name: 'Hard - Discard all changes', value: 'hard' }
+						], 'Yes, reset', (mode) => {
+							sendMessage({ command: 'resetUncommittedChanges', repo: this.currentRepo!, mode: <'mixed' | 'hard'>mode });
+						}, sourceElem);
+					}
+				},
+				{
+					title: 'Clean untracked files' + ELLIPSIS,
+					visible: visibility.clean,
+					onClick: () => {
+						showCheckboxDialog('Are you sure you want to delete all <b>untracked files</b>? This cannot be undone.', 'Also delete untracked directories', false, 'Yes, clean', (directories) => {
+							sendMessage({ command: 'cleanUntrackedFiles', repo: this.currentRepo!, directories: directories });
+						}, sourceElem);
+					}
+				}
+			], sourceElem);
 		});
 		addDelegatedListener(this.tableElem, 'gitRef', 'contextmenu', (e: Event) => {
 			e.stopPropagation();
@@ -529,9 +574,9 @@ class GitGraphView {
 								title: 'Merge into current branch' + ELLIPSIS,
 								visible: this.config.contextMenuActionsVisibility.branch.merge,
 								onClick: () => {
-									showCheckboxDialog('Are you sure you want to merge branch <b><i>' + escapeHtml(refName) + '</i></b> into the current branch?', 'Create a new commit even if fast-forward is possible', this.config.dialogDefaults.merge.noFastForward, 'Yes, merge', (createNewCommit) => {
-										sendMessage({ command: 'mergeBranch', repo: this.currentRepo!, branchName: refName, createNewCommit: createNewCommit });
-									}, null);
+									this.showMergeDialog('Are you sure you want to merge branch <b><i>' + escapeHtml(refName) + '</i></b> into the current branch?', (options) => {
+										sendMessage({ command: 'mergeBranch', repo: this.currentRepo!, branchName: refName, ...options });
+									});
 								}
 							}
 						);
@@ -640,6 +685,16 @@ class GitGraphView {
 		this.graph.clear();
 		this.tableElem.innerHTML = '<h2 id="loadingHeader">' + svgIcons.loading + 'Loading ...</h2>';
 		this.footerElem.innerHTML = '';
+	}
+	/** Merge dialog shared by the commit and branch menus: no-fast-forward, squash and no-commit options. */
+	private showMergeDialog(message: string, actioned: (options: GG.MergeOptions) => void) {
+		showFormDialog(message, [
+			{ type: 'checkbox', name: 'Create a new commit even if fast-forward is possible', value: this.config.dialogDefaults.merge.noFastForward },
+			{ type: 'checkbox', name: 'Squash Commits', value: this.config.dialogDefaults.merge.squashCommits },
+			{ type: 'checkbox', name: 'No Commit (stage the merge only)', value: this.config.dialogDefaults.merge.noCommit }
+		], 'Yes, merge', (values) => {
+			actioned({ createNewCommit: values[0] === 'checked', squash: values[1] === 'checked', noCommit: values[2] === 'checked' });
+		}, null);
 	}
 	/** The remote that a remote branch name such as "origin/feature" belongs to, or null when none matches. */
 	private getRemoteOfBranch(remoteBranchName: string) {
@@ -909,6 +964,9 @@ window.addEventListener('message', event => {
 		case 'cherrypickCommit':
 			refreshGraphOrDisplayError(msg.status, 'Unable to Cherry Pick Commit');
 			break;
+		case 'cleanUntrackedFiles':
+			refreshGraphOrDisplayError(msg.status, 'Unable to Clean Untracked Files');
+			break;
 		case 'commitDetails':
 			if (msg.commitDetails === null) {
 				gitGraph.hideCommitDetails();
@@ -931,6 +989,9 @@ window.addEventListener('message', event => {
 			break;
 		case 'deleteTag':
 			refreshGraphOrDisplayError(msg.status, 'Unable to Delete Tag');
+			break;
+		case 'dropCommit':
+			refreshGraphOrDisplayError(msg.status, 'Unable to Drop Commit');
 			break;
 		case 'fetch':
 			refreshGraphOrDisplayError(msg.status, 'Unable to Fetch from Remote(s)');
@@ -976,6 +1037,9 @@ window.addEventListener('message', event => {
 			break;
 		case 'resetToCommit':
 			refreshGraphOrDisplayError(msg.status, 'Unable to Reset to Commit');
+			break;
+		case 'resetUncommittedChanges':
+			refreshGraphOrDisplayError(msg.status, 'Unable to Reset Uncommitted Changes');
 			break;
 		case 'revertCommit':
 			refreshGraphOrDisplayError(msg.status, 'Unable to Revert Commit');
