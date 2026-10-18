@@ -393,8 +393,9 @@ export class DataSource {
 		return this.spawnGit(['rev-parse', '--git-dir'], path, () => true, false).catch(() => false);
 	}
 
-	public addTag(repo: string, tagName: string, commitHash: string, lightweight: boolean, message: string) {
-		if (!isSafeRefName(tagName) || !isCommitHash(commitHash)) return rejectArguments();
+	/** Create a tag and, when `pushToRemote` names a remote, push it there right away. */
+	public async addTag(repo: string, tagName: string, commitHash: string, lightweight: boolean, message: string, pushToRemote: string | null = null): Promise<GitCommandStatus> {
+		if (!isSafeRefName(tagName) || !isCommitHash(commitHash) || (pushToRemote !== null && !isSafeRefName(pushToRemote))) return rejectArguments();
 		const args = ['tag'];
 		if (lightweight) {
 			args.push(tagName);
@@ -402,7 +403,9 @@ export class DataSource {
 			args.push(getConfig().signTags() ? '-s' : '-a', tagName, '-m', message);
 		}
 		args.push(commitHash);
-		return this.runGitCommand(args, repo);
+		const status = await this.runGitCommand(args, repo);
+		if (status !== null || pushToRemote === null) return status;
+		return this.runGitCommand(['push', pushToRemote, 'refs/tags/' + tagName], repo);
 	}
 
 	public deleteTag(repo: string, tagName: string) {
@@ -733,15 +736,27 @@ export class DataSource {
 		return this.runGitCommand(args, repo);
 	}
 
-	public pullBranch(repo: string, branchName: string, remote: string, createNewCommit: boolean, squash: boolean) {
+	/** Pull a remote branch. A squash pull is committed afterwards with the message chosen by `dialog.pullBranch.squashMessageFormat`. */
+	public async pullBranch(repo: string, branchName: string, remote: string, createNewCommit: boolean, squash: boolean): Promise<GitCommandStatus> {
 		if (!isSafeRefName(branchName) || !isSafeRefName(remote)) return rejectArguments();
+		const config = getConfig();
 		const args = ['pull', remote, branchName];
 		if (squash) {
 			args.push('--squash');
-		} else if (createNewCommit) {
-			args.push('--no-ff');
+		} else {
+			if (createNewCommit) args.push('--no-ff');
+			if (config.signCommits()) args.push('-S');
 		}
-		return this.runGitCommand(args, repo);
+		const status = await this.runGitCommand(args, repo);
+		if (status !== null || !squash) return status;
+		const commitArgs = ['commit'];
+		if (config.dialogDefaults().pullBranch.squashMessageFormat === 'Git SQUASH_MSG') {
+			commitArgs.push('--no-edit');
+		} else {
+			commitArgs.push('-m', 'Merge remote-tracking branch \'' + remote + '/' + branchName + '\'');
+		}
+		if (config.signCommits()) commitArgs.push('-S');
+		return this.runGitCommand(commitArgs, repo);
 	}
 
 	public deleteRemoteBranch(repo: string, branchName: string, remote: string) {

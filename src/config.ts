@@ -79,7 +79,8 @@ class Config {
 		const substitution = this.getEnum('dialog.general.referenceInputSpaceSubstitution', null, ['None', 'Hyphen', 'Underscore'], 'None');
 		return {
 			addTag: {
-				type: this.getEnum('dialog.addTag.type', null, ['Annotated', 'Lightweight'], 'Annotated') === 'Lightweight' ? 'lightweight' : 'annotated'
+				type: this.getEnum('dialog.addTag.type', null, ['Annotated', 'Lightweight'], 'Annotated') === 'Lightweight' ? 'lightweight' : 'annotated',
+				pushToRemote: this.getBoolean('dialog.addTag.pushToRemote', null, false)
 			},
 			applyStash: {
 				reinstateIndex: this.getBoolean('dialog.applyStash.reinstateIndex', null, false)
@@ -97,6 +98,10 @@ class Config {
 			fetchIntoLocalBranch: {
 				forceFetch: this.getBoolean('dialog.fetchIntoLocalBranch.forceFetch', null, false)
 			},
+			fetchRemote: {
+				prune: this.getBoolean('dialog.fetchRemote.prune', null, false),
+				pruneTags: this.getBoolean('dialog.fetchRemote.pruneTags', null, false)
+			},
 			merge: {
 				noFastForward: this.getBoolean('dialog.merge.noFastForward', null, true),
 				noCommit: this.getBoolean('dialog.merge.noCommit', null, false),
@@ -107,7 +112,8 @@ class Config {
 			},
 			pullBranch: {
 				noFastForward: this.getBoolean('dialog.pullBranch.noFastForward', null, false),
-				squashCommits: this.getBoolean('dialog.pullBranch.squashCommits', null, false)
+				squashCommits: this.getBoolean('dialog.pullBranch.squashCommits', null, false),
+				squashMessageFormat: this.getEnum<SquashMessageFormat>('dialog.pullBranch.squashMessageFormat', null, ['Default', 'Git SQUASH_MSG'], 'Default')
 			},
 			rebase: {
 				ignoreDate: this.getBoolean('dialog.rebase.ignoreDate', null, true),
@@ -269,6 +275,12 @@ class Config {
 
 	public showCommitsOnlyReferencedByTags() {
 		return this.getBoolean('repository.showCommitsOnlyReferencedByTags', 'showCommitsOnlyReferencedByTags', true);
+	}
+
+	/** Branch names (or custom glob pattern names) selected when a repository opens without its own on-load setting. */
+	public onLoadShowSpecificBranches(): string[] {
+		const value = this.get<unknown>('repository.onLoad.showSpecificBranches', null, []);
+		return Array.isArray(value) ? value.filter((name): name is string => typeof name === 'string' && name.trim() !== '' && name.trim()[0] !== '-' && !/[\x00-\x1f\x7f]/.test(name)).slice(0, 100) : [];
 	}
 
 	public showCurrentBranchByDefault() {

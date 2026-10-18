@@ -141,7 +141,7 @@ export class GitGraphView {
 				case 'addTag':
 					this.sendMessage({
 						command: 'addTag',
-						status: await this.dataSource.addTag(msg.repo, msg.tagName, msg.commitHash, msg.lightweight, msg.message)
+						status: await this.dataSource.addTag(msg.repo, msg.tagName, msg.commitHash, msg.lightweight, msg.message, msg.pushToRemote)
 					});
 					break;
 				case 'fetchAvatar':
@@ -706,6 +706,7 @@ export class GitGraphView {
 			repos: this.repoManager.getRepos(),
 			scrollToHeadOnLoad: config.scrollToHeadOnLoad(),
 			showCurrentBranchByDefault: config.showCurrentBranchByDefault(),
+			onLoadBranches: config.onLoadShowSpecificBranches(),
 			showRemoteBranches: config.showRemoteBranches(),
 			stickyHeader: config.stickyHeader()
 		};

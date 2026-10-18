@@ -533,6 +533,11 @@
 					"additionalProperties": false,
 					"description": "%config.defaultColumnVisibility.description%"
 				},
+				"git-graph.dialog.addTag.pushToRemote": {
+					"type": "boolean",
+					"default": false,
+					"description": "%config.dialog.addTag.pushToRemote.description%"
+				},
 				"git-graph.dialog.addTag.type": {
 					"type": "string",
 					"enum": [
@@ -566,6 +571,16 @@
 					"type": "boolean",
 					"default": false,
 					"description": "%config.dialog.deleteBranch.forceDelete.description%"
+				},
+				"git-graph.dialog.fetchRemote.prune": {
+					"type": "boolean",
+					"default": false,
+					"description": "%config.dialog.fetchRemote.prune.description%"
+				},
+				"git-graph.dialog.fetchRemote.pruneTags": {
+					"type": "boolean",
+					"default": false,
+					"description": "%config.dialog.fetchRemote.pruneTags.description%"
 				},
 				"git-graph.dialog.fetchIntoLocalBranch.forceFetch": {
 					"type": "boolean",
@@ -624,6 +639,19 @@
 					"type": "boolean",
 					"default": false,
 					"description": "%config.dialog.pullBranch.noFastForward.description%"
+				},
+				"git-graph.dialog.pullBranch.squashMessageFormat": {
+					"type": "string",
+					"enum": [
+						"Default",
+						"Git SQUASH_MSG"
+					],
+					"enumDescriptions": [
+						"%config.dialog.pullBranch.squashMessageFormat.enumDescriptions.0%",
+						"%config.dialog.pullBranch.squashMessageFormat.enumDescriptions.1%"
+					],
+					"default": "Default",
+					"description": "%config.dialog.pullBranch.squashMessageFormat.description%"
 				},
 				"git-graph.dialog.pullBranch.squashCommits": {
 					"type": "boolean",
@@ -872,6 +900,14 @@
 					"type": "boolean",
 					"default": true,
 					"description": "%config.repository.showUncommittedChanges.description%"
+				},
+				"git-graph.repository.onLoad.showSpecificBranches": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"default": [],
+					"markdownDescription": "%config.repository.onLoad.showSpecificBranches.markdownDescription%"
 				},
 				"git-graph.repository.showUntrackedFiles": {
 					"type": "boolean",

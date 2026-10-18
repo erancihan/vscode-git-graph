@@ -192,15 +192,16 @@ export interface KeyboardShortcuts {
 }
 
 export interface DialogDefaults {
-	addTag: { type: 'annotated' | 'lightweight' };
+	addTag: { type: 'annotated' | 'lightweight', pushToRemote: boolean };
 	applyStash: { reinstateIndex: boolean };
 	cherryPick: { noCommit: boolean, recordOrigin: boolean };
 	createBranch: { checkOut: boolean };
 	deleteBranch: { forceDelete: boolean };
 	fetchIntoLocalBranch: { forceFetch: boolean };
+	fetchRemote: { prune: boolean, pruneTags: boolean };
 	merge: { noFastForward: boolean, noCommit: boolean, squashCommits: boolean };
 	popStash: { reinstateIndex: boolean };
-	pullBranch: { noFastForward: boolean, squashCommits: boolean };
+	pullBranch: { noFastForward: boolean, squashCommits: boolean, squashMessageFormat: SquashMessageFormat };
 	rebase: { ignoreDate: boolean, launchInteractiveRebase: boolean };
 	resetCurrentBranchToCommit: { mode: GitResetMode };
 	resetUncommittedChanges: { mode: 'mixed' | 'hard' };
@@ -265,6 +266,8 @@ export interface GitGraphViewState {
 	repos: GitRepoSet;
 	scrollToHeadOnLoad: boolean;
 	showCurrentBranchByDefault: boolean;
+	/** `git-graph.repository.onLoad.showSpecificBranches`: selected when a repository opens without its own on-load setting. */
+	onLoadBranches: string[];
 	showRemoteBranches: boolean;
 	stickyHeader: boolean;
 }
@@ -314,6 +317,7 @@ export interface RequestAddTag {
 	tagName: string;
 	lightweight: boolean;
 	message: string;
+	pushToRemote: string | null; // remote to push the new tag to, or null
 }
 export interface ResponseAddTag {
 	command: 'addTag';
