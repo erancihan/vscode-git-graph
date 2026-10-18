@@ -41,6 +41,15 @@ Testing:
 - Run the command `Developer: Open Webview Developer Tools` to inspect the webview.
 - To test a packaged build, run `npm run package` and then `code --install-extension <file>.vsix`.
 
+## Translations
+
+The user interface uses the VS Code localization mechanisms. Translations are community contributions.
+
+* `package.nls.json` holds the English text of the command titles and setting descriptions. Copy it to `package.nls.<locale>.json` (for example `package.nls.de.json`) and translate the values. Keys you leave out fall back to English.
+* `l10n/bundle.l10n.json` holds the English text of the messages, menus and dialogs. Copy it to `l10n/bundle.l10n.<locale>.json` and translate the values. Keep the `{0}`, `{1}` placeholders and the HTML tags (`<b>`, `<i>`) where the English text has them. Keys you leave out fall back to English.
+* After changing a string in the sources, run `npm run l10n` to regenerate `l10n/bundle.l10n.json`; the test suite checks that the file is current and that every translation only contains known keys with matching placeholders.
+* Write translations yourself. Do not copy translation files from other extensions or forks (see the license rule above).
+
 ## Pull requests
 
 Open a pull request against `master`. Fill in the template, including the license checklist. CI runs lint, compile, and packaging on every pull request.

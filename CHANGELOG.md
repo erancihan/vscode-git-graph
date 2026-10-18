@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Localisation: the user interface follows the VS Code display language. Command titles and setting descriptions come from `package.nls.json` (with `package.nls.<locale>.json` per language), extension messages use `vscode.l10n`, and the webview reads the same bundle (`l10n/bundle.l10n.<locale>.json`) through the view state. Missing keys fall back to English. A Turkish translation of the most visible strings ships as the first community sample; `npm run l10n` regenerates the English template and the tests check every translation. The commit details view is not translated yet.
 * Interactive rebase editor: "Interactive Rebase from this Commit..." in the commit menu opens a panel listing the commits after that commit up to HEAD, oldest first. Each commit has an action (pick, reword, edit, squash, fixup, drop), a message box for reword and squash, and arrows for reordering; the list follows `rebase.autoSquash` when it is set. "Start Rebase" runs `git rebase --interactive` with the prepared list through a sequence editor helper (`resources/sequence-editor.sh`), reworded and squashed messages through `exec` lines, and no editor is ever opened. When git stops (edit, conflicts) the conflict help bar takes over. "Fixup into Parent..." folds a commit into its parent with the same mechanism. New keys `commit.interactiveRebase` and `commit.fixup` in `git-graph.contextMenuActionsVisibility`. Designed from the description on the tracking issue; nothing is taken from other extensions.
 
 ## 2.4.1 - 2026-10-18

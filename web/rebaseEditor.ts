@@ -73,7 +73,7 @@ class RebaseEditor {
 		if (this.repo === null || msg.baseHash !== this.baseHash) return;
 		if (msg.todo === null) {
 			this.hide();
-			showErrorDialog('Unable to prepare the Interactive Rebase', msg.error !== null ? msg.error : 'The commits could not be listed.', null);
+			showErrorDialog(t('Unable to prepare the Interactive Rebase'), msg.error !== null ? msg.error : 'The commits could not be listed.', null);
 			return;
 		}
 		this.headHash = msg.headHash;
@@ -86,22 +86,22 @@ class RebaseEditor {
 	private render() {
 		if (this.repo === null || this.baseHash === null) return;
 		const todo = this.todo;
-		let html = '<div id="rebaseEditorHeader"><span class="settingsTitle">Interactive Rebase</span><span class="settingsRepoPath">onto ' + abbrevCommit(this.baseHash) + (todo !== null ? ' · ' + todo.length + ' commit' + (todo.length !== 1 ? 's' : '') : '') + '</span><span id="rebaseEditorClose" title="Close">' + svgIcons.close + '</span></div>';
+		let html = '<div id="rebaseEditorHeader"><span class="settingsTitle">Interactive Rebase</span><span class="settingsRepoPath">onto ' + abbrevCommit(this.baseHash) + (todo !== null ? ' · ' + todo.length + ' commit' + (todo.length !== 1 ? 's' : '') : '') + '</span><span id="rebaseEditorClose" title="' + t('Close') + '">' + svgIcons.close + '</span></div>';
 		html += '<div id="rebaseEditorBody">';
 		if (todo === null) {
-			html += '<p class="settingsLoading">Loading ' + ELLIPSIS + '</p>';
+			html += '<p class="settingsLoading">' + t('Loading ') + ELLIPSIS + '</p>';
 		} else {
-			html += '<p class="rebaseEditorIntro">The commits are listed oldest first, as git replays them. Choose an action for each commit and reorder them with the arrows. Nothing changes until you start the rebase.</p>';
+			html += '<p class="rebaseEditorIntro">' + t('The commits are listed oldest first, as git replays them. Choose an action for each commit and reorder them with the arrows. Nothing changes until you start the rebase.') + '</p>';
 			if (this.pushed) html += '<p class="rebaseEditorWarning">' + svgIcons.alert + 'The current branch is already on its upstream branch. Rewriting it means the next push needs force-with-lease.</p>';
-			html += '<table class="settingsTable rebaseTodo"><tr><th></th><th>Action</th><th>Commit</th><th>Subject</th></tr>';
+			html += '<table class="settingsTable rebaseTodo"><tr><th></th><th>' + t('Action') + '</th><th>' + t('Commit') + '</th><th>' + t('Subject') + '</th></tr>';
 			for (let i = 0; i < todo.length; i++) {
 				const entry = todo[i], withMessage = entry.action === 'reword' || entry.action === 'squash';
 				html += '<tr class="rebaseEntry rebaseAction-' + entry.action + '" data-index="' + i + '">'
-					+ '<td class="rebaseOrder"><span class="rebaseMove' + (i === 0 ? ' disabled' : '') + '" data-dir="-1" title="Move up (earlier)">&#9650;</span><span class="rebaseMove' + (i === todo.length - 1 ? ' disabled' : '') + '" data-dir="1" title="Move down (later)">&#9660;</span></td>'
+					+ '<td class="rebaseOrder"><span class="rebaseMove' + (i === 0 ? ' disabled' : '') + '" data-dir="-1" title="' + t('Move up (earlier)') + '">&#9650;</span><span class="rebaseMove' + (i === todo.length - 1 ? ' disabled' : '') + '" data-dir="1" title="' + t('Move down (later)') + '">&#9660;</span></td>'
 					+ '<td><select class="rebaseActionSelect">' + REBASE_ACTION_OPTIONS.map((option) => '<option value="' + option.value + '" title="' + option.hint + '"' + (option.value === entry.action ? ' selected' : '') + '>' + option.label + '</option>').join('') + '</select></td>'
 					+ '<td class="rebaseHash" title="' + escapeHtml(entry.hash) + '">' + abbrevCommit(entry.hash) + '</td>'
 					+ '<td class="rebaseSubject"><span class="rebaseSubjectText">' + escapeHtml(entry.subject) + '</span>'
-					+ (entry.action === 'edit' ? '<span class="settingsHint">The rebase stops after this commit. Amend it, then use Continue in the bar above the graph.</span>' : '')
+					+ (entry.action === 'edit' ? '<span class="settingsHint">' + t('The rebase stops after this commit. Amend it, then use Continue in the bar above the graph.') + '</span>' : '')
 					+ (withMessage ? '<textarea class="rebaseMessage" rows="3" placeholder="' + (entry.action === 'reword' ? 'New commit message' : 'Leave empty to keep the combined message git composes') + '">' + escapeHtml(entry.message !== null ? entry.message : '') + '</textarea>' : '')
 					+ '</td></tr>';
 			}
@@ -109,9 +109,9 @@ class RebaseEditor {
 		}
 		html += '</div>';
 		html += '<div id="rebaseEditorFooter"><span class="rebaseEditorSummary">' + (todo !== null ? this.describeTodo(todo) : '') + '</span>'
-			+ '<span id="rebaseEditorReset" class="roundedBtn' + (todo === null ? ' disabled' : '') + '" title="Back to the list as git proposed it">Reset</span>'
-			+ '<span id="rebaseEditorCancel" class="roundedBtn">Cancel</span>'
-			+ '<span id="rebaseEditorStart" class="roundedBtn' + (todo === null ? ' disabled' : '') + '">Start Rebase</span></div>';
+			+ '<span id="rebaseEditorReset" class="roundedBtn' + (todo === null ? ' disabled' : '') + '" title="' + t('Back to the list as git proposed it') + '">' + t('Reset') + '</span>'
+			+ '<span id="rebaseEditorCancel" class="roundedBtn">' + t('Cancel') + '</span>'
+			+ '<span id="rebaseEditorStart" class="roundedBtn' + (todo === null ? ' disabled' : '') + '">' + t('Start Rebase') + '</span></div>';
 		this.widgetElem.innerHTML = html;
 		this.attachListeners();
 	}
@@ -169,22 +169,22 @@ class RebaseEditor {
 		const todo = this.todo.map((entry) => ({ ...entry, message: (entry.action === 'reword' || entry.action === 'squash') && entry.message !== null && entry.message.trim() !== '' ? entry.message : null }));
 		const firstKept = todo.filter((entry) => entry.action !== 'drop')[0];
 		if (firstKept === undefined) {
-			showErrorDialog('Unable to Rebase', 'Every commit is dropped. Use "Reset current branch to this Commit" instead.', null);
+			showErrorDialog(t('Unable to Rebase'), t('Every commit is dropped. Use "Reset current branch to this Commit" instead.'), null);
 			return;
 		}
 		if (firstKept.action === 'squash' || firstKept.action === 'fixup') {
-			showErrorDialog('Unable to Rebase', 'The first kept commit cannot be squashed or fixed up: there is no earlier commit to merge it into.', null);
+			showErrorDialog(t('Unable to Rebase'), t('The first kept commit cannot be squashed or fixed up: there is no earlier commit to merge it into.'), null);
 			return;
 		}
 		if (todo.some((entry) => entry.action === 'reword' && entry.message === null)) {
-			showErrorDialog('Unable to Rebase', 'A reworded commit needs a message.', null);
+			showErrorDialog(t('Unable to Rebase'), t('A reworded commit needs a message.'), null);
 			return;
 		}
 		const repo = this.repo, baseHash = this.baseHash, headHash = this.headHash;
 		const summary = this.describeTodo(todo);
-		showConfirmationDialog('Rewrite the <b>current branch</b> with these changes (' + escapeHtml(summary) + ')?', () => {
+		showConfirmationDialog(t('Rewrite the <b>current branch</b> with these changes ({0})?', escapeHtml(summary)), () => {
 			this.hide();
-			showActionRunningDialog('Rebasing');
+			showActionRunningDialog(t('Rebasing'));
 			sendMessage({ command: 'interactiveRebase', repo: repo, baseHash: baseHash, headHash: headHash, todo: todo });
 		}, null);
 	}
@@ -194,7 +194,7 @@ class RebaseEditor {
 		if (status === null) {
 			hideDialog();
 		} else {
-			showErrorDialog('Unable to Rebase', status, null);
+			showErrorDialog(t('Unable to Rebase'), status, null);
 		}
 		this.view.refresh();
 	}

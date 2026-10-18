@@ -212,8 +212,15 @@ export interface CustomBranchGlobPattern {
 	glob: string;
 }
 
+/** A VS Code l10n bundle: English text to translation (or an object with `message` and a translator `comment`). */
+export interface L10nBundle {
+	[key: string]: string | { message: string, comment?: string | string[] };
+}
+
 export interface GitGraphViewState {
 	autoCenterCommitDetailsView: boolean;
+	/** Translations of the current display language, or null for English. */
+	l10n: L10nBundle | null;
 	codeReviews: CodeReviewSet;
 	commitDetailsView: CommitDetailsViewConfig;
 	customBranchGlobPatterns: CustomBranchGlobPattern[];

@@ -44,6 +44,7 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
     * Sticky controls bar and column headers while scrolling (`git-graph.stickyHeader`)
     * Conflict help: a bar shows the merge, rebase, cherry pick or revert in progress with the conflicted files and Continue / Skip / Abort buttons
     * Worktrees: list, add (from a branch or commit), open, remove and prune from the Repository Settings widget
+    * Translated user interface: follows the VS Code display language; translations live in `l10n/` and `package.nls.*.json` and are community contributions (see `CONTRIBUTING.md`). Turkish ships as the first sample
     * Interactive rebase editor: "Interactive Rebase from this Commit..." lists the commits after it, oldest first, with pick / reword / edit / squash / fixup / drop per commit, messages for reword and squash, reordering, and autosquash (`rebase.autoSquash`); "Fixup into Parent..." folds one commit into its parent. Nothing opens an editor; when git stops the conflict help bar takes over
     * Bisect from the graph (mark commits good, bad or skip; progress bar; stop) and drag a branch, tag or commit onto the checked-out commit to merge, rebase or cherry pick
     * Filter the graph by author (from a commit's context menu or the filter button) and by file or folder (from the file context menu); filters show as chips and combine with the branch selection

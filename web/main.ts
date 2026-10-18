@@ -158,7 +158,7 @@ class GitGraphView {
 			if (typeof this.gitRepos[this.currentRepo] !== 'undefined') this.settingsWidget.show(this.currentRepo);
 		});
 		document.getElementById('fetchBtn')!.addEventListener('click', () => {
-			showActionRunningDialog('Fetching from Remote(s)');
+			showActionRunningDialog(t('Fetching from Remote(s)'));
 			sendMessage({ command: 'fetch', repo: this.currentRepo!, remote: null, prune: this.config.fetchAndPrune, pruneTags: this.config.fetchAndPruneTags });
 		});
 		this.observeWindowSizeChanges();
@@ -269,7 +269,7 @@ class GitGraphView {
 		this.gitBranchHead = branchHead;
 		this.gitRemotes = remotes;
 		document.getElementById('fetchBtn')!.style.display = remotes.length > 0 ? '' : 'none';
-		const options = [{ name: 'Show All', value: '' }, { name: 'HEAD (checked-out commit)', value: 'HEAD' }];
+		const options = [{ name: t('Show All'), value: '' }, { name: t('HEAD (checked-out commit)'), value: 'HEAD' }];
 		for (let i = 0; i < this.config.customBranchGlobPatterns.length; i++) {
 			options.push({ name: this.config.customBranchGlobPatterns[i].name, value: '--glob=' + this.config.customBranchGlobPatterns[i].glob });
 		}
@@ -456,7 +456,7 @@ class GitGraphView {
 		this.graph.render(inlineExpandedCommit);
 	}
 	private renderTable() {
-		let html = '<tr id="tableColHeaders"><th id="tableHeaderGraphCol" class="tableColHeader">Graph</th><th class="tableColHeader">Description</th><th class="tableColHeader colDate">Date</th><th class="tableColHeader colAuthor">Author</th><th class="tableColHeader colCommit">Commit</th></tr>', i, currentHash = this.commits.length > 0 && this.commits[0].hash === '*' ? '*' : this.commitHead;
+		let html = '<tr id="tableColHeaders"><th id="tableHeaderGraphCol" class="tableColHeader">' + t('Graph') + '</th><th class="tableColHeader">' + t('Description') + '</th><th class="tableColHeader colDate">' + t('Date') + '</th><th class="tableColHeader colAuthor">' + t('Author') + '</th><th class="tableColHeader colCommit">' + t('Commit') + '</th></tr>', i, currentHash = this.commits.length > 0 && this.commits[0].hash === '*' ? '*' : this.commitHead;
 		const ancestorsOfHead = this.config.muteCommitsThatAreNotAncestorsOfHead ? this.getAncestorsOfHead() : null;
 		const alignment = this.config.referenceLabels.alignment, tagsOnRight = alignment !== 'Normal', branchesInGraph = alignment === 'Branches (aligned to the graph) & Tags (on the right)';
 		const issueLinking = compileIssueLinking(this.getIssueLinkingConfig());
@@ -475,7 +475,7 @@ class GitGraphView {
 			html += '<tr ' + (this.commits[i].hash !== '*' ? 'class="commit' + (muted ? ' mute' : '') + (bisectMark !== null ? ' bisect' + bisectMark : '') + '" data-hash="' + this.commits[i].hash + '" draggable="true"' : 'class="unsavedChanges"') + ' data-id="' + i + '" data-color="' + this.graph.getVertexColour(i) + '"">' + graphCell + '<td>' + (tagsOnRight && labels.tags !== '' ? '<div class="descriptionCell"><span class="descriptionMain">' : '') + (this.commits[i].hash === this.commitHead ? '<span class="commitHeadDot"></span>' : '') + refs + (this.commits[i].hash === currentHash ? '<b>' + message + '</b>' : message) + (tagsOnRight && labels.tags !== '' ? '</span><span class="gitRefsRight">' + labels.tags + '</span></div>' : '') + '</td><td class="colDate" title="' + date.title + '">' + date.value + '</td><td class="colAuthor" title="' + escapeHtml(this.commits[i].author + ' <' + this.commits[i].email + '>') + '">' + (this.config.fetchAvatars ? '<span class="avatar" data-email="' + escapeHtml(this.commits[i].email) + '">' + (typeof this.avatars[this.commits[i].email] === 'string' ? '<img class="avatarImg" src="' + this.avatars[this.commits[i].email] + '">' : '') + '</span>' : '') + escapeHtml(this.commits[i].author) + '</td><td class="colCommit" title="' + escapeHtml(this.commits[i].hash) + '">' + bisectBadge + signatureIconHtml(this.commits[i].signature) + abbrevCommit(this.commits[i].hash) + '</td></tr>';
 		}
 		this.tableElem.innerHTML = '<table>' + html + '</table>';
-		this.footerElem.innerHTML = this.moreCommitsAvailable ? '<div id="loadMoreCommitsBtn" class="roundedBtn">Load More Commits</div>' : '';
+		this.footerElem.innerHTML = this.moreCommitsAvailable ? '<div id="loadMoreCommitsBtn" class="roundedBtn">' + t('Load More Commits') + '</div>' : '';
 		this.makeTableResizable();
 		this.findWidget.update();
 
@@ -538,51 +538,51 @@ class GitGraphView {
 			}
 			showContextMenu(<MouseEvent>e, [
 				{
-					title: 'Add Tag' + ELLIPSIS,
+					title: t('Add Tag') + ELLIPSIS,
 					visible: visibility.addTag,
 					onClick: () => {
-						showFormDialog('Add tag to commit <b><i>' + abbrevCommit(hash) + '</i></b>:', [
-							{ type: 'text-ref' as const, name: 'Name: ', default: '' },
-							{ type: 'select' as const, name: 'Type: ', default: this.config.dialogDefaults.addTag.type, options: [{ name: 'Annotated', value: 'annotated' }, { name: 'Lightweight', value: 'lightweight' }] },
-							{ type: 'text' as const, name: 'Message: ', default: '', placeholder: 'Optional' }
-						], 'Add Tag', values => {
+						showFormDialog(t('Add tag to commit <b><i>{0}</i></b>:', abbrevCommit(hash)), [
+							{ type: 'text-ref' as const, name: t('Name: '), default: '' },
+							{ type: 'select' as const, name: t('Type: '), default: this.config.dialogDefaults.addTag.type, options: [{ name: t('Annotated'), value: 'annotated' }, { name: t('Lightweight'), value: 'lightweight' }] },
+							{ type: 'text' as const, name: t('Message: '), default: '', placeholder: t('Optional') }
+						], t('Add Tag'), values => {
 							sendMessage({ command: 'addTag', repo: this.currentRepo!, tagName: values[0], commitHash: hash, lightweight: values[1] === 'lightweight', message: values[2] });
 						}, sourceElem);
 					}
 				},
 				{
-					title: 'Create Branch' + ELLIPSIS,
+					title: t('Create Branch') + ELLIPSIS,
 					visible: visibility.createBranch,
 					onClick: () => {
-						showFormDialog('Enter the name of the branch you would like to create from commit <b><i>' + abbrevCommit(hash) + '</i></b>:', [
-							{ type: 'text-ref', name: 'Name: ', default: '' },
-							{ type: 'checkbox', name: 'Check out', value: this.config.dialogDefaults.createBranch.checkOut }
-						], 'Create Branch', (values) => {
+						showFormDialog(t('Enter the name of the branch you would like to create from commit <b><i>{0}</i></b>:', abbrevCommit(hash)), [
+							{ type: 'text-ref', name: t('Name: '), default: '' },
+							{ type: 'checkbox', name: t('Check out'), value: this.config.dialogDefaults.createBranch.checkOut }
+						], t('Create Branch'), (values) => {
 							sendMessage({ command: 'createBranch', repo: this.currentRepo!, branchName: values[0], commitHash: hash, checkout: values[1] === 'checked' });
 						}, sourceElem);
 					}
 				},
 				null,
 				{
-					title: 'Checkout' + ELLIPSIS,
+					title: t('Checkout') + ELLIPSIS,
 					visible: visibility.checkout,
 					onClick: () => {
-						showConfirmationDialog('Are you sure you want to checkout commit <b><i>' + abbrevCommit(hash) + '</i></b>? This will result in a \'detached HEAD\' state.', () => {
+						showConfirmationDialog(t('Are you sure you want to checkout commit <b><i>{0}</i></b>? This will result in a \'detached HEAD\' state.', abbrevCommit(hash)), () => {
 							sendMessage({ command: 'checkoutCommit', repo: this.currentRepo!, commitHash: hash });
 						}, sourceElem);
 					}
 				},
 				{
-					title: 'Cherry Pick' + ELLIPSIS,
+					title: t('Cherry Pick') + ELLIPSIS,
 					visible: visibility.cherrypick,
 					onClick: () => this.showCherryPickDialog(hash, sourceElem)
 				},
 				{
-					title: 'Revert' + ELLIPSIS,
+					title: t('Revert') + ELLIPSIS,
 					visible: visibility.revert,
 					onClick: () => {
 						if (this.commits[this.commitLookup[hash]].parentHashes.length === 1) {
-							showConfirmationDialog('Are you sure you want to revert commit <b><i>' + abbrevCommit(hash) + '</i></b>?', () => {
+							showConfirmationDialog(t('Are you sure you want to revert commit <b><i>{0}</i></b>?', abbrevCommit(hash)), () => {
 								sendMessage({ command: 'revertCommit', repo: this.currentRepo!, commitHash: hash, parentIndex: 0 });
 							}, sourceElem);
 						} else {
@@ -590,99 +590,99 @@ class GitGraphView {
 								name: abbrevCommit(hash) + (typeof this.commitLookup[hash] === 'number' ? ': ' + this.commits[this.commitLookup[hash]].message : ''),
 								value: (index + 1).toString()
 							}));
-							showSelectDialog('Are you sure you want to revert merge commit <b><i>' + abbrevCommit(hash) + '</i></b>? Choose the parent hash on the main branch, to revert the commit relative to:', '1', options, 'Yes, revert commit', (parentIndex) => {
+							showSelectDialog(t('Are you sure you want to revert merge commit <b><i>{0}</i></b>? Choose the parent hash on the main branch, to revert the commit relative to:', abbrevCommit(hash)), '1', options, t('Yes, revert commit'), (parentIndex) => {
 								sendMessage({ command: 'revertCommit', repo: this.currentRepo!, commitHash: hash, parentIndex: parseInt(parentIndex) });
 							}, sourceElem);
 						}
 					}
 				},
 				{
-					title: 'Drop Commit' + ELLIPSIS,
+					title: t('Drop Commit') + ELLIPSIS,
 					visible: visibility.drop && this.commits[this.commitLookup[hash]].parentHashes.length === 1,
 					onClick: () => {
-						showConfirmationDialog('Are you sure you want to drop commit <b><i>' + abbrevCommit(hash) + '</i></b>? The commits after it on the current branch are rewritten.', () => {
-							showActionRunningDialog('Dropping Commit');
+						showConfirmationDialog(t('Are you sure you want to drop commit <b><i>{0}</i></b>? The commits after it on the current branch are rewritten.', abbrevCommit(hash)), () => {
+							showActionRunningDialog(t('Dropping Commit'));
 							sendMessage({ command: 'dropCommit', repo: this.currentRepo!, commitHash: hash });
 						}, sourceElem);
 					}
 				},
 				null,
 				{
-					title: 'Merge into current branch' + ELLIPSIS,
+					title: t('Merge into current branch') + ELLIPSIS,
 					visible: visibility.merge,
 					onClick: () => {
-						this.showMergeDialog('Are you sure you want to merge commit <b><i>' + abbrevCommit(hash) + '</i></b> into the current branch?', (options) => {
+						this.showMergeDialog(t('Are you sure you want to merge commit <b><i>{0}</i></b> into the current branch?', abbrevCommit(hash)), (options) => {
 							sendMessage({ command: 'mergeCommit', repo: this.currentRepo!, commitHash: hash, ...options });
 						});
 					}
 				},
 				{
-					title: 'Rebase current branch on this Commit' + ELLIPSIS,
+					title: t('Rebase current branch on this Commit') + ELLIPSIS,
 					visible: visibility.rebase,
 					onClick: () => {
-						this.showRebaseDialog('Are you sure you want to rebase the <b>current branch</b> on commit <b><i>' + abbrevCommit(hash) + '</i></b>?', hash, 'Commit', sourceElem);
+						this.showRebaseDialog(t('Are you sure you want to rebase the <b>current branch</b> on commit <b><i>{0}</i></b>?', abbrevCommit(hash)), hash, 'Commit', sourceElem);
 					}
 				},
 				{
-					title: 'Interactive Rebase from this Commit' + ELLIPSIS,
+					title: t('Interactive Rebase from this Commit') + ELLIPSIS,
 					visible: visibility.interactiveRebase && hash !== this.commitHead,
 					onClick: () => this.rebaseEditor.show(this.currentRepo!, hash)
 				},
 				{
-					title: 'Fixup into Parent' + ELLIPSIS,
+					title: t('Fixup into Parent') + ELLIPSIS,
 					visible: visibility.fixup && this.commits[this.commitLookup[hash]].parentHashes.length === 1,
 					onClick: () => {
-						showConfirmationDialog('Are you sure you want to fold commit <b><i>' + abbrevCommit(hash) + '</i></b> into its parent? The parent keeps its message, and the commits after it on the current branch are rewritten.', () => {
-							showActionRunningDialog('Folding Commit into its Parent');
+						showConfirmationDialog(t('Are you sure you want to fold commit <b><i>{0}</i></b> into its parent? The parent keeps its message, and the commits after it on the current branch are rewritten.', abbrevCommit(hash)), () => {
+							showActionRunningDialog(t('Folding Commit into its Parent'));
 							sendMessage({ command: 'fixupCommit', repo: this.currentRepo!, commitHash: hash });
 						}, sourceElem);
 					}
 				},
 				{
-					title: 'Reset current branch to this Commit' + ELLIPSIS,
+					title: t('Reset current branch to this Commit') + ELLIPSIS,
 					visible: visibility.reset,
 					onClick: () => {
-						showSelectDialog('Are you sure you want to reset the <b>current branch</b> to commit <b><i>' + abbrevCommit(hash) + '</i></b>?', this.config.dialogDefaults.resetCurrentBranchToCommit.mode, [
-							{ name: 'Soft - Keep all changes, but reset head', value: 'soft' },
-							{ name: 'Mixed - Keep working tree, but reset index', value: 'mixed' },
-							{ name: 'Hard - Discard all changes', value: 'hard' }
-						], 'Yes, reset', (mode) => {
+						showSelectDialog(t('Are you sure you want to reset the <b>current branch</b> to commit <b><i>{0}</i></b>?', abbrevCommit(hash)), this.config.dialogDefaults.resetCurrentBranchToCommit.mode, [
+							{ name: t('Soft - Keep all changes, but reset head'), value: 'soft' },
+							{ name: t('Mixed - Keep working tree, but reset index'), value: 'mixed' },
+							{ name: t('Hard - Discard all changes'), value: 'hard' }
+						], t('Yes, reset'), (mode) => {
 							sendMessage({ command: 'resetToCommit', repo: this.currentRepo!, commitHash: hash, resetMode: <GG.GitResetMode>mode });
 						}, sourceElem);
 					}
 				},
 				{
-					title: 'Bisect: Mark as Bad',
+					title: t('Bisect: Mark as Bad'),
 					visible: visibility.bisect && this.commits[this.commitLookup[hash]].bisect !== 'bad',
 					onClick: () => this.bisect('bad', hash)
 				},
 				{
-					title: 'Bisect: Mark as Good',
+					title: t('Bisect: Mark as Good'),
 					visible: visibility.bisect && this.commits[this.commitLookup[hash]].bisect !== 'good',
 					onClick: () => this.bisect('good', hash)
 				},
 				{
-					title: 'Bisect: Skip this Commit',
+					title: t('Bisect: Skip this Commit'),
 					visible: visibility.bisect && this.bisecting && this.commits[this.commitLookup[hash]].bisect !== 'skip',
 					onClick: () => this.bisect('skip', hash)
 				},
 				{
-					title: 'Bisect: Stop',
+					title: t('Bisect: Stop'),
 					visible: visibility.bisect && this.bisecting,
 					onClick: () => this.bisect('reset', null)
 				},
 				{
-					title: 'Show only commits by ' + escapeHtml(this.commits[this.commitLookup[hash]].author),
+					title: t('Show only commits by {0}', escapeHtml(this.commits[this.commitLookup[hash]].author)),
 					visible: visibility.filterByAuthor && this.filters.authors.indexOf(this.commits[this.commitLookup[hash]].email) === -1,
 					onClick: () => this.addAuthorFilter(this.commits[this.commitLookup[hash]].email !== '' ? this.commits[this.commitLookup[hash]].email : this.commits[this.commitLookup[hash]].author)
 				},
 				{
-					title: 'Reword Commit Message' + ELLIPSIS,
+					title: t('Reword Commit Message') + ELLIPSIS,
 					visible: visibility.reword && hash === this.commitHead,
 					onClick: () => sendMessage({ command: 'getCommitMessage', repo: this.currentRepo!, commitHash: hash, purpose: 'reword' })
 				},
 				{
-					title: (this.getCodeReviewById(hash) !== null ? 'End Code Review' : 'Start Code Review'),
+					title: (this.getCodeReviewById(hash) !== null ? t('End Code Review') : t('Start Code Review')),
 					visible: visibility.codeReview,
 					onClick: () => {
 						if (this.getCodeReviewById(hash) !== null) {
@@ -693,25 +693,25 @@ class GitGraphView {
 					}
 				},
 				{
-					title: 'Create Worktree from this Commit' + ELLIPSIS,
+					title: t('Create Worktree from this Commit') + ELLIPSIS,
 					visible: visibility.createWorktree,
 					onClick: () => this.showCreateWorktreeDialog(hash, 'Commit')
 				},
 				{
-					title: 'Archive' + ELLIPSIS,
+					title: t('Archive') + ELLIPSIS,
 					visible: visibility.archive,
 					onClick: () => sendMessage({ command: 'archive', repo: this.currentRepo!, ref: hash })
 				},
 				null,
 				{
-					title: 'Copy Commit Hash to Clipboard',
+					title: t('Copy Commit Hash to Clipboard'),
 					visible: visibility.copyHash,
 					onClick: () => {
 						sendMessage({ command: 'copyToClipboard', type: 'Commit Hash', data: hash });
 					}
 				},
 				{
-					title: 'Copy Short Commit Hash to Clipboard',
+					title: t('Copy Short Commit Hash to Clipboard'),
 					visible: visibility.copyHash,
 					onClick: () => {
 						sendMessage({ command: 'copyToClipboard', type: 'Short Commit Hash', data: abbrevCommit(hash) });
@@ -741,39 +741,39 @@ class GitGraphView {
 			const sourceElem = <HTMLElement>(<Element>e.target).closest('.unsavedChanges')!, visibility = this.config.contextMenuActionsVisibility.uncommittedChanges;
 			showContextMenu(<MouseEvent>e, [
 				{
-					title: 'Stash uncommitted changes' + ELLIPSIS,
+					title: t('Stash uncommitted changes') + ELLIPSIS,
 					visible: visibility.stash,
 					onClick: () => {
-						showFormDialog('Stash the <b>uncommitted changes</b>:', [
-							{ type: 'text', name: 'Message: ', default: '', placeholder: 'Optional' },
-							{ type: 'checkbox', name: 'Include Untracked', value: this.config.dialogDefaults.stashUncommittedChanges.includeUntracked }
-						], 'Yes, stash', (values) => {
+						showFormDialog(t('Stash the <b>uncommitted changes</b>:'), [
+							{ type: 'text', name: t('Message: '), default: '', placeholder: t('Optional') },
+							{ type: 'checkbox', name: t('Include Untracked'), value: this.config.dialogDefaults.stashUncommittedChanges.includeUntracked }
+						], t('Yes, stash'), (values) => {
 							sendMessage({ command: 'pushStash', repo: this.currentRepo!, message: values[0], includeUntracked: values[1] === 'checked' });
 						}, sourceElem);
 					}
 				},
 				{
-					title: 'Amend Last Commit with Uncommitted Changes' + ELLIPSIS,
+					title: t('Amend Last Commit with Uncommitted Changes') + ELLIPSIS,
 					visible: visibility.amend && this.commitHead !== null,
 					onClick: () => sendMessage({ command: 'getCommitMessage', repo: this.currentRepo!, commitHash: this.commitHead!, purpose: 'amend' })
 				},
 				{
-					title: 'Reset uncommitted changes' + ELLIPSIS,
+					title: t('Reset uncommitted changes') + ELLIPSIS,
 					visible: visibility.reset,
 					onClick: () => {
-						showSelectDialog('Are you sure you want to reset the <b>uncommitted changes</b>?', this.config.dialogDefaults.resetUncommittedChanges.mode, [
-							{ name: 'Mixed - Keep working tree, but reset index', value: 'mixed' },
-							{ name: 'Hard - Discard all changes', value: 'hard' }
-						], 'Yes, reset', (mode) => {
+						showSelectDialog(t('Are you sure you want to reset the <b>uncommitted changes</b>?'), this.config.dialogDefaults.resetUncommittedChanges.mode, [
+							{ name: t('Mixed - Keep working tree, but reset index'), value: 'mixed' },
+							{ name: t('Hard - Discard all changes'), value: 'hard' }
+						], t('Yes, reset'), (mode) => {
 							sendMessage({ command: 'resetUncommittedChanges', repo: this.currentRepo!, mode: <'mixed' | 'hard'>mode });
 						}, sourceElem);
 					}
 				},
 				{
-					title: 'Clean untracked files' + ELLIPSIS,
+					title: t('Clean untracked files') + ELLIPSIS,
 					visible: visibility.clean,
 					onClick: () => {
-						showCheckboxDialog('Are you sure you want to delete all <b>untracked files</b>? This cannot be undone.', 'Also delete untracked directories', false, 'Yes, clean', (directories) => {
+						showCheckboxDialog(t('Are you sure you want to delete all <b>untracked files</b>? This cannot be undone.'), t('Also delete untracked directories'), false, t('Yes, clean'), (directories) => {
 							sendMessage({ command: 'cleanUntrackedFiles', repo: this.currentRepo!, directories: directories });
 						}, sourceElem);
 					}
@@ -792,20 +792,20 @@ class GitGraphView {
 			}
 			if (isTag) {
 				menu = [{
-					title: 'Delete Tag' + ELLIPSIS,
+					title: t('Delete Tag') + ELLIPSIS,
 					visible: this.config.contextMenuActionsVisibility.tag.delete,
 					onClick: () => {
-						showConfirmationDialog('Are you sure you want to delete the tag <b><i>' + escapeHtml(refName) + '</i></b>?', () => {
+						showConfirmationDialog(t('Are you sure you want to delete the tag <b><i>{0}</i></b>?', escapeHtml(refName)), () => {
 							sendMessage({ command: 'deleteTag', repo: this.currentRepo!, tagName: refName });
 						}, null);
 					}
 				}, {
-					title: 'Push Tag' + ELLIPSIS,
+					title: t('Push Tag') + ELLIPSIS,
 					visible: this.config.contextMenuActionsVisibility.tag.push,
 					onClick: () => {
-						showConfirmationDialog('Are you sure you want to push the tag <b><i>' + escapeHtml(refName) + '</i></b>?', () => {
+						showConfirmationDialog(t('Are you sure you want to push the tag <b><i>{0}</i></b>?', escapeHtml(refName)), () => {
 							sendMessage({ command: 'pushTag', repo: this.currentRepo!, tagName: refName });
-							showActionRunningDialog('Pushing Tag');
+							showActionRunningDialog(t('Pushing Tag'));
 						}, null);
 					}
 				}];
@@ -815,16 +815,16 @@ class GitGraphView {
 					menu = [];
 					if (this.gitBranchHead !== refName) {
 						menu.push({
-							title: 'Checkout Branch',
+							title: t('Checkout Branch'),
 							visible: this.config.contextMenuActionsVisibility.branch.checkout,
 							onClick: () => this.checkoutBranchAction(sourceElem, refName)
 						});
 					}
 					menu.push({
-						title: 'Rename Branch' + ELLIPSIS,
+						title: t('Rename Branch') + ELLIPSIS,
 						visible: this.config.contextMenuActionsVisibility.branch.rename,
 						onClick: () => {
-							showRefInputDialog('Enter the new name for branch <b><i>' + escapeHtml(refName) + '</i></b>:', refName, 'Rename Branch', (newName) => {
+							showRefInputDialog(t('Enter the new name for branch <b><i>{0}</i></b>:', escapeHtml(refName)), refName, t('Rename Branch'), (newName) => {
 								sendMessage({ command: 'renameBranch', repo: this.currentRepo!, oldName: refName, newName: newName });
 							}, null);
 						}
@@ -832,18 +832,18 @@ class GitGraphView {
 					if (this.gitBranchHead !== refName) {
 						menu.push(
 							{
-								title: 'Delete Branch' + ELLIPSIS,
+								title: t('Delete Branch') + ELLIPSIS,
 								visible: this.config.contextMenuActionsVisibility.branch.delete,
 								onClick: () => {
-									showCheckboxDialog('Are you sure you want to delete the branch <b><i>' + escapeHtml(refName) + '</i></b>?', 'Force Delete', this.config.dialogDefaults.deleteBranch.forceDelete, 'Delete Branch', (forceDelete) => {
+									showCheckboxDialog(t('Are you sure you want to delete the branch <b><i>{0}</i></b>?', escapeHtml(refName)), t('Force Delete'), this.config.dialogDefaults.deleteBranch.forceDelete, t('Delete Branch'), (forceDelete) => {
 										sendMessage({ command: 'deleteBranch', repo: this.currentRepo!, branchName: refName, forceDelete: forceDelete });
 									}, null);
 								}
 							}, {
-								title: 'Merge into current branch' + ELLIPSIS,
+								title: t('Merge into current branch') + ELLIPSIS,
 								visible: this.config.contextMenuActionsVisibility.branch.merge,
 								onClick: () => {
-									this.showMergeDialog('Are you sure you want to merge branch <b><i>' + escapeHtml(refName) + '</i></b> into the current branch?', (options) => {
+									this.showMergeDialog(t('Are you sure you want to merge branch <b><i>{0}</i></b> into the current branch?', escapeHtml(refName)), (options) => {
 										sendMessage({ command: 'mergeBranch', repo: this.currentRepo!, branchName: refName, ...options });
 									});
 								}
@@ -852,34 +852,34 @@ class GitGraphView {
 					}
 					if (this.gitBranchHead !== refName) {
 						menu.push({
-							title: 'Rebase current branch on this branch' + ELLIPSIS,
+							title: t('Rebase current branch on this branch') + ELLIPSIS,
 							visible: this.config.contextMenuActionsVisibility.branch.rebase,
 							onClick: () => {
-								this.showRebaseDialog('Are you sure you want to rebase the <b>current branch</b> on branch <b><i>' + escapeHtml(refName) + '</i></b>?', refName, 'Branch', null);
+								this.showRebaseDialog(t('Are you sure you want to rebase the <b>current branch</b> on branch <b><i>{0}</i></b>?', escapeHtml(refName)), refName, 'Branch', null);
 							}
 						});
 					}
 					if (this.gitRemotes.length > 0) {
 						menu.push({
-							title: 'Push Branch' + ELLIPSIS,
+							title: t('Push Branch') + ELLIPSIS,
 							visible: this.config.contextMenuActionsVisibility.branch.push,
 							onClick: () => {
 								const remotes = this.gitRemotes, multiple = remotes.length > 1;
 								const defaultRemote = remotes.indexOf('origin') > -1 ? 'origin' : remotes[0];
 								// With several remotes, one checkbox per remote; the branch is pushed to every checked remote
-								const inputs: DialogInput[] = multiple ? remotes.map((remote): DialogInput => ({ type: 'checkbox', name: 'Push to ' + escapeHtml(remote), value: remote === defaultRemote })) : [];
+								const inputs: DialogInput[] = multiple ? remotes.map((remote): DialogInput => ({ type: 'checkbox', name: t('Push to {0}', escapeHtml(remote)), value: remote === defaultRemote })) : [];
 								inputs.push(
-									{ type: 'checkbox', name: 'Set Upstream', value: true },
-									{ type: 'select', name: 'Mode: ', default: 'normal', options: [{ name: 'Normal', value: 'normal' }, { name: 'Force With Lease', value: 'force-with-lease' }, { name: 'Force', value: 'force' }] }
+									{ type: 'checkbox', name: t('Set Upstream'), value: true },
+									{ type: 'select', name: t('Mode: '), default: 'normal', options: [{ name: t('Normal'), value: 'normal' }, { name: t('Force With Lease'), value: 'force-with-lease' }, { name: t('Force'), value: 'force' }] }
 								);
-								showFormDialog('Are you sure you want to push the branch <b><i>' + escapeHtml(refName) + '</i></b>' + (!multiple ? ' to the remote <b><i>' + escapeHtml(remotes[0]) + '</i></b>' : '') + '?', inputs, 'Yes, push', (values) => {
+								showFormDialog(t('Are you sure you want to push the branch <b><i>{0}</i></b>{1}?', escapeHtml(refName), (!multiple ? ' to the remote <b><i>' + escapeHtml(remotes[0]) + '</i></b>' : '')), inputs, t('Yes, push'), (values) => {
 									const selected = multiple ? remotes.filter((_, index) => values[index] === 'checked') : [remotes[0]];
 									const options = values.slice(multiple ? remotes.length : 0);
 									if (selected.length === 0) {
-										showErrorDialog('Unable to Push Branch', 'Select at least one remote.', null);
+										showErrorDialog(t('Unable to Push Branch'), t('Select at least one remote.'), null);
 										return;
 									}
-									showActionRunningDialog('Pushing Branch');
+									showActionRunningDialog(t('Pushing Branch'));
 									sendMessage({ command: 'pushBranch', repo: this.currentRepo!, branchName: refName, remotes: selected, setUpstream: options[0] === 'checked', mode: <GG.GitPushBranchMode>options[1] });
 								}, null);
 							}
@@ -887,7 +887,7 @@ class GitGraphView {
 					}
 					if (this.gitRemotes.length > 0) {
 						menu.push({
-							title: 'Create Pull Request' + ELLIPSIS,
+							title: t('Create Pull Request') + ELLIPSIS,
 							visible: this.config.contextMenuActionsVisibility.branch.createPullRequest,
 							onClick: () => this.showCreatePullRequestDialog(refName)
 						});
@@ -895,41 +895,41 @@ class GitGraphView {
 				} else {
 					const remote = this.getRemoteOfBranch(refName), remoteBranch = remote !== null ? refName.substring(remote.length + 1) : refName;
 					menu = [{
-						title: 'Checkout Branch' + ELLIPSIS,
+						title: t('Checkout Branch') + ELLIPSIS,
 						visible: this.config.contextMenuActionsVisibility.remoteBranch.checkout,
 						onClick: () => this.checkoutBranchAction(sourceElem, refName)
 					}];
 					if (remote !== null) {
 						menu.push({
-							title: 'Delete Remote Branch' + ELLIPSIS,
+							title: t('Delete Remote Branch') + ELLIPSIS,
 							visible: this.config.contextMenuActionsVisibility.remoteBranch.delete,
 							onClick: () => {
-								showConfirmationDialog('Are you sure you want to delete the remote branch <b><i>' + escapeHtml(refName) + '</i></b>? This removes the branch from the remote <b><i>' + escapeHtml(remote) + '</i></b>.', () => {
-									showActionRunningDialog('Deleting Remote Branch');
+								showConfirmationDialog(t('Are you sure you want to delete the remote branch <b><i>{0}</i></b>? This removes the branch from the remote <b><i>{1}</i></b>.', escapeHtml(refName), escapeHtml(remote)), () => {
+									showActionRunningDialog(t('Deleting Remote Branch'));
 									sendMessage({ command: 'deleteRemoteBranch', repo: this.currentRepo!, branchName: remoteBranch, remote: remote });
 								}, null);
 							}
 						}, {
-							title: 'Fetch into local branch' + ELLIPSIS,
+							title: t('Fetch into local branch') + ELLIPSIS,
 							visible: this.config.contextMenuActionsVisibility.remoteBranch.fetch,
 							onClick: () => {
-								showFormDialog('Fetch the remote branch <b><i>' + escapeHtml(refName) + '</i></b> into a local branch (the local branch must not be checked out):', [
-									{ type: 'text-ref', name: 'Local branch: ', default: remoteBranch },
-									{ type: 'checkbox', name: 'Force Fetch', value: this.config.dialogDefaults.fetchIntoLocalBranch.forceFetch }
-								], 'Yes, fetch', (values) => {
-									showActionRunningDialog('Fetching Branch');
+								showFormDialog(t('Fetch the remote branch <b><i>{0}</i></b> into a local branch (the local branch must not be checked out):', escapeHtml(refName)), [
+									{ type: 'text-ref', name: t('Local branch: '), default: remoteBranch },
+									{ type: 'checkbox', name: t('Force Fetch'), value: this.config.dialogDefaults.fetchIntoLocalBranch.forceFetch }
+								], t('Yes, fetch'), (values) => {
+									showActionRunningDialog(t('Fetching Branch'));
 									sendMessage({ command: 'fetchIntoLocalBranch', repo: this.currentRepo!, remote: remote, remoteBranch: remoteBranch, localBranch: values[0], force: values[1] === 'checked' });
 								}, null);
 							}
 						}, {
-							title: 'Pull into current branch' + ELLIPSIS,
+							title: t('Pull into current branch') + ELLIPSIS,
 							visible: this.config.contextMenuActionsVisibility.remoteBranch.pull,
 							onClick: () => {
-								showFormDialog('Are you sure you want to pull the remote branch <b><i>' + escapeHtml(refName) + '</i></b> into the current branch?', [
-									{ type: 'checkbox', name: 'Create a new commit even if fast-forward is possible', value: this.config.dialogDefaults.pullBranch.noFastForward },
-									{ type: 'checkbox', name: 'Squash Commits', value: this.config.dialogDefaults.pullBranch.squashCommits }
-								], 'Yes, pull', (values) => {
-									showActionRunningDialog('Pulling Branch');
+								showFormDialog(t('Are you sure you want to pull the remote branch <b><i>{0}</i></b> into the current branch?', escapeHtml(refName)), [
+									{ type: 'checkbox', name: t('Create a new commit even if fast-forward is possible'), value: this.config.dialogDefaults.pullBranch.noFastForward },
+									{ type: 'checkbox', name: t('Squash Commits'), value: this.config.dialogDefaults.pullBranch.squashCommits }
+								], t('Yes, pull'), (values) => {
+									showActionRunningDialog(t('Pulling Branch'));
 									sendMessage({ command: 'pullBranch', repo: this.currentRepo!, branchName: remoteBranch, remote: remote, createNewCommit: values[0] === 'checked', squash: values[1] === 'checked' });
 								}, null);
 							}
@@ -940,20 +940,20 @@ class GitGraphView {
 			}
 			if (isHead) {
 				menu.push({
-					title: 'Create Worktree from this Branch' + ELLIPSIS,
+					title: t('Create Worktree from this Branch') + ELLIPSIS,
 					visible: this.config.contextMenuActionsVisibility.branch.createWorktree,
 					onClick: () => this.showCreateWorktreeDialog(refName, 'Branch')
 				});
 			}
 			if (isTag || isHead) {
 				menu.push({
-					title: 'Archive' + ELLIPSIS,
+					title: t('Archive') + ELLIPSIS,
 					visible: isTag ? this.config.contextMenuActionsVisibility.tag.archive : this.config.contextMenuActionsVisibility.branch.archive,
 					onClick: () => sendMessage({ command: 'archive', repo: this.currentRepo!, ref: refName })
 				});
 			}
 			menu.push(null, {
-				title: 'Copy ' + copyType + ' to Clipboard',
+				title: t('Copy {0} to Clipboard', copyType),
 				visible: isTag ? this.config.contextMenuActionsVisibility.tag.copyName : isHead ? this.config.contextMenuActionsVisibility.branch.copyName : this.config.contextMenuActionsVisibility.remoteBranch.copyName,
 				onClick: () => {
 					sendMessage({ command: 'copyToClipboard', type: copyType, data: refName });
@@ -1045,7 +1045,7 @@ class GitGraphView {
 	private renderShowLoading() {
 		hideDialogAndContextMenu();
 		this.graph.clear();
-		this.tableElem.innerHTML = '<h2 id="loadingHeader">' + svgIcons.loading + 'Loading ...</h2>';
+		this.tableElem.innerHTML = '<h2 id="loadingHeader">' + svgIcons.loading + t('Loading ...') + '</h2>';
 		this.footerElem.innerHTML = '';
 	}
 	/** Context menu of a stash row or label. */
@@ -1053,49 +1053,49 @@ class GitGraphView {
 		const visibility = this.config.contextMenuActionsVisibility.stash, name = stash.selector;
 		showContextMenu(e, [
 			{
-				title: 'Apply Stash' + ELLIPSIS,
+				title: t('Apply Stash') + ELLIPSIS,
 				visible: visibility.apply,
 				onClick: () => {
-					showCheckboxDialog('Are you sure you want to apply the stash <b><i>' + escapeHtml(name) + '</i></b>?', 'Reinstate Index', this.config.dialogDefaults.applyStash.reinstateIndex, 'Yes, apply', (reinstateIndex) => {
+					showCheckboxDialog(t('Are you sure you want to apply the stash <b><i>{0}</i></b>?', escapeHtml(name)), t('Reinstate Index'), this.config.dialogDefaults.applyStash.reinstateIndex, t('Yes, apply'), (reinstateIndex) => {
 						sendMessage({ command: 'applyStash', repo: this.currentRepo!, selector: name, reinstateIndex: reinstateIndex });
 					}, sourceElem);
 				}
 			},
 			{
-				title: 'Create Branch from Stash' + ELLIPSIS,
+				title: t('Create Branch from Stash') + ELLIPSIS,
 				visible: visibility.createBranch,
 				onClick: () => {
-					showRefInputDialog('Enter the name of the branch you would like to create from the stash <b><i>' + escapeHtml(name) + '</i></b>:', '', 'Create Branch', (branchName) => {
+					showRefInputDialog(t('Enter the name of the branch you would like to create from the stash <b><i>{0}</i></b>:', escapeHtml(name)), '', t('Create Branch'), (branchName) => {
 						sendMessage({ command: 'branchFromStash', repo: this.currentRepo!, selector: name, branchName: branchName });
 					}, sourceElem);
 				}
 			},
 			{
-				title: 'Pop Stash' + ELLIPSIS,
+				title: t('Pop Stash') + ELLIPSIS,
 				visible: visibility.pop,
 				onClick: () => {
-					showCheckboxDialog('Are you sure you want to pop the stash <b><i>' + escapeHtml(name) + '</i></b>?', 'Reinstate Index', this.config.dialogDefaults.popStash.reinstateIndex, 'Yes, pop', (reinstateIndex) => {
+					showCheckboxDialog(t('Are you sure you want to pop the stash <b><i>{0}</i></b>?', escapeHtml(name)), t('Reinstate Index'), this.config.dialogDefaults.popStash.reinstateIndex, t('Yes, pop'), (reinstateIndex) => {
 						sendMessage({ command: 'popStash', repo: this.currentRepo!, selector: name, reinstateIndex: reinstateIndex });
 					}, sourceElem);
 				}
 			},
 			{
-				title: 'Drop Stash' + ELLIPSIS,
+				title: t('Drop Stash') + ELLIPSIS,
 				visible: visibility.drop,
 				onClick: () => {
-					showConfirmationDialog('Are you sure you want to drop the stash <b><i>' + escapeHtml(name) + '</i></b>?', () => {
+					showConfirmationDialog(t('Are you sure you want to drop the stash <b><i>{0}</i></b>?', escapeHtml(name)), () => {
 						sendMessage({ command: 'dropStash', repo: this.currentRepo!, selector: name });
 					}, sourceElem);
 				}
 			},
 			null,
 			{
-				title: 'Copy Stash Name to Clipboard',
+				title: t('Copy Stash Name to Clipboard'),
 				visible: visibility.copyName,
 				onClick: () => sendMessage({ command: 'copyToClipboard', type: 'Stash Name', data: name })
 			},
 			{
-				title: 'Copy Stash Hash to Clipboard',
+				title: t('Copy Stash Hash to Clipboard'),
 				visible: visibility.copyHash,
 				onClick: () => sendMessage({ command: 'copyToClipboard', type: 'Stash Hash', data: hash })
 			}
@@ -1105,25 +1105,25 @@ class GitGraphView {
 	/** Dialog for rewording the checked-out commit or folding the uncommitted changes into it. Warns when the commit was pushed. */
 	public showAmendDialog(purpose: 'reword' | 'amend', commitHash: string, message: string | null, pushed: boolean) {
 		if (message === null) {
-			showErrorDialog('Unable to read the commit message', null, null);
+			showErrorDialog(t('Unable to read the commit message'), null, null);
 			return;
 		}
 		const warning = pushed ? '<br><span class="dialogWarning">' + svgIcons.alert + 'This commit is already on its upstream branch. Amending it rewrites history; the next push needs force-with-lease.</span>' : '';
-		const inputs: DialogInput[] = [{ type: 'textarea', name: 'Message: ', default: message, placeholder: 'Commit message' }];
-		if (purpose === 'amend') inputs.push({ type: 'checkbox', name: 'Also stage modified and deleted tracked files (git add -u)', value: false });
+		const inputs: DialogInput[] = [{ type: 'textarea', name: t('Message: '), default: message, placeholder: t('Commit message') }];
+		if (purpose === 'amend') inputs.push({ type: 'checkbox', name: t('Also stage modified and deleted tracked files (git add -u)'), value: false });
 		const title = purpose === 'reword'
 			? 'Change the message of the checked-out commit <b><i>' + abbrevCommit(commitHash) + '</i></b>:'
 			: 'Amend the checked-out commit <b><i>' + abbrevCommit(commitHash) + '</i></b> with the staged changes. Untracked files are not added.';
-		showFormDialog(title + warning, inputs, purpose === 'reword' ? 'Reword' : 'Amend', (values) => {
+		showFormDialog(title + warning, inputs, purpose === 'reword' ? t('Reword') : t('Amend'), (values) => {
 			if (values[0].trim() === '') {
-				showErrorDialog('The commit message cannot be empty', null, null);
+				showErrorDialog(t('The commit message cannot be empty'), null, null);
 				return;
 			}
 			if (purpose === 'reword') {
-				showActionRunningDialog('Rewording Commit');
+				showActionRunningDialog(t('Rewording Commit'));
 				sendMessage({ command: 'rewordCommit', repo: this.currentRepo!, commitHash: commitHash, message: values[0] });
 			} else {
-				showActionRunningDialog('Amending Commit');
+				showActionRunningDialog(t('Amending Commit'));
 				sendMessage({ command: 'amendCommit', repo: this.currentRepo!, commitHash: commitHash, message: values[0], stageTracked: values[1] === 'checked' });
 			}
 		}, null);
@@ -1140,24 +1140,24 @@ class GitGraphView {
 			this.updateControlsHeightVariable();
 			return;
 		}
-		const names: { [type: string]: string } = { 'merge': 'Merge', 'rebase': 'Rebase', 'cherry-pick': 'Cherry Pick', 'revert': 'Revert' };
+		const names: { [type: string]: string } = { 'merge': t('Merge'), 'rebase': t('Rebase'), 'cherry-pick': t('Cherry Pick'), 'revert': t('Revert') };
 		const conflicts = op.conflictedFiles.length;
-		let html = '<span class="operationBarLabel">' + names[op.type] + ' in progress</span>';
-		html += '<span class="operationBarMessage">' + (conflicts > 0 ? conflicts + ' file' + (conflicts !== 1 ? 's' : '') + ' with conflicts: ' + op.conflictedFiles.map((file) => '<span class="operationFile externalFile" data-path="' + encodeURIComponent(file) + '" title="Open ' + escapeHtml(file) + '">' + escapeHtml(file) + '</span>').join(', ') : 'No conflicts remain. Continue to finish, or abort to return to the previous state.') + '</span>';
+		let html = '<span class="operationBarLabel">' + t('{0} in progress', names[op.type]) + '</span>';
+		html += '<span class="operationBarMessage">' + (conflicts > 0 ? (conflicts === 1 ? t('1 file with conflicts: ') : t('{0} files with conflicts: ', conflicts)) + op.conflictedFiles.map((file) => '<span class="operationFile externalFile" data-path="' + encodeURIComponent(file) + '" title="' + t('Open {0}', escapeHtml(file)) + '">' + escapeHtml(file) + '</span>').join(', ') : t('No conflicts remain. Continue to finish, or abort to return to the previous state.')) + '</span>';
 		html += '<span class="operationBarActions">'
-			+ '<span id="operationContinue" class="roundedBtn' + (conflicts > 0 ? ' disabled' : '') + '" title="' + (conflicts > 0 ? 'Resolve and stage the conflicted files first' : 'git ' + op.type + ' --continue') + '">Continue</span>'
-			+ (op.type === 'rebase' || op.type === 'cherry-pick' ? '<span id="operationSkip" class="roundedBtn" title="git ' + op.type + ' --skip">Skip</span>' : '')
-			+ '<span id="operationAbort" class="roundedBtn" title="git ' + op.type + ' --abort">Abort</span></span>';
+			+ '<span id="operationContinue" class="roundedBtn' + (conflicts > 0 ? ' disabled' : '') + '" title="' + (conflicts > 0 ? t('Resolve and stage the conflicted files first') : 'git ' + op.type + ' --continue') + '">' + t('Continue') + '</span>'
+			+ (op.type === 'rebase' || op.type === 'cherry-pick' ? '<span id="operationSkip" class="roundedBtn" title="git ' + op.type + ' --skip">' + t('Skip') + '</span>' : '')
+			+ '<span id="operationAbort" class="roundedBtn" title="git ' + op.type + ' --abort">' + t('Abort') + '</span></span>';
 		bar.className = 'active';
 		bar.innerHTML = html;
 		const run = (action: GG.GitOperationAction) => {
-			showActionRunningDialog(action === 'continue' ? 'Continuing ' + names[op.type] : action === 'skip' ? 'Skipping' : 'Aborting ' + names[op.type]);
+			showActionRunningDialog(action === 'continue' ? t('Continuing {0}', names[op.type]) : action === 'skip' ? t('Skipping') : t('Aborting {0}', names[op.type]));
 			sendMessage({ command: 'operationAction', repo: this.currentRepo!, type: op.type, action: action });
 		};
 		document.getElementById('operationContinue')!.addEventListener('click', () => { if (conflicts === 0) run('continue'); });
 		const skip = document.getElementById('operationSkip');
-		if (skip !== null) skip.addEventListener('click', () => showConfirmationDialog('Skip the current commit of the ' + names[op.type].toLowerCase() + '? Its changes are dropped.', () => run('skip'), null));
-		document.getElementById('operationAbort')!.addEventListener('click', () => showConfirmationDialog('Abort the ' + names[op.type].toLowerCase() + ' and return to the state before it started?', () => run('abort'), null));
+		if (skip !== null) skip.addEventListener('click', () => showConfirmationDialog(t('Skip the current commit of the {0}? Its changes are dropped.', names[op.type].toLowerCase()), () => run('skip'), null));
+		document.getElementById('operationAbort')!.addEventListener('click', () => showConfirmationDialog(t('Abort the {0} and return to the state before it started?', names[op.type].toLowerCase()), () => run('abort'), null));
 		addListenerToClass('operationFile', 'click', (e) => {
 			sendMessage({ command: 'openFile', repo: this.currentRepo!, filePath: decodeURIComponent((<HTMLElement>(<Element>e.target).closest('.operationFile')!).dataset.path!) });
 		});
@@ -1167,9 +1167,9 @@ class GitGraphView {
 	/* Worktrees */
 	private showCreateWorktreeDialog(ref: string, type: 'Branch' | 'Commit') {
 		const what = type === 'Branch' ? 'branch <b><i>' + escapeHtml(ref) + '</i></b>' : 'commit <b><i>' + abbrevCommit(ref) + '</i></b>';
-		showFormDialog('Create a worktree for ' + what + '. You choose the folder next.' + (type === 'Commit' ? ' Without a new branch the worktree has a detached HEAD.' : ''), [
-			{ type: 'text', name: 'New branch (optional): ', default: '', placeholder: type === 'Branch' ? 'Leave empty to check out ' + ref : 'Branch to create at this commit' }
-		], 'Choose Folder' + ELLIPSIS, (values) => {
+		showFormDialog(t('Create a worktree for {0}. You choose the folder next.{1}', what, (type === 'Commit' ? ' Without a new branch the worktree has a detached HEAD.' : '')), [
+			{ type: 'text', name: t('New branch (optional): '), default: '', placeholder: type === 'Branch' ? 'Leave empty to check out ' + ref : 'Branch to create at this commit' }
+		], t('Choose Folder') + ELLIPSIS, (values) => {
 			sendMessage({ command: 'addWorktree', repo: this.currentRepo!, ref: ref, newBranch: values[0].trim() !== '' ? values[0].trim() : null });
 		}, null);
 	}
@@ -1177,18 +1177,18 @@ class GitGraphView {
 	/* Bisect */
 	private bisect(action: GG.GitBisectAction, hash: string | null) {
 		const run = () => {
-			showActionRunningDialog(action === 'reset' ? 'Stopping Bisect' : 'Bisecting');
+			showActionRunningDialog(action === 'reset' ? t('Stopping Bisect') : t('Bisecting'));
 			sendMessage({ command: 'bisect', repo: this.currentRepo!, action: action, commitHash: hash });
 		};
 		if (!this.bisecting && action !== 'reset') {
-			showConfirmationDialog('Start bisecting with commit <b><i>' + abbrevCommit(hash!) + '</i></b> marked as <b>' + action + '</b>? Once a good and a bad commit are known, git checks out the commits to test, so the working tree must be clean.', run, null);
+			showConfirmationDialog(t('Start bisecting with commit <b><i>{0}</i></b> marked as <b>{1}</b>? Once a good and a bad commit are known, git checks out the commits to test, so the working tree must be clean.', abbrevCommit(hash!), action), run, null);
 		} else {
 			run();
 		}
 	}
 	public bisectCompleted(status: GG.GitCommandStatus, message: string | null) {
 		if (status !== null) {
-			showErrorDialog('Unable to Bisect', status, null);
+			showErrorDialog(t('Unable to Bisect'), status, null);
 			return;
 		}
 		this.bisectMessage = message;
@@ -1204,7 +1204,7 @@ class GitGraphView {
 			bar.innerHTML = '';
 		} else {
 			bar.className = 'active';
-			bar.innerHTML = '<span class="bisectBarLabel">Bisecting</span><span class="bisectBarMessage">' + (this.bisectMessage !== null ? escapeHtml(this.bisectMessage) : 'Mark commits as good or bad from their context menu.') + '</span><span id="bisectStop" class="roundedBtn" title="git bisect reset">Stop</span>';
+			bar.innerHTML = '<span class="bisectBarLabel">' + t('Bisecting') + '</span><span class="bisectBarMessage">' + (this.bisectMessage !== null ? escapeHtml(this.bisectMessage) : t('Mark commits as good or bad from their context menu.')) + '</span><span id="bisectStop" class="roundedBtn" title="git bisect reset">Stop</span>';
 			document.getElementById('bisectStop')!.addEventListener('click', () => this.bisect('reset', null));
 		}
 		this.updateControlsHeightVariable();
@@ -1267,37 +1267,37 @@ class GitGraphView {
 			return;
 		}
 		const what = (kind === 'tag' ? 'tag' : 'branch') + ' <b><i>' + escapeHtml(value) + '</i></b>';
-		showSelectDialog('What should happen with ' + what + ' and the <b>current branch</b>?', 'merge', [
-			{ name: 'Merge ' + value + ' into the current branch', value: 'merge' },
-			{ name: 'Rebase the current branch on ' + value, value: 'rebase' }
-		], 'Continue', (choice) => {
+		showSelectDialog(t('What should happen with {0} and the <b>current branch</b>?', what), 'merge', [
+			{ name: t('Merge {0} into the current branch', value), value: 'merge' },
+			{ name: t('Rebase the current branch on {0}', value), value: 'rebase' }
+		], t('Continue'), (choice) => {
 			if (choice === 'merge') {
-				this.showMergeDialog('Are you sure you want to merge ' + what + ' into the current branch?', (options) => {
+				this.showMergeDialog(t('Are you sure you want to merge {0} into the current branch?', what), (options) => {
 					sendMessage(kind === 'tag'
 						? { command: 'mergeCommit', repo: this.currentRepo!, commitHash: value, ...options }
 						: { command: 'mergeBranch', repo: this.currentRepo!, branchName: value, ...options });
 				});
 			} else {
-				this.showRebaseDialog('Are you sure you want to rebase the <b>current branch</b> on ' + what + '?', value, kind === 'tag' ? 'Commit' : 'Branch', sourceElem);
+				this.showRebaseDialog(t('Are you sure you want to rebase the <b>current branch</b> on {0}?', what), value, kind === 'tag' ? 'Commit' : 'Branch', sourceElem);
 			}
 		}, sourceElem);
 	}
 	private showCherryPickDialog(hash: string, sourceElem: HTMLElement) {
 		const isMerge = this.commits[this.commitLookup[hash]].parentHashes.length > 1;
 		const inputs: DialogInput[] = [
-			{ type: 'checkbox', name: 'Record Origin (add "cherry picked from commit" to the message)', value: this.config.dialogDefaults.cherryPick.recordOrigin },
-			{ type: 'checkbox', name: 'No Commit (stage the changes only)', value: this.config.dialogDefaults.cherryPick.noCommit }
+			{ type: 'checkbox', name: t('Record Origin (add "cherry picked from commit" to the message)'), value: this.config.dialogDefaults.cherryPick.recordOrigin },
+			{ type: 'checkbox', name: t('No Commit (stage the changes only)'), value: this.config.dialogDefaults.cherryPick.noCommit }
 		];
 		if (isMerge) {
 			inputs.unshift({
-				type: 'select', name: 'Parent: ', default: '1',
+				type: 'select', name: t('Parent: '), default: '1',
 				options: this.commits[this.commitLookup[hash]].parentHashes.map((parent, index) => ({
 					name: abbrevCommit(parent) + (typeof this.commitLookup[parent] === 'number' ? ': ' + this.commits[this.commitLookup[parent]].message : ''),
 					value: (index + 1).toString()
 				}))
 			});
 		}
-		showFormDialog('Are you sure you want to cherry pick ' + (isMerge ? 'merge commit <b><i>' + abbrevCommit(hash) + '</i></b>? Choose the parent on the main branch, to cherry pick the commit relative to:' : 'commit <b><i>' + abbrevCommit(hash) + '</i></b>?'), inputs, 'Yes, cherry pick', (values) => {
+		showFormDialog(t('Are you sure you want to cherry pick {0}', (isMerge ? 'merge commit <b><i>' + abbrevCommit(hash) + '</i></b>? Choose the parent on the main branch, to cherry pick the commit relative to:' : 'commit <b><i>' + abbrevCommit(hash) + '</i></b>?')), inputs, t('Yes, cherry pick'), (values) => {
 			const parentIndex = isMerge ? parseInt(values.shift()!) : 0;
 			sendMessage({ command: 'cherrypickCommit', repo: this.currentRepo!, commitHash: hash, parentIndex: parentIndex, recordOrigin: values[0] === 'checked', noCommit: values[1] === 'checked' });
 		}, sourceElem);
@@ -1324,13 +1324,13 @@ class GitGraphView {
 	private renderFilterBar() {
 		const bar = document.getElementById('filterBar');
 		if (bar === null) return;
-		const chips = this.filters.authors.map((author) => this.filterChipHtml('author', 'Author', author)).concat(this.filters.paths.map((p) => this.filterChipHtml('path', 'Path', p)));
+		const chips = this.filters.authors.map((author) => this.filterChipHtml('author', t('Author'), author)).concat(this.filters.paths.map((p) => this.filterChipHtml('path', t('Path'), p)));
 		if (chips.length === 0) {
 			bar.className = '';
 			bar.innerHTML = '';
 		} else {
 			bar.className = 'active';
-			bar.innerHTML = '<span class="filterBarLabel">Filters:</span>' + chips.join('') + '<span id="filterClear" class="roundedBtn" title="Remove all filters">Clear</span>';
+			bar.innerHTML = '<span class="filterBarLabel">' + t('Filters:') + '</span>' + chips.join('') + '<span id="filterClear" class="roundedBtn" title="' + t('Remove all filters') + '">' + t('Clear') + '</span>';
 		}
 		this.updateControlsHeightVariable();
 	}
@@ -1338,10 +1338,10 @@ class GitGraphView {
 		return '<span class="filterChip" title="' + label + ': ' + escapeHtml(value) + '"><span class="filterChipKind">' + label + '</span>' + escapeHtml(value) + '<span class="filterChipRemove" data-kind="' + kind + '" data-value="' + encodeURIComponent(value) + '" title="Remove this filter">' + svgIcons.close + '</span></span>';
 	}
 	private showFilterDialog() {
-		showFormDialog('Show only the commits that match <b>every</b> filter type (values of one type combine with OR):', [
-			{ type: 'text', name: 'Author: ', default: '', placeholder: 'Name or email (substring, case-insensitive)' },
-			{ type: 'text', name: 'Path: ', default: '', placeholder: 'File or folder relative to the repository' }
-		], 'Add Filters', (values) => {
+		showFormDialog(t('Show only the commits that match <b>every</b> filter type (values of one type combine with OR):'), [
+			{ type: 'text', name: t('Author: '), default: '', placeholder: t('Name or email (substring, case-insensitive)') },
+			{ type: 'text', name: t('Path: '), default: '', placeholder: t('File or folder relative to the repository') }
+		], t('Add Filters'), (values) => {
 			const authors = values[0].trim() !== '' ? this.filters.authors.concat([values[0].trim()]) : this.filters.authors;
 			const paths = values[1].trim() !== '' ? this.filters.paths.concat([values[1].trim().replace(/^\.?\/+/, '').replace(/\/+$/, '')]) : this.filters.paths;
 			if (authors.length === this.filters.authors.length && paths.length === this.filters.paths.length) return;
@@ -1427,11 +1427,11 @@ class GitGraphView {
 	 */
 	private showRebaseDialog(message: string, obj: string, type: GG.GitRebaseType, sourceElem: HTMLElement | null) {
 		showFormDialog(message, [
-			{ type: 'checkbox', name: 'Launch Interactive Rebase in new Terminal', value: this.config.dialogDefaults.rebase.launchInteractiveRebase },
-			{ type: 'checkbox', name: 'Ignore Date (non-interactive rebase only)', value: this.config.dialogDefaults.rebase.ignoreDate }
-		], 'Yes, rebase', (values) => {
+			{ type: 'checkbox', name: t('Launch Interactive Rebase in new Terminal'), value: this.config.dialogDefaults.rebase.launchInteractiveRebase },
+			{ type: 'checkbox', name: t('Ignore Date (non-interactive rebase only)'), value: this.config.dialogDefaults.rebase.ignoreDate }
+		], t('Yes, rebase'), (values) => {
 			const interactive = values[0] === 'checked';
-			if (!interactive) showActionRunningDialog('Rebasing');
+			if (!interactive) showActionRunningDialog(t('Rebasing'));
 			sendMessage({ command: 'rebase', repo: this.currentRepo!, obj: obj, type: type, ignoreDate: values[1] === 'checked', interactive: interactive });
 		}, sourceElem);
 	}
@@ -1442,27 +1442,27 @@ class GitGraphView {
 	private showCreatePullRequestDialog(sourceBranch: string) {
 		const remotes = this.gitRemotes, defaultRemote = remotes.indexOf('origin') > -1 ? 'origin' : remotes[0];
 		const remoteOptions = remotes.map((remote) => ({ name: remote, value: remote }));
-		const providerOptions = [{ name: 'Detect from the destination remote (GitHub, GitLab, Bitbucket)', value: '' }].concat(this.config.customPullRequestProviders.map((p) => ({ name: p.name, value: p.name })));
+		const providerOptions = [{ name: t('Detect from the destination remote (GitHub, GitLab, Bitbucket)'), value: '' }].concat(this.config.customPullRequestProviders.map((p) => ({ name: p.name, value: p.name })));
 		// Destination branch candidates: the remote branches of the default remote, with the usual main branches first
 		const remoteBranches = this.gitBranches.filter((b) => b.startsWith('remotes/')).map((b) => b.substring(8));
 		const candidates = remoteBranches.filter((b) => b.startsWith(defaultRemote + '/')).map((b) => b.substring(defaultRemote.length + 1)).filter((b) => b !== 'HEAD');
 		const preferred = ['main', 'master', 'develop'].find((b) => candidates.indexOf(b) > -1);
 		const defaultDestination = preferred || (candidates.length > 0 && candidates[0] !== sourceBranch ? candidates[0] : 'main');
-		showFormDialog('Create a pull request for the branch <b><i>' + escapeHtml(sourceBranch) + '</i></b>:', [
-			{ type: 'select', name: 'Provider: ', default: '', options: providerOptions },
-			{ type: 'select', name: 'Source Remote: ', default: defaultRemote, options: remoteOptions },
-			{ type: 'select', name: 'Destination Remote: ', default: defaultRemote, options: remoteOptions },
-			{ type: 'text-ref', name: 'Destination Branch: ', default: defaultDestination }
-		], 'Create Pull Request', (values) => {
+		showFormDialog(t('Create a pull request for the branch <b><i>{0}</i></b>:', escapeHtml(sourceBranch)), [
+			{ type: 'select', name: t('Provider: '), default: '', options: providerOptions },
+			{ type: 'select', name: t('Source Remote: '), default: defaultRemote, options: remoteOptions },
+			{ type: 'select', name: t('Destination Remote: '), default: defaultRemote, options: remoteOptions },
+			{ type: 'text-ref', name: t('Destination Branch: '), default: defaultDestination }
+		], t('Create Pull Request'), (values) => {
 			sendMessage({ command: 'createPullRequest', repo: this.currentRepo!, provider: values[0] !== '' ? values[0] : null, sourceRemote: values[1], sourceBranch: sourceBranch, destinationRemote: values[2], destinationBranch: values[3] });
 		}, null);
 	}
 	private showMergeDialog(message: string, actioned: (options: GG.MergeOptions) => void) {
 		showFormDialog(message, [
-			{ type: 'checkbox', name: 'Create a new commit even if fast-forward is possible', value: this.config.dialogDefaults.merge.noFastForward },
-			{ type: 'checkbox', name: 'Squash Commits', value: this.config.dialogDefaults.merge.squashCommits },
-			{ type: 'checkbox', name: 'No Commit (stage the merge only)', value: this.config.dialogDefaults.merge.noCommit }
-		], 'Yes, merge', (values) => {
+			{ type: 'checkbox', name: t('Create a new commit even if fast-forward is possible'), value: this.config.dialogDefaults.merge.noFastForward },
+			{ type: 'checkbox', name: t('Squash Commits'), value: this.config.dialogDefaults.merge.squashCommits },
+			{ type: 'checkbox', name: t('No Commit (stage the merge only)'), value: this.config.dialogDefaults.merge.noCommit }
+		], t('Yes, merge'), (values) => {
 			actioned({ createNewCommit: values[0] === 'checked', squash: values[1] === 'checked', noCommit: values[2] === 'checked' });
 		}, null);
 	}
@@ -1481,7 +1481,7 @@ class GitGraphView {
 			sendMessage({ command: 'checkoutBranch', repo: this.currentRepo!, branchName: refName, remoteBranch: null });
 		} else if (sourceElem.classList.contains('remote')) {
 			const refNameComps = refName.split('/');
-			showRefInputDialog('Enter the name of the new branch you would like to create when checking out <b><i>' + escapeHtml(sourceElem.dataset.name!) + '</i></b>:', refNameComps[refNameComps.length - 1], 'Checkout Branch', (newBranch) => {
+			showRefInputDialog(t('Enter the name of the new branch you would like to create when checking out <b><i>{0}</i></b>:', escapeHtml(sourceElem.dataset.name!)), refNameComps[refNameComps.length - 1], t('Checkout Branch'), (newBranch) => {
 				sendMessage({ command: 'checkoutBranch', repo: this.currentRepo!, branchName: newBranch, remoteBranch: refName });
 			}, null);
 		}
@@ -1562,9 +1562,9 @@ class GitGraphView {
 				this.render();
 			};
 			showContextMenu(e, [
-				{ title: (current.date ? '\u2713 ' : '\u2003 ') + 'Date', onClick: () => toggle('date') },
-				{ title: (current.author ? '\u2713 ' : '\u2003 ') + 'Author', onClick: () => toggle('author') },
-				{ title: (current.commit ? '\u2713 ' : '\u2003 ') + 'Commit', onClick: () => toggle('commit') }
+				{ title: (current.date ? '\u2713 ' : '\u2003 ') + t('Date'), onClick: () => toggle('date') },
+				{ title: (current.author ? '\u2713 ' : '\u2003 ') + t('Author'), onClick: () => toggle('author') },
+				{ title: (current.commit ? '\u2713 ' : '\u2003 ') + t('Commit'), onClick: () => toggle('commit') }
 			], colHeadersElem);
 		});
 		function stopResizing() {
@@ -1790,7 +1790,7 @@ class GitGraphView {
 		this.expandedCommit.compareWithSrcElem.classList.add('compareCommitOpen');
 		this.saveState();
 
-		const describe = (hash: string) => hash === '*' ? '<b>Uncommitted Changes</b>' : '<b>' + abbrevCommit(hash) + '</b>' + (typeof this.commitLookup[hash] === 'number' ? ': ' + escapeHtml(this.commits[this.commitLookup[hash]].message) : '');
+		const describe = (hash: string) => hash === '*' ? '<b>' + t('Uncommitted Changes') + '</b>' : '<b>' + abbrevCommit(hash) + '</b>' + (typeof this.commitLookup[hash] === 'number' ? ': ' + escapeHtml(this.commits[this.commitLookup[hash]].message) : '');
 		const review = this.getCodeReviewById(codeReviewIdOf(fromHash, toHash));
 		if (this.pendingCodeReviewStart === codeReviewIdOf(fromHash, toHash)) {
 			this.pendingCodeReviewStart = null;
@@ -1987,61 +1987,61 @@ class GitGraphView {
 			const existsAtCommit = type !== 'D', isCommit = hash !== '*';
 			showContextMenu(<MouseEvent>e, [
 				{
-					title: 'View Diff',
+					title: t('View Diff'),
 					visible: sourceElem.classList.contains('gitDiffPossible'),
 					onClick: () => sendMessage({ command: 'viewDiff', repo: this.currentRepo!, fromHash: range.fromHash, toHash: range.toHash, oldFilePath: oldFilePath, newFilePath: newFilePath, type: type })
 				},
 				{
-					title: 'Open Diff in External Tool',
+					title: t('Open Diff in External Tool'),
 					onClick: () => {
-						showActionRunningDialog('Opening External Diff Tool');
+						showActionRunningDialog(t('Opening External Diff Tool'));
 						sendMessage({ command: 'openExternalDiff', repo: this.currentRepo!, fromHash: range.fromHash, toHash: range.toHash, filePath: type === 'D' ? oldFilePath : newFilePath });
 					}
 				},
 				{
-					title: 'View File at this Revision',
+					title: t('View File at this Revision'),
 					visible: existsAtCommit && isCommit,
 					onClick: () => sendMessage({ command: 'viewFileAtRevision', repo: this.currentRepo!, commitHash: hash, filePath: newFilePath })
 				},
 				{
-					title: 'View Diff with Working File',
+					title: t('View Diff with Working File'),
 					visible: existsAtCommit && isCommit,
 					onClick: () => sendMessage({ command: 'viewDiffWithWorkingFile', repo: this.currentRepo!, commitHash: hash, filePath: newFilePath })
 				},
 				{
-					title: 'Open File',
+					title: t('Open File'),
 					visible: existsAtCommit,
 					onClick: () => sendMessage({ command: 'openFile', repo: this.currentRepo!, filePath: newFilePath })
 				},
 				null,
 				{
-					title: 'Show only commits affecting this file',
+					title: t('Show only commits affecting this file'),
 					visible: this.filters.paths.indexOf(newFilePath) === -1,
 					onClick: () => this.addPathFilter(newFilePath)
 				},
 				{
-					title: 'Show only commits affecting this folder',
+					title: t('Show only commits affecting this folder'),
 					visible: newFilePath.indexOf('/') > -1 && this.filters.paths.indexOf(newFilePath.substring(0, newFilePath.lastIndexOf('/'))) === -1,
 					onClick: () => this.addPathFilter(newFilePath.substring(0, newFilePath.lastIndexOf('/')))
 				},
 				null,
 				{
-					title: 'Mark as Reviewed',
+					title: t('Mark as Reviewed'),
 					visible: this.getActiveCodeReview() !== null && this.getActiveCodeReview()!.remainingFiles.indexOf(newFilePath) > -1,
 					onClick: () => this.setFileReviewed(newFilePath, true)
 				},
 				{
-					title: 'Mark as Not Reviewed',
+					title: t('Mark as Not Reviewed'),
 					visible: this.getActiveCodeReview() !== null && this.getActiveCodeReview()!.remainingFiles.indexOf(newFilePath) === -1,
 					onClick: () => this.setFileReviewed(newFilePath, false)
 				},
 				null,
 				{
-					title: 'Copy Absolute File Path to Clipboard',
+					title: t('Copy Absolute File Path to Clipboard'),
 					onClick: () => sendMessage({ command: 'copyToClipboard', type: 'File Path', data: this.currentRepo + '/' + newFilePath })
 				},
 				{
-					title: 'Copy Relative File Path to Clipboard',
+					title: t('Copy Relative File Path to Clipboard'),
 					onClick: () => sendMessage({ command: 'copyToClipboard', type: 'File Path', data: newFilePath })
 				}
 			], sourceElem);
@@ -2096,39 +2096,39 @@ window.addEventListener('message', event => {
 	const msg: GG.ResponseMessage = event.data;
 	switch (msg.command) {
 		case 'addTag':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Add Tag');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Add Tag'));
 			break;
 		case 'applyStash':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Apply Stash');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Apply Stash'));
 			break;
 		case 'branchFromStash':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Create Branch from Stash');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Create Branch from Stash'));
 			break;
 		case 'dropStash':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Drop Stash');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Drop Stash'));
 			break;
 		case 'popStash':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Pop Stash');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Pop Stash'));
 			break;
 		case 'pushStash':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Stash Uncommitted Changes');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Stash Uncommitted Changes'));
 			break;
 		case 'checkoutBranch':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Checkout Branch');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Checkout Branch'));
 			break;
 		case 'checkoutCommit':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Checkout Commit');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Checkout Commit'));
 			break;
 		case 'cherrypickCommit':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Cherry Pick Commit');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Cherry Pick Commit'));
 			break;
 		case 'cleanUntrackedFiles':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Clean Untracked Files');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Clean Untracked Files'));
 			break;
 		case 'compareCommits':
 			if (msg.fileChanges === null) {
 				gitGraph.hideCommitDetails();
-				showErrorDialog('Unable to compare the commits', null, null);
+				showErrorDialog(t('Unable to compare the commits'), null, null);
 			} else {
 				gitGraph.showCommitComparison(msg.fromHash, msg.toHash, msg.fileChanges, generateGitFileTree(msg.fileChanges));
 			}
@@ -2136,38 +2136,38 @@ window.addEventListener('message', event => {
 		case 'commitDetails':
 			if (msg.commitDetails === null) {
 				gitGraph.hideCommitDetails();
-				showErrorDialog('Unable to load commit details', null, null);
+				showErrorDialog(t('Unable to load commit details'), null, null);
 			} else {
 				gitGraph.showCommitDetails(msg.commitDetails, generateGitFileTree(msg.commitDetails.fileChanges));
 			}
 			break;
 		case 'copyToClipboard':
-			if (msg.success === false) showErrorDialog('Unable to Copy ' + msg.type + ' to Clipboard', null, null);
+			if (msg.success === false) showErrorDialog(t('Unable to Copy {0} to Clipboard', msg.type), null, null);
 			break;
 		case 'createBranch':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Create Branch');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Create Branch'));
 			break;
 		case 'deleteBranch':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Delete Branch');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Delete Branch'));
 			break;
 		case 'deleteRemoteBranch':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Delete Remote Branch');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Delete Remote Branch'));
 			break;
 		case 'deleteTag':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Delete Tag');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Delete Tag'));
 			break;
 		case 'dropCommit':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Drop Commit');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Drop Commit'));
 			break;
 		case 'fetch':
 			if (gitGraph.isSettingsWidgetVisible()) {
 				gitGraph.repoSettingsActionCompleted(msg.status, 'Unable to Fetch from Remote', true);
 				break;
 			}
-			refreshGraphOrDisplayError(msg.status, 'Unable to Fetch from Remote(s)');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Fetch from Remote(s)'));
 			break;
 		case 'fetchIntoLocalBranch':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Fetch into Local Branch');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Fetch into Local Branch'));
 			break;
 		case 'fetchAvatar':
 			gitGraph.loadAvatar(msg.email, msg.image);
@@ -2182,26 +2182,26 @@ window.addEventListener('message', event => {
 			gitGraph.loadRepos(msg.repos, msg.lastActiveRepo);
 			break;
 		case 'mergeBranch':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Merge Branch');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Merge Branch'));
 			break;
 		case 'mergeCommit':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Merge Commit');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Merge Commit'));
 			break;
 		case 'pullBranch':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Pull Branch');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Pull Branch'));
 			break;
 		case 'pushBranch':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Push Branch');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Push Branch'));
 			break;
 		case 'pushTag':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Push Tag');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Push Tag'));
 			break;
 		case 'rebase':
 			if (msg.status === null) {
 				hideDialog();
 				gitGraph.refresh(true);
 			} else {
-				showErrorDialog('Unable to Rebase', msg.status, null);
+				showErrorDialog(t('Unable to Rebase'), msg.status, null);
 			}
 			break;
 		case 'getRebaseTodo':
@@ -2214,7 +2214,7 @@ window.addEventListener('message', event => {
 			gitGraph.interactiveRebaseCompleted(msg.status);
 			break;
 		case 'renameBranch':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Rename Branch');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Rename Branch'));
 			break;
 		case 'refresh':
 			gitGraph.refresh(false);
@@ -2223,25 +2223,25 @@ window.addEventListener('message', event => {
 			gitGraph.selectRepo(msg.repo);
 			break;
 		case 'resetToCommit':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Reset to Commit');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Reset to Commit'));
 			break;
 		case 'resetUncommittedChanges':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Reset Uncommitted Changes');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Reset Uncommitted Changes'));
 			break;
 		case 'revertCommit':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Revert Commit');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Revert Commit'));
 			break;
 		case 'openFile':
-			if (msg.success === false) showErrorDialog('Unable to open file', null, null);
+			if (msg.success === false) showErrorDialog(t('Unable to open file'), null, null);
 			break;
 		case 'createPullRequest':
-			if (msg.error !== null) showErrorDialog('Unable to Create Pull Request', msg.error, null);
+			if (msg.error !== null) showErrorDialog(t('Unable to Create Pull Request'), msg.error, null);
 			break;
 		case 'bisect':
 			gitGraph.bisectCompleted(msg.status, msg.message);
 			break;
 		case 'operationAction':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Continue the Operation');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Continue the Operation'));
 			break;
 		case 'addWorktree':
 			gitGraph.repoSettingsActionCompleted(msg.status, 'Unable to Create Worktree', false);
@@ -2262,16 +2262,16 @@ window.addEventListener('message', event => {
 			gitGraph.showAmendDialog(msg.purpose, msg.commitHash, msg.message, msg.pushed);
 			break;
 		case 'rewordCommit':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Reword Commit Message');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Reword Commit Message'));
 			break;
 		case 'amendCommit':
-			refreshGraphOrDisplayError(msg.status, 'Unable to Amend Commit');
+			refreshGraphOrDisplayError(msg.status, t('Unable to Amend Commit'));
 			break;
 		case 'openExternalUrl':
-			if (msg.success === false) showErrorDialog('Unable to open the link', 'Only http and https links can be opened.', null);
+			if (msg.success === false) showErrorDialog(t('Unable to open the link'), t('Only http and https links can be opened.'), null);
 			break;
 		case 'archive':
-			if (msg.status !== null) showErrorDialog('Unable to Create Archive', msg.status, null);
+			if (msg.status !== null) showErrorDialog(t('Unable to Create Archive'), msg.status, null);
 			break;
 		case 'getRepoSettings':
 			gitGraph.loadRepoSettings(msg.settings);
@@ -2295,17 +2295,17 @@ window.addEventListener('message', event => {
 			if (msg.status === null) {
 				hideDialog();
 			} else {
-				showErrorDialog('Unable to Open the External Diff Tool', msg.status, null);
+				showErrorDialog(t('Unable to Open the External Diff Tool'), msg.status, null);
 			}
 			break;
 		case 'viewDiff':
-			if (msg.success === false) showErrorDialog('Unable to view diff of file', null, null);
+			if (msg.success === false) showErrorDialog(t('Unable to view diff of file'), null, null);
 			break;
 		case 'viewDiffWithWorkingFile':
-			if (msg.success === false) showErrorDialog('Unable to view diff with the working file', null, null);
+			if (msg.success === false) showErrorDialog(t('Unable to view diff with the working file'), null, null);
 			break;
 		case 'viewFileAtRevision':
-			if (msg.success === false) showErrorDialog('Unable to view the file at this revision', null, null);
+			if (msg.success === false) showErrorDialog(t('Unable to view the file at this revision'), null, null);
 			break;
 	}
 });
@@ -2512,7 +2512,7 @@ function hideContextMenu() {
 
 /* Dialogs */
 function showConfirmationDialog(message: string, confirmed: () => void, sourceElem: HTMLElement | null) {
-	showDialog(message, 'Yes', 'No', () => {
+	showDialog(message, t('Yes'), t('No'), () => {
 		hideDialog();
 		confirmed();
 	}, sourceElem);
@@ -2550,7 +2550,7 @@ function showFormDialog(message: string, inputs: DialogInput[], actionName: stri
 		html += '</td></tr>';
 	}
 	html += '</table>';
-	showDialog(html, actionName, 'Cancel', () => {
+	showDialog(html, actionName, t('Cancel'), () => {
 		if (dialog.className === 'active noInput' || dialog.className === 'active inputInvalid') return;
 		const values = [];
 		for (let i = 0; i < inputs.length; i++) {
@@ -2590,10 +2590,10 @@ function showFormDialog(message: string, inputs: DialogInput[], actionName: stri
 	}
 }
 function showErrorDialog(message: string, reason: string | null, sourceElem: HTMLElement | null) {
-	showDialog(svgIcons.alert + 'Error: ' + message + (reason !== null ? '<br><span class="errorReason">' + escapeHtml(reason).split('\n').join('<br>') + '</span>' : ''), null, 'Dismiss', null, sourceElem);
+	showDialog(svgIcons.alert + 'Error: ' + message + (reason !== null ? '<br><span class="errorReason">' + escapeHtml(reason).split('\n').join('<br>') + '</span>' : ''), null, t('Dismiss'), null, sourceElem);
 }
 function showActionRunningDialog(command: string) {
-	showDialog('<span id="actionRunning">' + svgIcons.loading + command + ' ...</span>', null, 'Dismiss', null, null);
+	showDialog('<span id="actionRunning">' + svgIcons.loading + command + ' ...</span>', null, t('Dismiss'), null, null);
 }
 function showDialog(html: string, actionName: string | null, dismissName: string, actioned: (() => void) | null, sourceElem: HTMLElement | null) {
 	dialogBacking.className = 'active';
