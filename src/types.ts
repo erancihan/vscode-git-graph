@@ -70,8 +70,11 @@ export interface GitCommitDetails {
 	parents: string[];
 	author: string;
 	email: string;
-	date: number;
+	date: number; // author or commit date, following git-graph.date.type
+	authorDate: number;
 	committer: string;
+	committerEmail: string;
+	commitDate: number;
 	body: string;
 	fileChanges: GitFileChange[];
 	signature: GitSignature | null;

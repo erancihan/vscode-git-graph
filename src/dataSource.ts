@@ -94,12 +94,12 @@ export class DataSource {
 	private getFormats() {
 		const config = getConfig();
 		const dateType = config.dateType() === 'Author Date' ? '%at' : '%ct';
-		const [authorName, authorEmail, committerName] = config.useMailmap() ? ['%aN', '%aE', '%cN'] : ['%an', '%ae', '%cn'];
+		const [authorName, authorEmail, committerName, committerEmail] = config.useMailmap() ? ['%aN', '%aE', '%cN', '%cE'] : ['%an', '%ae', '%cn', '%ce'];
 		const signature = config.showSignatureStatus() ? ['%G?', '%GS', '%GK'] : [];
 		return {
 			log: ['%H', '%P', authorName, authorEmail, dateType].concat(signature, ['%s']).join(gitLogSeparator),
 			logFields: 6 + signature.length,
-			commitDetails: ['%H', '%P', authorName, authorEmail, dateType, committerName].concat(signature).join(gitLogSeparator) + '%n%B',
+			commitDetails: ['%H', '%P', authorName, authorEmail, '%at', committerName, committerEmail, '%ct'].concat(signature).join(gitLogSeparator) + '%n%B',
 			withSignature: signature.length > 0
 		};
 	}
@@ -199,16 +199,20 @@ export class DataSource {
 				let lastLine = lines.length - 1;
 				while (lines.length > 0 && lines[lastLine] === '') lastLine--;
 				const commitInfo = lines[0].split(gitLogSeparator);
+				const authorDate = parseInt(commitInfo[4]), commitDate = parseInt(commitInfo[7]);
 				return {
 					hash: commitInfo[0],
 					parents: commitInfo[1].split(' '),
 					author: commitInfo[2],
 					email: commitInfo[3],
-					date: parseInt(commitInfo[4]),
+					date: getConfig().dateType() === 'Author Date' ? authorDate : commitDate,
+					authorDate: authorDate,
 					committer: commitInfo[5],
+					committerEmail: commitInfo[6],
+					commitDate: commitDate,
 					body: lines.slice(1, lastLine + 1).join('\n'),
 					fileChanges: [],
-					signature: formats.withSignature && commitInfo.length >= 9 ? parseSignature(commitInfo[6], commitInfo[7], commitInfo[8]) : null
+					signature: formats.withSignature && commitInfo.length >= 11 ? parseSignature(commitInfo[8], commitInfo[9], commitInfo[10]) : null
 				};
 			}),
 			this.getFileChangesOfCommit(repo, commitHash)

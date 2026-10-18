@@ -2017,9 +2017,12 @@ class GitGraphView {
 				? '<span class="commitDetailsParent" data-hash="' + escapeHtml(parent) + '" title="' + t('Open the details of this commit') + '">' + escapeHtml(parent) + '</span>'
 				: '<span title="' + t('This commit is not loaded on the graph') + '">' + escapeHtml(parent) + '</span>';
 		}).join(', ') + '<br>';
-		html += '<b>' + t('Author: ') + '</b>' + escapeHtml(commitDetails.author) + ' &lt;<a href="mailto:' + encodeURIComponent(commitDetails.email) + '">' + escapeHtml(commitDetails.email) + '</a>&gt;<br>';
-		html += '<b>' + t('Date: ') + '</b>' + (new Date(commitDetails.date * 1000)).toString() + '<br>';
-		html += '<b>' + t('Committer: ') + '</b>' + escapeHtml(commitDetails.committer);
+		const person = (name: string, email: string) => escapeHtml(name) + (email !== '' ? ' &lt;<a href="mailto:' + encodeURIComponent(email) + '">' + escapeHtml(email) + '</a>&gt;' : '');
+		const sameDate = commitDetails.authorDate === commitDetails.commitDate;
+		html += '<b>' + t('Author: ') + '</b>' + person(commitDetails.author, commitDetails.email) + '<br>';
+		html += '<b>' + (sameDate ? t('Date: ') : t('Author Date: ')) + '</b>' + (new Date(commitDetails.authorDate * 1000)).toString() + '<br>';
+		html += '<b>' + t('Committer: ') + '</b>' + person(commitDetails.committer, commitDetails.committerEmail);
+		if (!sameDate) html += '<br><b>' + t('Commit Date: ') + '</b>' + (new Date(commitDetails.commitDate * 1000)).toString();
 		if (commitDetails.signature) html += '<br><b>Signature: </b>' + signatureIconHtml(commitDetails.signature) + escapeHtml(describeSignature(commitDetails.signature));
 		const refs = typeof this.commitLookup[commitDetails.hash] === 'number' ? this.commits[this.commitLookup[commitDetails.hash]].refs : [];
 		const branches = refs.filter((ref) => ref.type === 'head' || ref.type === 'remote').map((ref) => escapeHtml(ref.name)), tags = refs.filter((ref) => ref.type === 'tag').map((ref) => escapeHtml(ref.name));
