@@ -17,11 +17,15 @@ Work is tracked in GitHub milestones. Each theme has a tracking issue labeled `t
 3. No account, no telemetry, no network calls except the ones the user enables (avatars, issue links).
 4. Each milestone ships as a Marketplace and Open VSX release. Small releases are preferred over large ones.
 
-## Where we stand (2.0.2)
+## Where we stand (2.1.0)
 
-Shipped: the Git Graph 1.4.6 feature set, a current toolchain (TypeScript 5, ESLint, Node 20, VS Code 1.74 or later), CI, signed-off release pipeline, two bug fixes.
+Shipped in 2.0.x: the Git Graph 1.4.6 feature set, a current toolchain (TypeScript 5, ESLint, Node 20, VS Code 1.74 or later), CI, release pipeline, two bug fixes.
 
-Missing versus Git Graph 1.30: 363 commits of features. Missing versus the field: see the ranked table in `docs/COMPETITORS.md`, section 3. The first eighteen gaps there are all Git Graph 1.30 features, so parity with upstream comes first.
+Shipped in 2.1.0 (milestone "Foundations"): Output Channel logging; `spawn`-based git invocation with argument guards; git executable discovery; Jest tests in CI; `asWebviewUri` and a nonce-only script policy; grouped setting names with deprecated fallbacks and typed coercion; commit ordering, auto-load on scroll, tag and remote visibility, mailmap, untracked files, dialog defaults and context menu visibility settings; detached HEAD fix; graph rendering linear in rows (20,000 commits over 200 branches render in 0.14 s instead of 17.5 s) and delegated row listeners.
+
+Still open from 2.1: per-repository setting overrides (needs the Repository Settings widget), rebindable shortcuts, menus that survive a refresh, Remote Development verification, symlink and network drive handling. See the status comments on #10, #25 and #26.
+
+Missing versus Git Graph 1.30: the user-facing features of milestones 2.2 and 2.3. Missing versus the field: see the ranked table in `docs/COMPETITORS.md`, section 3.
 
 ## Milestone 2.1: Foundations
 
