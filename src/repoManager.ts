@@ -383,7 +383,7 @@ function doesPathExist(path: string) {
 	});
 }
 export function defaultRepoState(): GitRepoState {
-	return { columnWidths: null, columnVisibility: null, name: null, hideRemotes: [], showTags: null, showStashes: null, includeCommitsMentionedByReflogs: null, onlyFollowFirstParent: null };
+	return { columnWidths: null, columnVisibility: null, name: null, hideRemotes: [], showTags: null, showStashes: null, includeCommitsMentionedByReflogs: null, onlyFollowFirstParent: null, issueLinkingConfig: null };
 }
 
 /** Fills the fields that older versions did not store, and drops values of the wrong type. */
@@ -396,6 +396,10 @@ export function normaliseRepoState(state: Partial<GitRepoState> | null | undefin
 	if (Array.isArray(state.hideRemotes)) result.hideRemotes = state.hideRemotes.filter((remote): remote is string => typeof remote === 'string');
 	for (const key of <const>['showTags', 'showStashes', 'includeCommitsMentionedByReflogs', 'onlyFollowFirstParent']) {
 		if (typeof state[key] === 'boolean') result[key] = <boolean>state[key];
+	}
+	const linking = state.issueLinkingConfig;
+	if (linking && typeof linking === 'object' && typeof linking.issue === 'string' && typeof linking.url === 'string' && linking.issue !== '' && /^https?:\/\//i.test(linking.url)) {
+		result.issueLinkingConfig = { issue: linking.issue, url: linking.url };
 	}
 	return result;
 }

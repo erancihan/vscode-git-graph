@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Issue linking: the Repository Settings widget takes an issue pattern (regular expression) and an issue URL with `$1`-style placeholders; matching references in commit messages and in the Commit Details View become links that open in the browser. Plain http(s) URLs in the commit body are links too. Only http and https links are opened.
+
 * Avatars: GitHub and GitLab are recognised from SSH and `git://` remote URLs as well as HTTPS; images are requested at 108px for high DPI displays; Gravatar addresses are trimmed and lower-cased before hashing; GitLab avatars come from the public avatar endpoint, so the extension no longer ships an API token; only image responses are saved. "Clear Avatar Cache" reports how many avatars were removed.
 * New commands "Git Graph: Fetch from Remote(s)", "Git Graph: Get Version Information" (with a Copy button) and "Git Graph: Open File", also shown in the editor title of a file that Git Graph opened at a revision.
 

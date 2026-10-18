@@ -410,9 +410,10 @@ class GitGraphView {
 		let html = '<tr id="tableColHeaders"><th id="tableHeaderGraphCol" class="tableColHeader">Graph</th><th class="tableColHeader">Description</th><th class="tableColHeader colDate">Date</th><th class="tableColHeader colAuthor">Author</th><th class="tableColHeader colCommit">Commit</th></tr>', i, currentHash = this.commits.length > 0 && this.commits[0].hash === '*' ? '*' : this.commitHead;
 		const ancestorsOfHead = this.config.muteCommitsThatAreNotAncestorsOfHead ? this.getAncestorsOfHead() : null;
 		const alignment = this.config.referenceLabels.alignment, tagsOnRight = alignment !== 'Normal', branchesInGraph = alignment === 'Branches (aligned to the graph) & Tags (on the right)';
+		const issueLinking = compileIssueLinking(this.getIssueLinkingConfig());
 		this.updateGraphWidthVariable();
 		for (i = 0; i < this.commits.length; i++) {
-			const message = escapeHtml(this.commits[i].message), date = getCommitDate(this.commits[i].date), labels = this.renderRefLabels(this.commits[i]);
+			const message = linkifyMessage(this.commits[i].message, issueLinking, false), date = getCommitDate(this.commits[i].date), labels = this.renderRefLabels(this.commits[i]);
 			const graphCell = branchesInGraph && labels.branches !== '' ? '<td><span class="gitRefsGraph">' + labels.branches + '</span></td>' : '<td></td>';
 			const refs = (branchesInGraph ? '' : labels.branches) + (tagsOnRight ? '' : labels.tags);
 			const muted = this.commits[i].hash !== '*' && (
@@ -847,6 +848,15 @@ class GitGraphView {
 			});
 			showContextMenu(<MouseEvent>e, menu, sourceElem);
 		});
+		addDelegatedListener(this.tableElem, 'externalLink', 'click', (e: Event) => {
+			e.stopPropagation();
+			sendMessage({ command: 'openExternalUrl', url: (<HTMLElement>(<Element>e.target).closest('.externalLink')!).dataset.url! });
+		});
+		addDelegatedListener(document.body, 'externalLink', 'click', (e: Event) => {
+			// Docked details view lives outside the table
+			if (this.tableElem.contains(<Node>e.target)) return;
+			sendMessage({ command: 'openExternalUrl', url: (<HTMLElement>(<Element>e.target).closest('.externalLink')!).dataset.url! });
+		});
 		addDelegatedListener(this.tableElem, 'gitRef', 'click', (e: Event) => e.stopPropagation());
 		addDelegatedListener(this.tableElem, 'gitRef', 'dblclick', (e: Event) => {
 			e.stopPropagation();
@@ -894,6 +904,10 @@ class GitGraphView {
 			if (type === 'tag') tags += html; else branches += html;
 		}
 		return { branches: branches, tags: tags };
+	}
+	private getIssueLinkingConfig(): GG.IssueLinkingConfig | null {
+		const state = typeof this.gitRepos[this.currentRepo] !== 'undefined' ? this.gitRepos[this.currentRepo] : null;
+		return state !== null && state.issueLinkingConfig ? state.issueLinkingConfig : null;
 	}
 	/** Tells the stylesheet how wide the graph is, so labels placed in the Graph column start to its right. */
 	private updateGraphWidthVariable() {
@@ -1354,7 +1368,7 @@ class GitGraphView {
 		html += '</span>';
 		if (typeof this.avatars[commitDetails.email] === 'string') html += '<span class="commitDetailsSummaryAvatar"><img src="' + this.avatars[commitDetails.email] + '"></span>';
 		html += '</span></span><br><br>';
-		html += escapeHtml(commitDetails.body).replace(/\n/g, '<br>') + '</div>';
+		html += linkifyMessage(commitDetails.body, compileIssueLinking(this.getIssueLinkingConfig()), true).replace(/\n/g, '<br>') + '</div>';
 		html += this.generateDetailsFilesHtml(fileTree, commitDetails.fileChanges);
 		html += '<div id="commitDetailsClose">' + svgIcons.close + '</div>';
 		this.renderDetailsElem(html, this.expandedCommit.srcElem);
@@ -1700,6 +1714,9 @@ window.addEventListener('message', event => {
 			break;
 		case 'openFile':
 			if (msg.success === false) showErrorDialog('Unable to open file', null, null);
+			break;
+		case 'openExternalUrl':
+			if (msg.success === false) showErrorDialog('Unable to open the link', 'Only http and https links can be opened.', null);
 			break;
 		case 'archive':
 			if (msg.status !== null) showErrorDialog('Unable to Create Archive', msg.status, null);

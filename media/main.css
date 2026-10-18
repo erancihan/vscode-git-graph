@@ -209,6 +209,14 @@ body.resizingDetails{
 #commitDetailsSummary .signatureStatus{
 	margin-top:1px;
 }
+.externalLink{
+	cursor:pointer;
+	text-decoration:underline;
+	color:var(--vscode-textLink-foreground);
+}
+.externalLink:hover{
+	color:var(--vscode-textLink-activeForeground);
+}
 .commitDetailsParent{
 	cursor:pointer;
 	text-decoration:underline dotted;

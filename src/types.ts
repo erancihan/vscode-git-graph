@@ -79,6 +79,15 @@ export interface GitRepoState {
 	showStashes: boolean | null;
 	includeCommitsMentionedByReflogs: boolean | null;
 	onlyFollowFirstParent: boolean | null;
+	/** Turns issue references in commit messages into links. null => no issue linking. */
+	issueLinkingConfig: IssueLinkingConfig | null;
+}
+
+export interface IssueLinkingConfig {
+	/** Regular expression (JavaScript syntax, applied globally) that matches an issue reference, for example "#(\\d+)". */
+	issue: string;
+	/** URL of the issue; "$1", "$2" ... are replaced by the capture groups of the match. */
+	url: string;
 }
 
 export interface GitRemoteDetails {
@@ -722,6 +731,15 @@ export interface RequestOpenExtensionSettings {
 	command: 'openExtensionSettings';
 }
 
+export interface RequestOpenExternalUrl {
+	command: 'openExternalUrl';
+	url: string; // http(s) only
+}
+export interface ResponseOpenExternalUrl {
+	command: 'openExternalUrl';
+	success: boolean;
+}
+
 export interface RequestOpenFile {
 	command: 'openFile';
 	repo: string;
@@ -820,6 +838,7 @@ export type RequestMessage =
 	| RequestPruneRemote
 	| RequestSetUserDetails
 	| RequestOpenExtensionSettings
+	| RequestOpenExternalUrl
 	| RequestOpenExternalDiff
 	| RequestViewDiffWithWorkingFile
 	| RequestViewFileAtRevision;
@@ -870,6 +889,7 @@ export type ResponseMessage =
 	| ResponseDeleteRemote
 	| ResponsePruneRemote
 	| ResponseSetUserDetails
+	| ResponseOpenExternalUrl
 	| ResponseOpenExternalDiff
 	| ResponseViewDiffWithWorkingFile
 	| ResponseViewFileAtRevision;

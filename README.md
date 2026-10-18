@@ -37,7 +37,7 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
         * Copy commit hashes (full or short), tag names, branch names, and stash names to the clipboard
     * Show the commits of one or more branches (Ctrl/Cmd+click in the Branch dropdown), of named glob patterns, of the checked-out commit (HEAD), or of everything
     * Fetch from all remotes with the Fetch button
-    * Repository Settings widget (gear button): custom repository name, per-repository overrides for tags, stashes, reflogs and first-parent loading, remotes (add, edit, delete, fetch, prune, hide), user name and email
+    * Repository Settings widget (gear button): custom repository name, per-repository overrides for tags, stashes, reflogs and first-parent loading, remotes (add, edit, delete, fetch, prune, hide), user name and email, issue linking (pattern and URL template, so issue references in commit messages open in the browser)
     * Find commits with Ctrl/Cmd+F: match case and regular expression modes, step through the matches
     * Show or hide the Date, Author and Commit columns (right-click a column header), mute merge commits or commits outside the ancestry of HEAD
     * Keyboard shortcuts: Ctrl/Cmd+R refresh, Ctrl/Cmd+H scroll to HEAD, Ctrl/Cmd+S next stash

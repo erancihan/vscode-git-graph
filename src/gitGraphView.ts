@@ -320,6 +320,12 @@ export class GitGraphView {
 						status: await this.dataSource.setUserDetails(msg.repo, msg.name, msg.email, msg.useGlobally)
 					});
 					break;
+				case 'openExternalUrl':
+					this.sendMessage({
+						command: 'openExternalUrl',
+						success: await openExternalUrl(msg.url, this.logger)
+					});
+					break;
 				case 'openExtensionSettings':
 					vscode.commands.executeCommand('workbench.action.openSettings', '@ext:erancihan.vscode-git-graph');
 					break;
@@ -586,6 +592,16 @@ function viewFileAtRevision(repo: string, commitHash: string, filePath: string) 
 /** Open the file from the working tree. */
 function openFile(repo: string, filePath: string) {
 	return runToBoolean(vscode.window.showTextDocument(vscode.Uri.file(path.join(repo, filePath)), { preview: true }));
+}
+
+/** Open an http(s) URL in the browser. Other schemes are refused. */
+function openExternalUrl(url: string, logger: Logger) {
+	if (!/^https?:\/\/[^\s]+$/i.test(url)) {
+		logger.logError('Refused to open a URL that is not http(s): ' + url);
+		return Promise.resolve(false);
+	}
+	logger.log('Opening in the browser: ' + url);
+	return runToBoolean(vscode.env.openExternal(vscode.Uri.parse(url)));
 }
 
 function fileName(filePath: string) {

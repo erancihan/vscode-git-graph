@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { DataSource, isSafeRelativePath, parseSignature } from '../src/dataSource';
+import { defaultRepoState } from '../src/repoManager';
 import { Logger } from '../src/logger';
 import { configurationValues, outputChannelLines } from './mocks/vscode';
 
@@ -509,7 +510,7 @@ describe('DataSource remote actions', () => {
 	});
 
 	it('hides the branches of remotes listed in the repository state', async () => {
-		const state = { columnWidths: null, columnVisibility: null, name: null, hideRemotes: ['origin'], showTags: null, showStashes: null, includeCommitsMentionedByReflogs: null, onlyFollowFirstParent: null };
+		const state = { ...defaultRepoState(), hideRemotes: ['origin'] };
 		const shown = await dataSource.getCommits(repo, [], 50, true);
 		expect(shown.commits.some((c) => c.refs.some((r) => r.type === 'remote'))).toBe(true);
 		const hidden = await dataSource.getCommits(repo, [], 50, true, state);
@@ -522,7 +523,7 @@ describe('DataSource remote actions', () => {
 	it('applies the per-repository tag override', async () => {
 		git(repo, ['tag', 'override-tag']);
 		try {
-			const state = { columnWidths: null, columnVisibility: null, name: null, hideRemotes: [], showTags: false, showStashes: null, includeCommitsMentionedByReflogs: null, onlyFollowFirstParent: null };
+			const state = { ...defaultRepoState(), showTags: false };
 			expect((await dataSource.getCommits(repo, [], 50, false)).commits.some((c) => c.refs.some((r) => r.name === 'override-tag'))).toBe(true);
 			expect((await dataSource.getCommits(repo, [], 50, false, state)).commits.some((c) => c.refs.some((r) => r.name === 'override-tag'))).toBe(false);
 		} finally {
