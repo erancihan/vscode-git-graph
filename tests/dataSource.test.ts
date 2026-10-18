@@ -35,6 +35,8 @@ describe('DataSource', () => {
 	beforeAll(() => {
 		repo = fs.mkdtempSync(path.join(os.tmpdir(), 'git-graph-test-'));
 		git(repo, ['init', '-q', '-b', 'master']);
+		git(repo, ['config', 'user.name', 'Test Committer']);
+		git(repo, ['config', 'user.email', 'committer@example.com']);
 		first = commit(repo, 'a.txt', 'one\n', 'First commit');
 		second = commit(repo, 'b.txt', 'two\n', 'Second commit with "quotes" and \'apostrophes\'');
 		git(repo, ['tag', 'v1']);
