@@ -1,5 +1,9 @@
 # Change Log
 
+## Unreleased
+
+* Worktrees: the Repository Settings widget lists the worktrees of the repository (folder, branch or detached commit, locked and prunable flags) with "Add Worktree...", "Add to Git Graph" (registers the worktree as a repository), "Open" (new window), "Remove" (with a Force option) and "Prune". "Create Worktree from this Branch..." and "... from this Commit..." in the context menus ask for an optional new branch and then for the folder. New keys `branch.createWorktree` and `commit.createWorktree` in `git-graph.contextMenuActionsVisibility`.
+
 ## 2.4.0 - 2026-10-18
 
 Milestone "2.4 Beyond upstream", first release. These features go beyond Git Graph 1.30 and were designed from the descriptions on their tracking issues; nothing is taken from other extensions.

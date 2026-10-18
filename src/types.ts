@@ -123,6 +123,17 @@ export interface GitUserDetails {
 export interface GitRepoSettings {
 	remotes: GitRemoteDetails[];
 	user: GitUserDetails;
+	worktrees: GitWorktree[];
+}
+
+/** One entry of `git worktree list --porcelain`. */
+export interface GitWorktree {
+	path: string;
+	head: string | null; // null for a bare entry
+	branch: string | null; // null when detached
+	isMain: boolean; // the first entry: the repository itself
+	locked: boolean;
+	prunable: boolean;
 }
 
 export interface ColumnVisibility {
@@ -137,8 +148,8 @@ export interface GitUnsavedChanges {
 }
 
 export interface ContextMenuActionsVisibility {
-	branch: { checkout: boolean, rename: boolean, delete: boolean, merge: boolean, rebase: boolean, push: boolean, createPullRequest: boolean, archive: boolean, copyName: boolean };
-	commit: { addTag: boolean, createBranch: boolean, checkout: boolean, cherrypick: boolean, revert: boolean, drop: boolean, merge: boolean, rebase: boolean, reset: boolean, archive: boolean, codeReview: boolean, reword: boolean, filterByAuthor: boolean, bisect: boolean, copyHash: boolean };
+	branch: { checkout: boolean, rename: boolean, delete: boolean, merge: boolean, rebase: boolean, push: boolean, createPullRequest: boolean, archive: boolean, createWorktree: boolean, copyName: boolean };
+	commit: { addTag: boolean, createBranch: boolean, checkout: boolean, cherrypick: boolean, revert: boolean, drop: boolean, merge: boolean, rebase: boolean, reset: boolean, archive: boolean, codeReview: boolean, reword: boolean, filterByAuthor: boolean, bisect: boolean, createWorktree: boolean, copyHash: boolean };
 	remoteBranch: { checkout: boolean, delete: boolean, fetch: boolean, pull: boolean, copyName: boolean };
 	stash: { apply: boolean, createBranch: boolean, pop: boolean, drop: boolean, copyName: boolean, copyHash: boolean };
 	tag: { delete: boolean, push: boolean, archive: boolean, copyName: boolean };
@@ -853,6 +864,48 @@ export interface ResponseBisect {
 	message: string | null; // git's progress line, for example "Bisecting: 3 revisions left to test after this (roughly 2 steps)"
 }
 
+export interface RequestAddWorktree {
+	command: 'addWorktree';
+	repo: string;
+	ref: string; // branch name or commit hash to check out in the new worktree
+	newBranch: string | null; // create this branch at ref instead of checking out ref itself
+}
+export interface ResponseAddWorktree {
+	command: 'addWorktree';
+	status: GitCommandStatus; // null also when the folder dialog was cancelled
+}
+
+export interface RequestRemoveWorktree {
+	command: 'removeWorktree';
+	repo: string;
+	path: string;
+	force: boolean;
+}
+export interface ResponseRemoveWorktree {
+	command: 'removeWorktree';
+	status: GitCommandStatus;
+}
+
+export interface RequestPruneWorktrees {
+	command: 'pruneWorktrees';
+	repo: string;
+}
+export interface ResponsePruneWorktrees {
+	command: 'pruneWorktrees';
+	status: GitCommandStatus;
+}
+
+export interface RequestOpenWorktree {
+	command: 'openWorktree';
+	repo: string;
+	path: string;
+	newWindow: boolean;
+}
+export interface ResponseOpenWorktree {
+	command: 'openWorktree';
+	status: GitCommandStatus;
+}
+
 export interface RequestOpenExternalUrl {
 	command: 'openExternalUrl';
 	url: string; // http(s) only
@@ -961,6 +1014,10 @@ export type RequestMessage =
 	| RequestSetUserDetails
 	| RequestOpenExtensionSettings
 	| RequestOpenExternalUrl
+	| RequestAddWorktree
+	| RequestRemoveWorktree
+	| RequestPruneWorktrees
+	| RequestOpenWorktree
 	| RequestBisect
 	| RequestGetCommitMessage
 	| RequestRewordCommit
@@ -1020,6 +1077,10 @@ export type ResponseMessage =
 	| ResponsePruneRemote
 	| ResponseSetUserDetails
 	| ResponseOpenExternalUrl
+	| ResponseAddWorktree
+	| ResponseRemoveWorktree
+	| ResponsePruneWorktrees
+	| ResponseOpenWorktree
 	| ResponseBisect
 	| ResponseGetCommitMessage
 	| ResponseRewordCommit

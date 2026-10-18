@@ -126,6 +126,22 @@ class SettingsWidget {
 			+ '<tr><td>Issue URL</td><td><input id="settingsIssueUrl" type="text" value="' + escapeHtml(linking !== null ? linking.url : '') + '" placeholder="https://github.com/owner/repo/issues/$1"><span class="settingsHint">$1, $2 ... are replaced by the capture groups. Must start with http:// or https://.</span></td></tr></table>'
 			+ '<div class="settingsRow"><span id="settingsSaveIssueLinking" class="roundedBtn">Save Issue Linking</span><span id="settingsClearIssueLinking" class="roundedBtn">Remove</span></div>';
 
+		// Worktrees
+		html += '<h3>Worktrees</h3>';
+		if (this.settings === null) {
+			html += '<p class="settingsLoading">Loading ' + ELLIPSIS + '</p>';
+		} else {
+			html += '<table class="settingsTable settingsWorktrees"><tr><th>Folder</th><th>Branch</th><th></th></tr>';
+			for (const worktree of this.settings.worktrees) {
+				const label = worktree.branch !== null ? escapeHtml(worktree.branch) : worktree.head !== null ? 'detached at ' + abbrevCommit(worktree.head) : 'bare';
+				const flags = (worktree.locked ? ' <span class="settingsHint">locked</span>' : '') + (worktree.prunable ? ' <span class="settingsHint">prunable</span>' : '');
+				html += '<tr data-worktree="' + escapeHtml(worktree.path) + '"><td class="settingsWorktreePath" title="' + escapeHtml(worktree.path) + '">' + escapeHtml(worktree.path) + (worktree.isMain ? ' <span class="settingsHint">(main)</span>' : '') + '</td><td>' + label + flags + '</td>'
+					+ '<td class="settingsRemoteActions">' + (worktree.isMain ? '' : '<span class="settingsBtn settingsWorktreeOpen" title="Show this worktree in the repository dropdown">Add to Git Graph</span><span class="settingsBtn settingsWorktreeWindow" title="Open the folder in a new window">Open</span><span class="settingsBtn settingsWorktreeRemove">Remove</span>') + '</td></tr>';
+			}
+			html += '</table>';
+		}
+		html += '<div class="settingsRow"><span id="settingsAddWorktree" class="roundedBtn">Add Worktree' + ELLIPSIS + '</span><span id="settingsPruneWorktrees" class="roundedBtn" title="Remove the records of worktrees whose folders no longer exist">Prune</span></div>';
+
 		html += '<h3>User Details</h3>';
 		if (this.settings === null) {
 			html += '<p class="settingsLoading">Loading ' + ELLIPSIS + '</p>';
@@ -237,6 +253,33 @@ class SettingsWidget {
 			this.view.saveRepoState(repo, state);
 			this.view.refresh();
 			this.render();
+		});
+		const worktreeOf = (elem: HTMLElement) => unescapeHtml((<HTMLElement>elem.closest('tr')!).dataset.worktree!);
+		addListenerToClass('settingsWorktreeOpen', 'click', (e) => {
+			showActionRunningDialog('Adding Worktree to Git Graph');
+			sendMessage({ command: 'openWorktree', repo: repo, path: worktreeOf(<HTMLElement>e.target), newWindow: false });
+		});
+		addListenerToClass('settingsWorktreeWindow', 'click', (e) => {
+			sendMessage({ command: 'openWorktree', repo: repo, path: worktreeOf(<HTMLElement>e.target), newWindow: true });
+		});
+		addListenerToClass('settingsWorktreeRemove', 'click', (e) => {
+			const worktreePath = worktreeOf(<HTMLElement>e.target);
+			showCheckboxDialog('Are you sure you want to remove the worktree <b><i>' + escapeHtml(worktreePath) + '</i></b>? The folder is deleted; the branch is kept.', 'Force (also when the worktree has uncommitted changes)', false, 'Remove Worktree', (force) => {
+				showActionRunningDialog('Removing Worktree');
+				sendMessage({ command: 'removeWorktree', repo: repo, path: worktreePath, force: force });
+			}, null);
+		});
+		document.getElementById('settingsAddWorktree')!.addEventListener('click', () => {
+			showFormDialog('Add a worktree. You choose the folder next; the branch or commit is checked out there:', [
+				{ type: 'text-ref', name: 'Branch or commit: ', default: '' },
+				{ type: 'text', name: 'New branch (optional): ', default: '', placeholder: 'Create this branch at the given commit' }
+			], 'Choose Folder' + ELLIPSIS, (values) => {
+				sendMessage({ command: 'addWorktree', repo: repo, ref: values[0], newBranch: values[1].trim() !== '' ? values[1].trim() : null });
+			}, null);
+		});
+		document.getElementById('settingsPruneWorktrees')!.addEventListener('click', () => {
+			showActionRunningDialog('Pruning Worktrees');
+			sendMessage({ command: 'pruneWorktrees', repo: repo });
 		});
 		const saveUser = (useGlobally: boolean) => {
 			const name = (<HTMLInputElement>document.getElementById('settingsUserName')).value, email = (<HTMLInputElement>document.getElementById('settingsUserEmail')).value;

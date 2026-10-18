@@ -42,6 +42,7 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
     * Find commits with Ctrl/Cmd+F: match case and regular expression modes, step through the matches
     * Show or hide the Date, Author and Commit columns (right-click a column header), mute merge commits or commits outside the ancestry of HEAD
     * Sticky controls bar and column headers while scrolling (`git-graph.stickyHeader`)
+    * Worktrees: list, add (from a branch or commit), open, remove and prune from the Repository Settings widget
     * Bisect from the graph (mark commits good, bad or skip; progress bar; stop) and drag a branch, tag or commit onto the checked-out commit to merge, rebase or cherry pick
     * Filter the graph by author (from a commit's context menu or the filter button) and by file or folder (from the file context menu); filters show as chips and combine with the branch selection
     * Keyboard shortcuts: Ctrl/Cmd+R refresh, Ctrl/Cmd+H scroll to HEAD, Ctrl/Cmd+S next stash

@@ -372,6 +372,30 @@ export class GitGraphView {
 					this.sendMessage({ command: 'bisect', status: result.status, message: result.message });
 					break;
 				}
+				case 'addWorktree':
+					this.sendMessage({
+						command: 'addWorktree',
+						status: await this.addWorktree(msg.repo, msg.ref, msg.newBranch)
+					});
+					break;
+				case 'removeWorktree':
+					this.sendMessage({
+						command: 'removeWorktree',
+						status: await this.dataSource.removeWorktree(msg.repo, msg.path, msg.force)
+					});
+					break;
+				case 'pruneWorktrees':
+					this.sendMessage({
+						command: 'pruneWorktrees',
+						status: await this.dataSource.pruneWorktrees(msg.repo)
+					});
+					break;
+				case 'openWorktree':
+					this.sendMessage({
+						command: 'openWorktree',
+						status: await this.openWorktree(msg.path, msg.newWindow)
+					});
+					break;
 				case 'openExternalUrl':
 					this.sendMessage({
 						command: 'openExternalUrl',
@@ -524,6 +548,35 @@ export class GitGraphView {
 		const url = buildPullRequestUrl(resolvedProvider, { remote: sourceUrl, branch: sourceBranch }, { remote: destinationUrl, branch: destinationBranch }, getConfig().customPullRequestProviders());
 		if (url === null) return 'The pull request URL could not be built for the provider "' + resolvedProvider + '".';
 		return await openExternalUrl(url, this.logger) ? null : 'The browser could not be opened.';
+	}
+
+	/** Ask for the folder of a new worktree (default: a sibling folder named after the branch), then create it. */
+	private async addWorktree(repo: string, ref: string, newBranch: string | null): Promise<GitCommandStatus> {
+		const name = (newBranch !== null ? newBranch : ref).replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'worktree';
+		const uri = await vscode.window.showSaveDialog({
+			defaultUri: vscode.Uri.file(path.join(path.dirname(repo), path.basename(repo) + '-' + name)),
+			saveLabel: 'Create Worktree',
+			title: 'Choose the folder of the new worktree'
+		});
+		if (!uri) return null;
+		const status = await this.dataSource.addWorktree(repo, uri.fsPath, ref, newBranch);
+		if (status === null) {
+			this.logger.log('Created worktree at ' + uri.fsPath + ' for ' + ref);
+			const choice = await vscode.window.showInformationMessage('Git Graph: Worktree created at ' + uri.fsPath + '.', 'Add to Git Graph', 'Open in New Window');
+			if (choice === 'Add to Git Graph') await this.openWorktree(uri.fsPath, false);
+			else if (choice === 'Open in New Window') await this.openWorktree(uri.fsPath, true);
+		}
+		return status;
+	}
+
+	/** Register a worktree as a repository of this workspace, or open it in a new editor window. */
+	private async openWorktree(worktreePath: string, newWindow: boolean): Promise<GitCommandStatus> {
+		if (newWindow) {
+			await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(worktreePath), true);
+			return null;
+		}
+		const error = await this.repoManager.registerRepo(worktreePath);
+		return error !== null && error.indexOf('already known') === -1 ? error : null;
 	}
 
 	/** Tell the open view that every code review was ended (command "End All Code Reviews in Workspace"). */

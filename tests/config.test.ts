@@ -129,7 +129,7 @@ describe('Config.contextMenuActionsVisibility', () => {
 	it('shows every action by default', () => {
 		const visibility = getConfig().contextMenuActionsVisibility();
 		expect(Object.values(visibility.commit).every(v => v === true)).toBe(true);
-		expect(Object.keys(visibility.commit).sort()).toEqual(['addTag', 'archive', 'bisect', 'checkout', 'cherrypick', 'codeReview', 'copyHash', 'createBranch', 'drop', 'filterByAuthor', 'merge', 'rebase', 'reset', 'revert', 'reword']);
+		expect(Object.keys(visibility.commit).sort()).toEqual(['addTag', 'archive', 'bisect', 'checkout', 'cherrypick', 'codeReview', 'copyHash', 'createBranch', 'createWorktree', 'drop', 'filterByAuthor', 'merge', 'rebase', 'reset', 'revert', 'reword']);
 		expect(visibility.uncommittedChanges).toEqual({ reset: true, clean: true, stash: true, amend: true });
 		expect(Object.keys(visibility.stash).sort()).toEqual(['apply', 'copyHash', 'copyName', 'createBranch', 'drop', 'pop']);
 		expect(visibility.tag).toEqual({ delete: true, push: true, archive: true, copyName: true });
