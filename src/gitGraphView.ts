@@ -259,6 +259,7 @@ export class GitGraphView {
 		const viewState: GitGraphViewState = {
 			autoCenterCommitDetailsView: config.autoCenterCommitDetailsView(),
 			dateFormat: config.dateFormat(),
+			dialogDefaults: config.dialogDefaults(),
 			fetchAvatars: config.fetchAvatars() && this.extensionState.isAvatarStorageAvailable(),
 			graphColours: config.graphColours(),
 			graphStyle: config.graphStyle(),

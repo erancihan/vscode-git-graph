@@ -51,9 +51,18 @@ export interface GitUnsavedChanges {
 	changes: number;
 }
 
+export interface DialogDefaults {
+	addTag: { type: 'annotated' | 'lightweight' };
+	deleteBranch: { forceDelete: boolean };
+	merge: { noFastForward: boolean };
+	resetCurrentBranchToCommit: { mode: GitResetMode };
+	general: { referenceInputSpaceSubstitution: string | null };
+}
+
 export interface GitGraphViewState {
 	autoCenterCommitDetailsView: boolean;
 	dateFormat: DateFormat;
+	dialogDefaults: DialogDefaults;
 	fetchAvatars: boolean;
 	graphColours: string[];
 	graphStyle: GraphStyle;

@@ -66,6 +66,42 @@ describe('Config', () => {
 	});
 });
 
+describe('Config.dialogDefaults', () => {
+	it('returns the documented defaults', () => {
+		expect(getConfig().dialogDefaults()).toEqual({
+			addTag: { type: 'annotated' },
+			deleteBranch: { forceDelete: false },
+			merge: { noFastForward: true },
+			resetCurrentBranchToCommit: { mode: 'mixed' },
+			general: { referenceInputSpaceSubstitution: null }
+		});
+	});
+
+	it('maps the setting values to dialog values', () => {
+		setConfig({
+			'dialog.addTag.type': 'Lightweight',
+			'dialog.deleteBranch.forceDelete': 'true',
+			'dialog.merge.noFastForward': false,
+			'dialog.resetCurrentBranchToCommit.mode': 'Hard',
+			'dialog.general.referenceInputSpaceSubstitution': 'Underscore'
+		});
+		expect(getConfig().dialogDefaults()).toEqual({
+			addTag: { type: 'lightweight' },
+			deleteBranch: { forceDelete: true },
+			merge: { noFastForward: false },
+			resetCurrentBranchToCommit: { mode: 'hard' },
+			general: { referenceInputSpaceSubstitution: '_' }
+		});
+	});
+
+	it('falls back for unknown enum values', () => {
+		setConfig({ 'dialog.resetCurrentBranchToCommit.mode': 'Nuke', 'dialog.general.referenceInputSpaceSubstitution': 'Dash' });
+		const defaults = getConfig().dialogDefaults();
+		expect(defaults.resetCurrentBranchToCommit.mode).toBe('mixed');
+		expect(defaults.general.referenceInputSpaceSubstitution).toBeNull();
+	});
+});
+
 describe('coerceBoolean', () => {
 	it('accepts booleans and boolean strings', () => {
 		expect(coerceBoolean(true, false)).toBe(true);

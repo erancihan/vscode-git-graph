@@ -103,6 +103,55 @@
 					"default": "Author Date",
 					"description": "Specifies the date type to be displayed throughout Git Graph."
 				},
+				"git-graph.dialog.addTag.type": {
+					"type": "string",
+					"enum": [
+						"Annotated",
+						"Lightweight"
+					],
+					"default": "Annotated",
+					"description": "Default tag type in the \"Add Tag\" dialog."
+				},
+				"git-graph.dialog.deleteBranch.forceDelete": {
+					"type": "boolean",
+					"default": false,
+					"description": "Default state of the \"Force Delete\" checkbox in the \"Delete Branch\" dialog."
+				},
+				"git-graph.dialog.general.referenceInputSpaceSubstitution": {
+					"type": "string",
+					"enum": [
+						"None",
+						"Hyphen",
+						"Underscore"
+					],
+					"enumDescriptions": [
+						"Spaces are left as typed (git rejects reference names that contain spaces)",
+						"Spaces are replaced with hyphens (-)",
+						"Spaces are replaced with underscores (_)"
+					],
+					"default": "None",
+					"description": "Replace spaces typed into branch and tag name inputs with another character."
+				},
+				"git-graph.dialog.merge.noFastForward": {
+					"type": "boolean",
+					"default": true,
+					"description": "Default state of the \"Create a new commit even if fast-forward is possible\" checkbox in the merge dialogs."
+				},
+				"git-graph.dialog.resetCurrentBranchToCommit.mode": {
+					"type": "string",
+					"enum": [
+						"Soft",
+						"Mixed",
+						"Hard"
+					],
+					"enumDescriptions": [
+						"Keep all changes, but reset head",
+						"Keep working tree, but reset index",
+						"Discard all changes"
+					],
+					"default": "Mixed",
+					"description": "Default reset mode in the \"Reset current branch to this Commit\" dialog."
+				},
 				"git-graph.graph.colours": {
 					"type": "array",
 					"items": {
