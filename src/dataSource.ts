@@ -307,7 +307,7 @@ export class DataSource {
 
 	/** `user.name` and `user.email` from the local and the global configuration (null when not set). */
 	public async getUserDetails(repo: string): Promise<GitUserDetails> {
-		const read = (scope: string, key: string) => this.spawnGit(['config', scope, '--get', key], repo, (stdout) => stdout.split(eolRegex)[0], false).catch((): string | null => null);
+		const read = (scope: string, key: string) => this.spawnGit(['config', scope, '--includes', '--get', key], repo, (stdout) => stdout.split(eolRegex)[0], false).catch((): string | null => null);
 		const [localName, localEmail, globalName, globalEmail] = await Promise.all([read('--local', 'user.name'), read('--local', 'user.email'), read('--global', 'user.name'), read('--global', 'user.email')]);
 		return { localName, localEmail, globalName, globalEmail };
 	}
@@ -323,7 +323,8 @@ export class DataSource {
 			let status: GitCommandStatus = null;
 			if (value.trim() === '') {
 				if (useGlobally) return 'The global ' + key + ' cannot be empty.';
-				const isSet = await this.spawnGit(['config', scope, '--get', key], repo, () => true, false).catch(() => false);
+				// Without --includes: only a value written in this scope's own file can be unset there
+				const isSet = await this.spawnGit(['config', scope, '--no-includes', '--get', key], repo, () => true, false).catch(() => false);
 				if (isSet) status = await this.runGitCommand(['config', scope, '--unset', key], repo);
 			} else {
 				status = await this.runGitCommand(['config', scope, key, value.trim()], repo);
