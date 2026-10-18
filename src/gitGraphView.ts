@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { AvatarManager } from './avatarManager';
@@ -10,6 +11,7 @@ import { Logger } from './logger';
 import { RepoFileWatcher } from './repoFileWatcher';
 import { buildPullRequestUrl, detectPullRequestProvider, parseRemoteUrl } from './remoteUrl';
 import { RepoManager, defaultRepoState } from './repoManager';
+import { REPO_SETTINGS_FILE, applyRepoSettings, hashRepoSettings, parseRepoSettings, repoSettingsMatch, serializeRepoSettings } from './repoSettingsFile';
 import { runGitCommandInTerminal } from './terminal';
 import { GitArchiveType, GitCommandStatus, GitFileChangeType, GitGraphViewState, GitRebaseType, L10nBundle, GitRepoSet, GitRepoState, PullRequestProvider, RequestMessage, ResponseMessage } from './types';
 import { abbrevCommit, copyToClipboard } from './utils';
@@ -238,6 +240,7 @@ export class GitGraphView {
 					});
 					break;
 				case 'loadBranches':
+					this.offerRepoSettingsFile(msg.repo);
 					let branchData = await this.dataSource.getBranches(msg.repo, msg.showRemoteBranches, this.getRepoState(msg.repo).hideRemotes), isRepo = true;
 					if (branchData.error) {
 						// If an error occurred, check to make sure the repo still exists
@@ -464,6 +467,18 @@ export class GitGraphView {
 						command: 'predictConflicts',
 						id: msg.id,
 						conflicts: await this.dataSource.predictConflicts(msg.repo, msg.obj, msg.type)
+					});
+					break;
+				case 'exportRepoSettings':
+					this.sendMessage({
+						command: 'exportRepoSettings',
+						status: await this.exportRepoSettings(msg.repo)
+					});
+					break;
+				case 'importRepoSettings':
+					this.sendMessage({
+						command: 'importRepoSettings',
+						status: await this.importRepoSettings(msg.repo, true)
 					});
 					break;
 				case 'getRebaseTodo': {
@@ -757,6 +772,81 @@ export class GitGraphView {
 
 	private getUri(...pathComps: string[]) {
 		return vscode.Uri.file(path.join(this.extensionPath, ...pathComps));
+	}
+
+	/* Repository settings file (.vscode/git-graph.json) */
+
+	private repoSettingsOffered: { [repo: string]: string } = {};
+
+	/** Read the settings file of a repository, or null when it does not exist or cannot be read. */
+	private readRepoSettingsFile(repo: string): Promise<string | null> {
+		return new Promise((resolve) => {
+			fs.readFile(path.join(repo, REPO_SETTINGS_FILE), { encoding: 'utf8' }, (err, data) => resolve(err ? null : data));
+		});
+	}
+
+	/**
+	 * When the repository has a settings file whose content was not applied, exported or declined
+	 * before, offer to apply it. Each version of the file is offered once per session.
+	 */
+	private async offerRepoSettingsFile(repo: string) {
+		if (!this.isKnownRepo(repo)) return;
+		const text = await this.readRepoSettingsFile(repo);
+		if (text === null) return;
+		const hash = hashRepoSettings(text), state = this.getRepoState(repo);
+		if (state.settingsFileHash === hash || this.repoSettingsOffered[repo] === hash) return;
+		this.repoSettingsOffered[repo] = hash;
+		const imported = parseRepoSettings(text);
+		if (imported === null) {
+			this.logger.logError('The repository settings file ' + path.join(repo, REPO_SETTINGS_FILE) + ' is not a valid JSON object.');
+			return;
+		}
+		if (repoSettingsMatch(state, imported)) {
+			this.repoManager.setRepoState(repo, { ...state, settingsFileHash: hash });
+			return;
+		}
+		const name = state.name !== null ? state.name : path.basename(repo);
+		const apply = vscode.l10n.t('Apply'), ignore = vscode.l10n.t('Ignore this version');
+		const choice = await vscode.window.showInformationMessage(vscode.l10n.t('Git Graph: The repository "{0}" contains {1} with shared Git Graph settings. Apply them to this repository?', name, REPO_SETTINGS_FILE), apply, ignore);
+		if (choice === apply) {
+			await this.importRepoSettings(repo, false);
+		} else if (choice === ignore) {
+			this.repoManager.setRepoState(repo, { ...this.getRepoState(repo), settingsFileHash: hash });
+		}
+	}
+
+	/** Apply the settings file to the repository state and refresh the view. */
+	private async importRepoSettings(repo: string, fromWidget: boolean): Promise<GitCommandStatus> {
+		if (!this.isKnownRepo(repo)) return 'Unknown repository.';
+		const text = await this.readRepoSettingsFile(repo);
+		if (text === null) return vscode.l10n.t('The repository has no {0} file.', REPO_SETTINGS_FILE);
+		const imported = parseRepoSettings(text);
+		if (imported === null) return vscode.l10n.t('{0} is not a valid JSON object.', REPO_SETTINGS_FILE);
+		this.repoManager.setRepoState(repo, { ...applyRepoSettings(this.getRepoState(repo), imported), settingsFileHash: hashRepoSettings(text) });
+		this.respondLoadRepos(this.repoManager.getRepos());
+		if (!fromWidget) vscode.window.showInformationMessage(vscode.l10n.t('Git Graph: Repository settings applied from {0}.', REPO_SETTINGS_FILE));
+		return null;
+	}
+
+	/** Write the shareable settings of the repository to the settings file, asking before an existing file is replaced. */
+	private async exportRepoSettings(repo: string): Promise<GitCommandStatus> {
+		if (!this.isKnownRepo(repo)) return 'Unknown repository.';
+		const text = serializeRepoSettings(this.getRepoState(repo)), target = path.join(repo, REPO_SETTINGS_FILE);
+		const existing = await this.readRepoSettingsFile(repo);
+		if (existing !== null && existing !== text) {
+			const replace = vscode.l10n.t('Replace');
+			const choice = await vscode.window.showWarningMessage(vscode.l10n.t('Git Graph: {0} already exists in this repository. Replace it with the current settings?', REPO_SETTINGS_FILE), replace);
+			if (choice !== replace) return vscode.l10n.t('The export was cancelled; the existing file was kept.');
+		}
+		try {
+			fs.mkdirSync(path.dirname(target), { recursive: true });
+			fs.writeFileSync(target, text);
+		} catch (e) {
+			return vscode.l10n.t('Unable to write {0}: {1}', REPO_SETTINGS_FILE, e instanceof Error ? e.message : String(e));
+		}
+		this.repoManager.setRepoState(repo, { ...this.getRepoState(repo), settingsFileHash: hashRepoSettings(text) });
+		vscode.window.showInformationMessage(vscode.l10n.t('Git Graph: Repository settings exported to {0}. Commit the file to share them.', target));
+		return null;
 	}
 
 	private respondLoadRepos(repos: GitRepoSet) {

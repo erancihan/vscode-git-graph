@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Repository Settings: "Export to File" writes the shareable settings (overrides, hidden remotes, issue linking, branches shown on load) to `.vscode/git-graph.json` in the repository, and "Import from File" applies that file. When a repository with such a file opens and its content was not applied, exported or declined before, Git Graph offers once to apply it. The file is validated field by field; unknown fields are ignored and the display name is never shared.
 * Repository Settings: "Branches shown on load" chooses what the Branch dropdown selects when the repository opens without a remembered selection: the default from the extension settings, the checked-out branch, specific branches (names separated by commas, custom glob pattern names accepted), or both. Stored per repository.
 
 ## 2.4.2 - 2026-10-18

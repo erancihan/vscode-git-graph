@@ -2334,6 +2334,12 @@ window.addEventListener('message', event => {
 				showErrorDialog(t('Unable to Rebase'), msg.status, null);
 			}
 			break;
+		case 'exportRepoSettings':
+			gitGraph.repoSettingsActionCompleted(msg.status, t('Unable to Export the Repository Settings'), false);
+			break;
+		case 'importRepoSettings':
+			gitGraph.repoSettingsActionCompleted(msg.status, t('Unable to Import the Repository Settings'), true);
+			break;
 		case 'getRebaseTodo':
 			gitGraph.loadRebaseTodo(msg);
 			break;

@@ -107,6 +107,8 @@ export interface GitRepoState {
 	issueLinkingConfig: IssueLinkingConfig | null;
 	/** Branches selected when the repository opens without a remembered selection. null => the extension settings decide. */
 	onLoad: GitRepoOnLoad | null;
+	/** Hash of the last `.vscode/git-graph.json` that was applied, exported or declined, so an unchanged file is not offered again. */
+	settingsFileHash: string | null;
 }
 
 export interface GitRepoOnLoad {
@@ -654,6 +656,23 @@ export interface ResponseFetchIntoLocalBranch {
 	status: GitCommandStatus;
 }
 
+export interface RequestExportRepoSettings {
+	command: 'exportRepoSettings';
+	repo: string;
+}
+export interface ResponseExportRepoSettings {
+	command: 'exportRepoSettings';
+	status: GitCommandStatus;
+}
+export interface RequestImportRepoSettings {
+	command: 'importRepoSettings';
+	repo: string;
+}
+export interface ResponseImportRepoSettings {
+	command: 'importRepoSettings';
+	status: GitCommandStatus;
+}
+
 export interface RequestRebase {
 	command: 'rebase';
 	repo: string;
@@ -1133,6 +1152,8 @@ export type RequestMessage =
 	| RequestPushStash
 	| RequestPushTag
 	| RequestRebase
+	| RequestExportRepoSettings
+	| RequestImportRepoSettings
 	| RequestPredictConflicts
 	| RequestGetRebaseTodo
 	| RequestInteractiveRebase
@@ -1202,6 +1223,8 @@ export type ResponseMessage =
 	| ResponsePushStash
 	| ResponsePushTag
 	| ResponseRebase
+	| ResponseExportRepoSettings
+	| ResponseImportRepoSettings
 	| ResponsePredictConflicts
 	| ResponseGetRebaseTodo
 	| ResponseInteractiveRebase

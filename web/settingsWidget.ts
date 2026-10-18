@@ -161,7 +161,7 @@ class SettingsWidget {
 				+ '<p class="settingsHint">Empty values remove the repository\'s own setting so the global one applies.</p>';
 		}
 
-		html += '</div><div id="settingsWidgetFooter"><span id="settingsOpenExtensionSettings" class="roundedBtn">' + t('Open Extension Settings') + '</span><span id="settingsDone" class="roundedBtn">' + t('Done') + '</span></div>';
+		html += '</div><div id="settingsWidgetFooter"><span id="settingsExport" class="roundedBtn" title="' + t('Write the overrides, hidden remotes, issue linking and on-load branches to .vscode/git-graph.json, so the team can share them') + '">' + t('Export to File') + '</span><span id="settingsImport" class="roundedBtn" title="' + t('Apply the settings from .vscode/git-graph.json') + '">' + t('Import from File') + '</span><span class="settingsFooterSpacer"></span><span id="settingsOpenExtensionSettings" class="roundedBtn">' + t('Open Extension Settings') + '</span><span id="settingsDone" class="roundedBtn">' + t('Done') + '</span></div>';
 		this.widgetElem.innerHTML = html;
 		this.attachListeners(repo);
 	}
@@ -170,6 +170,16 @@ class SettingsWidget {
 		document.getElementById('settingsWidgetClose')!.addEventListener('click', () => this.hide());
 		document.getElementById('settingsDone')!.addEventListener('click', () => this.hide());
 		document.getElementById('settingsOpenExtensionSettings')!.addEventListener('click', () => sendMessage({ command: 'openExtensionSettings' }));
+		document.getElementById('settingsExport')!.addEventListener('click', () => {
+			showActionRunningDialog(t('Exporting Repository Settings'));
+			sendMessage({ command: 'exportRepoSettings', repo: repo });
+		});
+		document.getElementById('settingsImport')!.addEventListener('click', () => {
+			showConfirmationDialog(t('Apply the settings from <b>.vscode/git-graph.json</b> to this repository? Your current overrides, hidden remotes, issue linking and on-load branches are replaced by the values in the file.'), () => {
+				showActionRunningDialog(t('Importing Repository Settings'));
+				sendMessage({ command: 'importRepoSettings', repo: repo });
+			}, null);
+		});
 
 		const nameInput = <HTMLInputElement>document.getElementById('settingsName')!;
 		nameInput.addEventListener('change', () => {
