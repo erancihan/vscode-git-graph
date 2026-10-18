@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* "Create Pull Request..." on local branch labels opens the provider's new pull request page in the browser. GitHub, GitLab and Bitbucket are detected from the destination remote's URL; other hosts can be added with `git-graph.customPullRequestProviders` (URL templates with `$sourceOwner`, `$sourceRepo`, `$sourceBranch`, `$destinationOwner`, `$destinationRepo`, `$destinationBranch`). The dialog offers the provider, source and destination remotes and the destination branch. New key `branch.createPullRequest` in `git-graph.contextMenuActionsVisibility`.
+
 * Issue linking: the Repository Settings widget takes an issue pattern (regular expression) and an issue URL with `$1`-style placeholders; matching references in commit messages and in the Commit Details View become links that open in the browser. Plain http(s) URLs in the commit body are links too. Only http and https links are opened.
 
 * Avatars: GitHub and GitLab are recognised from SSH and `git://` remote URLs as well as HTTPS; images are requested at 108px for high DPI displays; Gravatar addresses are trimmed and lower-cased before hashing; GitLab avatars come from the public avatar endpoint, so the extension no longer ships an API token; only image responses are saved. "Clear Avatar Cache" reports how many avatars were removed.

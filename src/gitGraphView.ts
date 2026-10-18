@@ -7,9 +7,10 @@ import { encodeDiffDocUri } from './diffDocProvider';
 import { ExtensionState } from './extensionState';
 import { Logger } from './logger';
 import { RepoFileWatcher } from './repoFileWatcher';
+import { buildPullRequestUrl, detectPullRequestProvider, parseRemoteUrl } from './remoteUrl';
 import { RepoManager, defaultRepoState } from './repoManager';
 import { runGitCommandInTerminal } from './terminal';
-import { GitArchiveType, GitCommandStatus, GitFileChangeType, GitGraphViewState, GitRebaseType, GitRepoSet, GitRepoState, RequestMessage, ResponseMessage } from './types';
+import { GitArchiveType, GitCommandStatus, GitFileChangeType, GitGraphViewState, GitRebaseType, GitRepoSet, GitRepoState, PullRequestProvider, RequestMessage, ResponseMessage } from './types';
 import { abbrevCommit, copyToClipboard } from './utils';
 
 export class GitGraphView {
@@ -320,6 +321,12 @@ export class GitGraphView {
 						status: await this.dataSource.setUserDetails(msg.repo, msg.name, msg.email, msg.useGlobally)
 					});
 					break;
+				case 'createPullRequest':
+					this.sendMessage({
+						command: 'createPullRequest',
+						error: await this.createPullRequest(msg.repo, msg.provider, msg.sourceRemote, msg.sourceBranch, msg.destinationRemote, msg.destinationBranch)
+					});
+					break;
 				case 'openExternalUrl':
 					this.sendMessage({
 						command: 'openExternalUrl',
@@ -459,6 +466,21 @@ export class GitGraphView {
 		return status;
 	}
 
+	/** Build the "new pull request" URL from the remotes' URLs and open it in the browser. Returns an error message or null. */
+	private async createPullRequest(repo: string, provider: PullRequestProvider | null, sourceRemote: string, sourceBranch: string, destinationRemote: string, destinationBranch: string): Promise<string | null> {
+		const remotes = await this.dataSource.getRemoteDetails(repo);
+		const source = remotes.find((r) => r.name === sourceRemote), destination = remotes.find((r) => r.name === destinationRemote);
+		if (!source || !destination) return 'The selected remote no longer exists.';
+		const sourceUrl = parseRemoteUrl(source.pushUrl !== null ? source.pushUrl : source.url), destinationUrl = parseRemoteUrl(destination.url);
+		if (sourceUrl === null) return 'The URL of the remote "' + sourceRemote + '" could not be understood.';
+		if (destinationUrl === null) return 'The URL of the remote "' + destinationRemote + '" could not be understood.';
+		const resolvedProvider = provider !== null ? provider : detectPullRequestProvider(destinationUrl);
+		if (resolvedProvider === null) return 'No pull request provider is known for ' + destinationUrl.host + '. Add one with the "git-graph.customPullRequestProviders" setting.';
+		const url = buildPullRequestUrl(resolvedProvider, { remote: sourceUrl, branch: sourceBranch }, { remote: destinationUrl, branch: destinationBranch }, getConfig().customPullRequestProviders());
+		if (url === null) return 'The pull request URL could not be built for the provider "' + resolvedProvider + '".';
+		return await openExternalUrl(url, this.logger) ? null : 'The browser could not be opened.';
+	}
+
 	/** The stored state of a repository (defaults when the repository is unknown). */
 	private getRepoState(repo: string): GitRepoState {
 		const repos = this.repoManager.getRepos();
@@ -471,6 +493,7 @@ export class GitGraphView {
 			autoCenterCommitDetailsView: config.autoCenterCommitDetailsView(),
 			commitDetailsView: config.commitDetailsView(),
 			customBranchGlobPatterns: config.customBranchGlobPatterns(),
+			customPullRequestProviders: config.customPullRequestProviders(),
 			contextMenuActionsVisibility: config.contextMenuActionsVisibility(),
 			dateFormat: config.dateFormat(),
 			defaultColumnVisibility: config.defaultColumnVisibility(),

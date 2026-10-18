@@ -121,7 +121,7 @@ export interface GitUnsavedChanges {
 }
 
 export interface ContextMenuActionsVisibility {
-	branch: { checkout: boolean, rename: boolean, delete: boolean, merge: boolean, rebase: boolean, push: boolean, archive: boolean, copyName: boolean };
+	branch: { checkout: boolean, rename: boolean, delete: boolean, merge: boolean, rebase: boolean, push: boolean, createPullRequest: boolean, archive: boolean, copyName: boolean };
 	commit: { addTag: boolean, createBranch: boolean, checkout: boolean, cherrypick: boolean, revert: boolean, drop: boolean, merge: boolean, rebase: boolean, reset: boolean, archive: boolean, copyHash: boolean };
 	remoteBranch: { checkout: boolean, delete: boolean, fetch: boolean, pull: boolean, copyName: boolean };
 	stash: { apply: boolean, createBranch: boolean, pop: boolean, drop: boolean, copyName: boolean, copyHash: boolean };
@@ -163,6 +163,13 @@ export interface CommitDetailsViewConfig {
 	location: CommitDetailsViewLocation;
 }
 
+export type PullRequestProvider = 'GitHub' | 'GitLab' | 'Bitbucket' | string; // a string names a custom provider
+export interface CustomPullRequestProvider {
+	name: string;
+	/** URL template with $sourceOwner, $sourceRepo, $sourceBranch, $destinationOwner, $destinationRepo and $destinationBranch. */
+	templateUrl: string;
+}
+
 export interface CustomBranchGlobPattern {
 	name: string;
 	glob: string;
@@ -172,6 +179,7 @@ export interface GitGraphViewState {
 	autoCenterCommitDetailsView: boolean;
 	commitDetailsView: CommitDetailsViewConfig;
 	customBranchGlobPatterns: CustomBranchGlobPattern[];
+	customPullRequestProviders: CustomPullRequestProvider[];
 	contextMenuActionsVisibility: ContextMenuActionsVisibility;
 	dateFormat: DateFormat;
 	defaultColumnVisibility: ColumnVisibility;
@@ -731,6 +739,20 @@ export interface RequestOpenExtensionSettings {
 	command: 'openExtensionSettings';
 }
 
+export interface RequestCreatePullRequest {
+	command: 'createPullRequest';
+	repo: string;
+	provider: PullRequestProvider | null; // null => detect from the destination remote
+	sourceRemote: string;
+	sourceBranch: string;
+	destinationRemote: string;
+	destinationBranch: string;
+}
+export interface ResponseCreatePullRequest {
+	command: 'createPullRequest';
+	error: string | null;
+}
+
 export interface RequestOpenExternalUrl {
 	command: 'openExternalUrl';
 	url: string; // http(s) only
@@ -839,6 +861,7 @@ export type RequestMessage =
 	| RequestSetUserDetails
 	| RequestOpenExtensionSettings
 	| RequestOpenExternalUrl
+	| RequestCreatePullRequest
 	| RequestOpenExternalDiff
 	| RequestViewDiffWithWorkingFile
 	| RequestViewFileAtRevision;
@@ -890,6 +913,7 @@ export type ResponseMessage =
 	| ResponsePruneRemote
 	| ResponseSetUserDetails
 	| ResponseOpenExternalUrl
+	| ResponseCreatePullRequest
 	| ResponseOpenExternalDiff
 	| ResponseViewDiffWithWorkingFile
 	| ResponseViewFileAtRevision;

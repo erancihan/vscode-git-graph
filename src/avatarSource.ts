@@ -1,4 +1,5 @@
 import * as crypto from 'crypto';
+import { parseRemoteUrl } from './remoteUrl';
 
 export interface GitHubRemoteSource {
 	type: 'github';
@@ -19,25 +20,13 @@ export type RemoteSource = GitHubRemoteSource | GitLabRemoteSource | GravatarRem
  * gitlab.com URLs; everything else uses Gravatar.
  */
 export function parseRemoteSource(remoteUrl: string | null): RemoteSource {
-	if (remoteUrl === null) return { type: 'gravatar' };
-	const url = remoteUrl.trim();
-	let host: string, path: string;
-	const scp = /^(?:[A-Za-z0-9._-]+@)?([A-Za-z0-9.-]+):(?!\/\/)(.+)$/.exec(url); // git@github.com:owner/repo.git
-	const full = /^[A-Za-z][A-Za-z0-9+.-]*:\/\/(?:[^@\/]+@)?([A-Za-z0-9.-]+)(?::\d+)?\/(.*)$/.exec(url); // https://github.com/owner/repo.git, ssh://git@github.com/owner/repo
-	if (full !== null) {
-		host = full[1]; path = full[2];
-	} else if (scp !== null) {
-		host = scp[1]; path = scp[2];
-	} else {
-		return { type: 'gravatar' };
+	const parsed = parseRemoteUrl(remoteUrl);
+	if (parsed === null) return { type: 'gravatar' };
+	if (parsed.host === 'github.com' || parsed.host === 'www.github.com') {
+		// GitHub repositories have exactly one owner segment
+		return parsed.owner.indexOf('/') === -1 ? { type: 'github', owner: parsed.owner, repo: parsed.repo } : { type: 'gravatar' };
 	}
-	host = host.toLowerCase();
-	const parts = path.replace(/\/+$/, '').split('/').filter((part) => part !== '');
-	if (host === 'github.com' || host === 'www.github.com') {
-		if (parts.length >= 2) return { type: 'github', owner: parts[0], repo: parts[1].replace(/\.git$/, '') };
-		return { type: 'gravatar' };
-	}
-	if (host === 'gitlab.com' || host === 'www.gitlab.com') return { type: 'gitlab' };
+	if (parsed.host === 'gitlab.com' || parsed.host === 'www.gitlab.com') return { type: 'gitlab' };
 	return { type: 'gravatar' };
 }
 

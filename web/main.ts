@@ -786,6 +786,13 @@ class GitGraphView {
 							}
 						});
 					}
+					if (this.gitRemotes.length > 0) {
+						menu.push({
+							title: 'Create Pull Request' + ELLIPSIS,
+							visible: this.config.contextMenuActionsVisibility.branch.createPullRequest,
+							onClick: () => this.showCreatePullRequestDialog(refName)
+						});
+					}
 				} else {
 					const remote = this.getRemoteOfBranch(refName), remoteBranch = remote !== null ? refName.substring(remote.length + 1) : refName;
 					menu = [{
@@ -994,6 +1001,28 @@ class GitGraphView {
 			if (!interactive) showActionRunningDialog('Rebasing');
 			sendMessage({ command: 'rebase', repo: this.currentRepo!, obj: obj, type: type, ignoreDate: values[1] === 'checked', interactive: interactive });
 		}, sourceElem);
+	}
+	/**
+	 * Dialog for opening the provider's "new pull request" page: provider (detected from the
+	 * destination remote, or a custom one), source and destination remotes, destination branch.
+	 */
+	private showCreatePullRequestDialog(sourceBranch: string) {
+		const remotes = this.gitRemotes, defaultRemote = remotes.indexOf('origin') > -1 ? 'origin' : remotes[0];
+		const remoteOptions = remotes.map((remote) => ({ name: remote, value: remote }));
+		const providerOptions = [{ name: 'Detect from the destination remote (GitHub, GitLab, Bitbucket)', value: '' }].concat(this.config.customPullRequestProviders.map((p) => ({ name: p.name, value: p.name })));
+		// Destination branch candidates: the remote branches of the default remote, with the usual main branches first
+		const remoteBranches = this.gitBranches.filter((b) => b.startsWith('remotes/')).map((b) => b.substring(8));
+		const candidates = remoteBranches.filter((b) => b.startsWith(defaultRemote + '/')).map((b) => b.substring(defaultRemote.length + 1)).filter((b) => b !== 'HEAD');
+		const preferred = ['main', 'master', 'develop'].find((b) => candidates.indexOf(b) > -1);
+		const defaultDestination = preferred || (candidates.length > 0 && candidates[0] !== sourceBranch ? candidates[0] : 'main');
+		showFormDialog('Create a pull request for the branch <b><i>' + escapeHtml(sourceBranch) + '</i></b>:', [
+			{ type: 'select', name: 'Provider: ', default: '', options: providerOptions },
+			{ type: 'select', name: 'Source Remote: ', default: defaultRemote, options: remoteOptions },
+			{ type: 'select', name: 'Destination Remote: ', default: defaultRemote, options: remoteOptions },
+			{ type: 'text-ref', name: 'Destination Branch: ', default: defaultDestination }
+		], 'Create Pull Request', (values) => {
+			sendMessage({ command: 'createPullRequest', repo: this.currentRepo!, provider: values[0] !== '' ? values[0] : null, sourceRemote: values[1], sourceBranch: sourceBranch, destinationRemote: values[2], destinationBranch: values[3] });
+		}, null);
 	}
 	private showMergeDialog(message: string, actioned: (options: GG.MergeOptions) => void) {
 		showFormDialog(message, [
@@ -1559,6 +1588,7 @@ const gitGraph = new GitGraphView(viewState.repos, viewState.lastActiveRepo, {
 	autoCenterCommitDetailsView: viewState.autoCenterCommitDetailsView,
 	commitDetailsView: viewState.commitDetailsView,
 	customBranchGlobPatterns: viewState.customBranchGlobPatterns,
+	customPullRequestProviders: viewState.customPullRequestProviders,
 	contextMenuActionsVisibility: viewState.contextMenuActionsVisibility,
 	defaultColumnVisibility: viewState.defaultColumnVisibility,
 	dialogDefaults: viewState.dialogDefaults,
@@ -1714,6 +1744,9 @@ window.addEventListener('message', event => {
 			break;
 		case 'openFile':
 			if (msg.success === false) showErrorDialog('Unable to open file', null, null);
+			break;
+		case 'createPullRequest':
+			if (msg.error !== null) showErrorDialog('Unable to Create Pull Request', msg.error, null);
 			break;
 		case 'openExternalUrl':
 			if (msg.success === false) showErrorDialog('Unable to open the link', 'Only http and https links can be opened.', null);
