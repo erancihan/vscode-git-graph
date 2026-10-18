@@ -1,6 +1,6 @@
 import * as cp from 'child_process';
-import * as fs from 'fs';
 import { getConfig } from './config';
+import { findGitExecutable } from './gitExecutable';
 import { Logger } from './logger';
 import { GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChangeType, GitRefData, GitResetMode, GitUnsavedChanges } from './types';
 import { getPathFromStr } from './utils';
@@ -44,7 +44,7 @@ export class DataSource {
 			this.logger.log('Using git executable: ' + gitPath);
 			this.spawnGit(['--version'], process.cwd(), (stdout) => stdout.trim()).then(
 				(version) => this.logger.log(version),
-				(error) => this.logger.logError('Unable to run git: ' + error)
+				(error) => this.logger.logError('Unable to run git (set the "git.path" setting to the path of your git executable): ' + error)
 			);
 		});
 	}
@@ -417,21 +417,3 @@ function rejectArguments(): Promise<GitCommandStatus> {
 	return Promise.resolve(INVALID_ARGUMENT);
 }
 
-/**
- * Return the first candidate that can be used as the git executable. Candidates that contain a
- * path separator must exist on disk; bare command names are accepted as-is (PATH lookup). When no
- * candidate qualifies, `git` is returned.
- */
-export async function findGitExecutable(candidates: string[]): Promise<string> {
-	for (let i = 0; i < candidates.length; i++) {
-		const candidate = candidates[i].trim();
-		if (candidate === '') continue;
-		if (!/[\\/]/.test(candidate)) return candidate;
-		if (await fileExists(candidate)) return candidate;
-	}
-	return 'git';
-}
-
-function fileExists(path: string) {
-	return new Promise<boolean>((resolve) => fs.stat(path, (err, stats) => resolve(!err && stats.isFile())));
-}

@@ -2,7 +2,7 @@ import * as cp from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { DataSource, findGitExecutable } from '../src/dataSource';
+import { DataSource } from '../src/dataSource';
 import { Logger } from '../src/logger';
 import { configurationValues, outputChannelLines } from './mocks/vscode';
 
@@ -225,24 +225,5 @@ describe('DataSource commit loading options', () => {
 		configurationValues['git-graph'] = { 'commitOrdering': 'author-date' };
 		await dataSource.getCommits(repo, '', 10, false);
 		expect(lines.slice(-4).some(l => l.includes('--author-date-order'))).toBe(true);
-	});
-});
-
-describe('findGitExecutable', () => {
-	it('returns git when there are no candidates', async () => {
-		expect(await findGitExecutable([])).toBe('git');
-	});
-
-	it('accepts bare command names without checking the disk', async () => {
-		expect(await findGitExecutable(['git.exe'])).toBe('git.exe');
-	});
-
-	it('skips paths that do not exist and takes the first one that does', async () => {
-		const existing = __filename;
-		expect(await findGitExecutable(['/definitely/not/here/git', existing, '/also/missing'])).toBe(existing);
-	});
-
-	it('falls back to git when no path exists', async () => {
-		expect(await findGitExecutable(['/definitely/not/here/git'])).toBe('git');
 	});
 });

@@ -394,6 +394,11 @@
 					"default": false,
 					"description": "Apply the .mailmap file of the repository to author and committer names and email addresses."
 				},
+				"git-graph.retainContextWhenHidden": {
+					"type": "boolean",
+					"default": true,
+					"description": "Keep the Git Graph view alive while its tab is hidden, so that it restores instantly. Uses more memory. When false, the view is rebuilt when the tab becomes visible again."
+				},
 				"git-graph.showStatusBarItem": {
 					"type": "boolean",
 					"default": true,
