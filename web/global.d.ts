@@ -13,6 +13,7 @@ declare global {
 		autoCenterCommitDetailsView: boolean;
 		commitDetailsView: GG.CommitDetailsViewConfig;
 		customBranchGlobPatterns: GG.CustomBranchGlobPattern[];
+		customPullRequestProviders: GG.CustomPullRequestProvider[];
 		contextMenuActionsVisibility: GG.ContextMenuActionsVisibility;
 		defaultColumnVisibility: GG.ColumnVisibility;
 		dialogDefaults: GG.DialogDefaults;

@@ -27,7 +27,7 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
         * Compare two commits: Ctrl/Cmd+click a second commit (or the uncommitted changes) while the details are open
         * Inline or docked to the bottom, with a draggable height; click a parent hash to jump to that commit; Up and Down arrows step through commits, Escape closes
     * Perform Git actions by right clicking on a commit, branch, tag, stash, or the uncommitted changes:
-        * Create, checkout, rename, delete, merge, rebase on, and push branches (to one or several remotes)
+        * Create, checkout, rename, delete, merge, rebase on, and push branches (to one or several remotes); create a pull request on GitHub, GitLab, Bitbucket or a custom provider
         * Archive a branch, tag or commit as a zip or tar file
         * Delete remote branches, fetch a remote branch into a local branch, pull a remote branch into the current branch
         * Add, delete, and push tags
@@ -55,6 +55,7 @@ This extension contributes the following settings:
 * `git-graph.commitDetailsView.location`: Where the commit details open: `Inline` (below the commit) or `Docked to Bottom`. Default: `Inline`.
 * `git-graph.commitDetailsView.fileView.type`: Default file view in the commit details: `File Tree` or `File List`. Default: `File Tree`.
 * `git-graph.contextMenuActionsVisibility`: Hide individual context menu actions, for example `{"commit": {"reset": false}}`. Menus: `branch`, `commit`, `remoteBranch`, `tag`.
+* `git-graph.customPullRequestProviders`: Pull request providers for hosts other than GitHub, GitLab and Bitbucket, for example `[{"name": "Gitea", "templateUrl": "https://gitea.example.com/$destinationOwner/$destinationRepo/compare/$destinationBranch...$sourceOwner:$sourceBranch"}]`.
 * `git-graph.customBranchGlobPatterns`: Named glob patterns offered in the Branch dropdown, for example `[{"name": "Features", "glob": "heads/feature/*"}]`.
 * `git-graph.date.format`: Specifies the date format used in the date column of the graph.
 * `git-graph.date.type`: Specifies whether the author date or the commit date is displayed.

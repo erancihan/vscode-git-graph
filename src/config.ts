@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ColumnVisibility, CommitDetailsViewConfig, CommitDetailsViewLocation, CommitOrdering, ContextMenuActionsVisibility, CustomBranchGlobPattern, DateFormat, DateType, DialogDefaults, GitResetMode, GraphStyle, KeyboardShortcuts, ReferenceLabelAlignment, ReferenceLabelsConfig, RepoDropdownOrder, SquashMessageFormat, TabIconColourTheme } from './types';
+import { ColumnVisibility, CommitDetailsViewConfig, CommitDetailsViewLocation, CommitOrdering, ContextMenuActionsVisibility, CustomBranchGlobPattern, CustomPullRequestProvider, DateFormat, DateType, DialogDefaults, GitResetMode, GraphStyle, KeyboardShortcuts, ReferenceLabelAlignment, ReferenceLabelsConfig, RepoDropdownOrder, SquashMessageFormat, TabIconColourTheme } from './types';
 
 const DEFAULT_GRAPH_COLOURS = ['#0085d9', '#d9008f', '#00d90a', '#d98500', '#a300d9', '#ff0000', '#00d9cc', '#e138e8', '#85d900', '#dc5b23', '#6f24d6', '#ffcc00'];
 const GRAPH_COLOUR_REGEX = /^\s*(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|rgb[a]?\s*\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\))\s*$/;
@@ -62,7 +62,7 @@ class Config {
 			return <T>result;
 		};
 		return {
-			branch: read('branch', { checkout: true, rename: true, delete: true, merge: true, rebase: true, push: true, archive: true, copyName: true }),
+			branch: read('branch', { checkout: true, rename: true, delete: true, merge: true, rebase: true, push: true, createPullRequest: true, archive: true, copyName: true }),
 			commit: read('commit', { addTag: true, createBranch: true, checkout: true, cherrypick: true, revert: true, drop: true, merge: true, rebase: true, reset: true, archive: true, copyHash: true }),
 			remoteBranch: read('remoteBranch', { checkout: true, delete: true, fetch: true, pull: true, copyName: true }),
 			stash: read('stash', { apply: true, createBranch: true, pop: true, drop: true, copyName: true, copyHash: true }),
@@ -164,6 +164,21 @@ class Config {
 			}
 		}
 		return patterns;
+	}
+
+	/** Extra pull request providers for hosts other than GitHub, GitLab and Bitbucket. */
+	public customPullRequestProviders(): CustomPullRequestProvider[] {
+		const value = this.get<unknown>('customPullRequestProviders', null, []);
+		if (!Array.isArray(value)) return [];
+		const providers: CustomPullRequestProvider[] = [];
+		for (const entry of value) {
+			if (typeof entry !== 'object' || entry === null) continue;
+			const name = (<{ name?: unknown }>entry).name, templateUrl = (<{ templateUrl?: unknown }>entry).templateUrl;
+			if (typeof name === 'string' && name.trim() !== '' && typeof templateUrl === 'string' && /^https?:\/\//i.test(templateUrl.trim())) {
+				providers.push({ name: name.trim(), templateUrl: templateUrl.trim() });
+			}
+		}
+		return providers;
 	}
 
 	/* Columns */

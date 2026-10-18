@@ -180,6 +180,11 @@
 									"default": true,
 									"description": "Push Branch"
 								},
+								"createPullRequest": {
+									"type": "boolean",
+									"default": true,
+									"description": "Create Pull Request"
+								},
 								"archive": {
 									"type": "boolean",
 									"default": true,
@@ -393,6 +398,29 @@
 					},
 					"default": [],
 					"description": "Named glob patterns offered in the Branch dropdown, for example {\"name\": \"Feature Branches\", \"glob\": \"heads/feature/*\"}."
+				},
+				"git-graph.customPullRequestProviders": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"name": {
+								"type": "string",
+								"description": "Name shown in the \"Create Pull Request\" dialog"
+							},
+							"templateUrl": {
+								"type": "string",
+								"description": "URL of the \"new pull request\" page. Variables: $sourceOwner, $sourceRepo, $sourceBranch, $destinationOwner, $destinationRepo, $destinationBranch."
+							}
+						},
+						"required": [
+							"name",
+							"templateUrl"
+						],
+						"additionalProperties": false
+					},
+					"default": [],
+					"description": "Pull request providers for hosts other than github.com, gitlab.com and bitbucket.org, for example {\"name\": \"Gitea\", \"templateUrl\": \"https://gitea.example.com/$destinationOwner/$destinationRepo/compare/$destinationBranch...$sourceOwner:$sourceBranch\"}."
 				},
 				"git-graph.date.format": {
 					"type": "string",

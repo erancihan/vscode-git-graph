@@ -243,3 +243,11 @@ describe('Config.referenceLabels', () => {
 		expect(getConfig().referenceLabels().alignment).toBe('Normal');
 	});
 });
+
+describe('Config.customPullRequestProviders', () => {
+	it('keeps valid entries only', () => {
+		expect(getConfig().customPullRequestProviders()).toEqual([]);
+		setConfig({ 'customPullRequestProviders': [{ name: ' Gitea ', templateUrl: ' https://gitea.example.com/$sourceOwner ' }, { name: 'Bad', templateUrl: 'ftp://x' }, { name: '', templateUrl: 'https://x' }, 'nope'] });
+		expect(getConfig().customPullRequestProviders()).toEqual([{ name: 'Gitea', templateUrl: 'https://gitea.example.com/$sourceOwner' }]);
+	});
+});
