@@ -1,14 +1,16 @@
+import * as os from 'os';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { AvatarManager } from './avatarManager';
 import { getConfig } from './config';
 import { DataSource } from './dataSource';
-import { DiffDocProvider } from './diffDocProvider';
+import { DiffDocProvider, decodeDiffDocUri } from './diffDocProvider';
 import { ExtensionState } from './extensionState';
 import { GitGraphView } from './gitGraphView';
 import { Logger } from './logger';
 import { RepoManager } from './repoManager';
 import { StatusBarItem } from './statusBarItem';
-import { getPathFromUri } from './utils';
+import { copyToClipboard, getPathFromUri } from './utils';
 
 export function activate(context: vscode.ExtensionContext) {
 	const logger = new Logger();
@@ -53,7 +55,46 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.window.showInformationMessage('The repository "' + picked.path + '" was removed from Git Graph. Use "Git Graph: Add Git Repository..." to add it again.');
 		}),
 		vscode.commands.registerCommand('git-graph.clearAvatarCache', () => {
-			avatarManager.clearCache();
+			const count = avatarManager.clearCache();
+			vscode.window.showInformationMessage('Git Graph: The avatar cache was cleared (' + count + ' avatar' + (count !== 1 ? 's' : '') + ' removed).');
+		}),
+		vscode.commands.registerCommand('git-graph.fetch', async () => {
+			const repo = await pickRepo(repoManager, 'Select the repository to fetch');
+			if (repo === null) return;
+			const config = getConfig();
+			const status = await dataSource.fetch(repo, null, config.fetchAndPrune(), config.fetchAndPruneTags());
+			if (status === null) {
+				vscode.window.showInformationMessage('Git Graph: Fetched from the remote(s) of "' + repo + '".');
+			} else {
+				vscode.window.showErrorMessage('Git Graph: Unable to fetch: ' + status);
+			}
+		}),
+		vscode.commands.registerCommand('git-graph.version', async () => {
+			const extension = vscode.extensions.getExtension('erancihan.vscode-git-graph');
+			const info = [
+				'Git Graph Community: ' + (extension ? extension.packageJSON.version : 'unknown'),
+				'Visual Studio Code: ' + vscode.version,
+				'Git: ' + (dataSource.getGitVersion() || 'unknown') + ' (' + dataSource.getGitPath() + ')',
+				'OS: ' + os.type() + ' ' + os.release() + ' ' + os.arch()
+			];
+			logger.log('Version information: ' + info.join('; '));
+			const choice = await vscode.window.showInformationMessage(info.join('  |  '), 'Copy');
+			if (choice === 'Copy') {
+				if (await copyToClipboard(info.join('\n'))) {
+					vscode.window.showInformationMessage('Git Graph: Version information copied to the clipboard.');
+				} else {
+					vscode.window.showErrorMessage('Git Graph: Unable to copy the version information to the clipboard.');
+				}
+			}
+		}),
+		vscode.commands.registerCommand('git-graph.openFile', (uri?: vscode.Uri) => {
+			const target = uri || (vscode.window.activeTextEditor ? vscode.window.activeTextEditor.document.uri : null);
+			if (!target || target.scheme !== DiffDocProvider.scheme) {
+				vscode.window.showErrorMessage('Git Graph: This command opens the working file of a file that Git Graph shows at a revision.');
+				return;
+			}
+			const request = decodeDiffDocUri(target);
+			return vscode.window.showTextDocument(vscode.Uri.file(path.join(request.repo, request.filePath)), { preview: true });
 		}),
 		vscode.workspace.registerTextDocumentContentProvider(DiffDocProvider.scheme, new DiffDocProvider(dataSource)),
 		vscode.workspace.onDidChangeConfiguration(e => {
@@ -71,6 +112,18 @@ export function activate(context: vscode.ExtensionContext) {
 		logger
 	);
 	logger.log('Started Git Graph - Ready to use!');
+}
+
+/** The repository a command applies to: the only one, or the one the user picks. */
+async function pickRepo(repoManager: RepoManager, placeHolder: string): Promise<string | null> {
+	const repos = Object.keys(repoManager.getRepos());
+	if (repos.length === 0) {
+		vscode.window.showInformationMessage('Git Graph does not know any repository in this workspace.');
+		return null;
+	}
+	if (repos.length === 1) return repos[0];
+	const picked = await vscode.window.showQuickPick(repos.map((repo) => ({ label: repo.substring(repo.lastIndexOf('/') + 1), description: repo, path: repo })), { placeHolder: placeHolder });
+	return picked ? picked.path : null;
 }
 
 export function deactivate() { }

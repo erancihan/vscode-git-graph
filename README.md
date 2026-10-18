@@ -131,7 +131,10 @@ This extension reads the following setting:
 * `git-graph.view`: Git Graph: View Git Graph
 * `git-graph.addGitRepository`: Git Graph: Add Git Repository... (a repository outside the workspace folders, or one that was removed)
 * `git-graph.removeGitRepository`: Git Graph: Remove Git Repository...
-* `git-graph.clearAvatarCache`: Git Graph: Clear Avatar Cache
+* `git-graph.clearAvatarCache`: Git Graph: Clear Avatar Cache (reports how many avatars were removed)
+* `git-graph.fetch`: Git Graph: Fetch from Remote(s) (asks for the repository when there are several)
+* `git-graph.version`: Git Graph: Get Version Information (extension, Visual Studio Code, git and OS versions, with a Copy button)
+* `git-graph.openFile`: Git Graph: Open File (from the title of a file that Git Graph shows at a revision)
 
 ## Install
 

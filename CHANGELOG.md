@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+* Avatars: GitHub and GitLab are recognised from SSH and `git://` remote URLs as well as HTTPS; images are requested at 108px for high DPI displays; Gravatar addresses are trimmed and lower-cased before hashing; GitLab avatars come from the public avatar endpoint, so the extension no longer ships an API token; only image responses are saved. "Clear Avatar Cache" reports how many avatars were removed.
+* New commands "Git Graph: Fetch from Remote(s)", "Git Graph: Get Version Information" (with a Copy button) and "Git Graph: Open File", also shown in the editor title of a file that Git Graph opened at a revision.
+
 * Repository Settings widget (gear button in the controls bar): a custom name for the repository dropdown; per-repository overrides for showing tags, stashes, reflog commits and first-parent loading; the remotes with Fetch, Prune, Edit, Delete and "Add Remote" actions and a "Hidden" switch that keeps a remote's branches off the graph; the repository's user name and email, saved locally or globally; a shortcut to the extension settings. Repository state written by earlier versions is upgraded on load.
 
 ## 2.2.1 - 2026-10-18

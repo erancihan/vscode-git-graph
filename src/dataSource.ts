@@ -27,6 +27,12 @@ const INVALID_ARGUMENT = 'The value is not a valid reference name or commit hash
 export class DataSource {
 	private readonly logger: Logger;
 	private gitPath: string = 'git';
+	private gitVersion: string | null = null;
+
+	/** Output of `git --version`, or null until it has been read. */
+	public getGitVersion() {
+		return this.gitVersion;
+	}
 
 	/** Path of the git executable in use (`git` until discovery finishes). */
 	public getGitPath() {
@@ -49,7 +55,7 @@ export class DataSource {
 			this.gitPath = gitPath;
 			this.logger.log('Using git executable: ' + gitPath);
 			this.spawnGit(['--version'], process.cwd(), (stdout) => stdout.trim()).then(
-				(version) => this.logger.log(version),
+				(version) => { this.gitVersion = version; this.logger.log(version); },
 				(error) => this.logger.logError('Unable to run git (set the "git.path" setting to the path of your git executable): ' + error)
 			);
 		});
