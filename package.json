@@ -927,6 +927,7 @@
 				"git-graph.ciStatus.enabled": {
 					"type": "boolean",
 					"default": false,
+					"scope": "application",
 					"description": "%config.ciStatus.enabled.description%"
 				},
 				"git-graph.ciStatus.maxCommits": {
@@ -939,6 +940,7 @@
 				"git-graph.ciStatus.hosts": {
 					"type": "object",
 					"default": {},
+					"scope": "application",
 					"additionalProperties": {
 						"type": "string",
 						"enum": [
