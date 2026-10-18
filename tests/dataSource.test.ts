@@ -22,6 +22,7 @@ function git(repo: string, args: string[]) {
 }
 
 function commit(repo: string, file: string, content: string, message: string) {
+	fs.mkdirSync(path.dirname(path.join(repo, file)), { recursive: true });
 	fs.writeFileSync(path.join(repo, file), content);
 	git(repo, ['add', file]);
 	git(repo, ['commit', '-q', '-m', message]);
@@ -739,5 +740,87 @@ describe('parseSignature', () => {
 	it('keeps known status codes and maps unknown ones to "E"', () => {
 		expect(parseSignature('G', 'Alice <alice@example.com>', 'ABCDEF')).toEqual({ status: 'G', signer: 'Alice <alice@example.com>', key: 'ABCDEF' });
 		expect(parseSignature('?', '', '')).toEqual({ status: 'E', signer: '', key: '' });
+	});
+});
+
+describe('DataSource bisect', () => {
+	let repo: string;
+	let dataSource: DataSource;
+	const hashes: string[] = [];
+
+	beforeAll(() => {
+		repo = fs.mkdtempSync(path.join(os.tmpdir(), 'git-graph-bisect-'));
+		git(repo, ['init', '-q', '-b', 'master']);
+		git(repo, ['config', 'user.name', 'Test Committer']);
+		git(repo, ['config', 'user.email', 'committer@example.com']);
+		git(repo, ['config', 'commit.gpgsign', 'false']);
+		for (let i = 1; i <= 6; i++) hashes.push(commit(repo, 'f.txt', 'v' + i + '\n', 'Commit ' + i));
+		dataSource = new DataSource(new Logger());
+	});
+
+	afterAll(() => {
+		fs.rmSync(repo, { recursive: true, force: true });
+	});
+
+	it('starts on the first mark, reports progress, shows the marks on the graph and resets', async () => {
+		expect(await dataSource.isBisecting(repo)).toBe(false);
+		const bad = await dataSource.bisect(repo, 'bad', hashes[5]);
+		expect(bad.status).toBeNull();
+		expect(await dataSource.isBisecting(repo)).toBe(true);
+		const good = await dataSource.bisect(repo, 'good', hashes[0]);
+		expect(good.status).toBeNull();
+		expect(good.message).toMatch(/^Bisecting: \d+ revisions? left to test/);
+		const result = await dataSource.getCommits(repo, [], 50, false);
+		expect(result.bisecting).toBe(true);
+		expect(result.commits.find((c) => c.hash === hashes[5])!.bisect).toBe('bad');
+		expect(result.commits.find((c) => c.hash === hashes[0])!.bisect).toBe('good');
+		expect(result.commits.find((c) => c.hash === hashes[3])!.bisect).toBeNull();
+		const current = git(repo, ['rev-parse', 'HEAD']);
+		expect(hashes.indexOf(current)).toBeGreaterThan(0);
+		expect((await dataSource.bisect(repo, 'skip', current)).status).toBeNull();
+		expect((await dataSource.bisect(repo, 'good', 'nothash')).status).toMatch(/not a valid/i);
+		expect((await dataSource.bisect(repo, 'reset', null)).status).toBeNull();
+		expect(await dataSource.isBisecting(repo)).toBe(false);
+		expect(git(repo, ['rev-parse', 'HEAD'])).toBe(hashes[5]);
+		expect((await dataSource.getCommits(repo, [], 50, false)).bisecting).toBe(false);
+	});
+});
+
+describe('DataSource filters', () => {
+	let repo: string;
+	let dataSource: DataSource;
+
+	beforeAll(() => {
+		repo = fs.mkdtempSync(path.join(os.tmpdir(), 'git-graph-filter-'));
+		git(repo, ['init', '-q', '-b', 'master']);
+		git(repo, ['config', 'user.name', 'Test Committer']);
+		git(repo, ['config', 'user.email', 'committer@example.com']);
+		git(repo, ['config', 'commit.gpgsign', 'false']);
+		commit(repo, 'a.txt', 'one\n', 'Touches a');
+		commit(repo, 'dir/b.txt', 'two\n', 'Touches dir/b');
+		// The git() helper pins the author identity through the environment, so this commit sets its own
+		cp.execFileSync('git', ['commit', '-q', '--allow-empty', '-m', 'By someone else'], { cwd: repo, encoding: 'utf8', env: { ...process.env, GIT_AUTHOR_NAME: 'Other Author', GIT_AUTHOR_EMAIL: 'other@example.com', GIT_COMMITTER_NAME: 'Other Author', GIT_COMMITTER_EMAIL: 'other@example.com' } });
+		dataSource = new DataSource(new Logger());
+	});
+
+	afterAll(() => {
+		fs.rmSync(repo, { recursive: true, force: true });
+	});
+
+	const messages = (result: { commits: { hash: string, message: string }[] }) => result.commits.filter((c) => c.hash !== '*').map((c) => c.message);
+
+	it('filters by author (case-insensitive substring, several authors combine with OR)', async () => {
+		expect(messages(await dataSource.getCommits(repo, [], 50, false, null, { authors: ['OTHER@example'], paths: [] }))).toEqual(['By someone else']);
+		expect(messages(await dataSource.getCommits(repo, [], 50, false, null, { authors: ['other@example.com', 'author@example.com'], paths: [] }))).toHaveLength(3);
+		expect(messages(await dataSource.getCommits(repo, [], 50, false, null, { authors: ['a.b'], paths: [] }))).toEqual([]); // literal, not a regular expression
+	});
+
+	it('filters by path and refuses paths outside the repository', async () => {
+		expect(messages(await dataSource.getCommits(repo, [], 50, false, null, { authors: [], paths: ['a.txt'] }))).toEqual(['Touches a']);
+		expect(messages(await dataSource.getCommits(repo, [], 50, false, null, { authors: [], paths: ['dir'] }))).toEqual(['Touches dir/b']);
+		expect(messages(await dataSource.getCommits(repo, [], 50, false, null, { authors: [], paths: ['a.txt', 'dir'] }))).toEqual(['Touches dir/b', 'Touches a']);
+		expect(messages(await dataSource.getCommits(repo, [], 50, false, null, { authors: ['author@example.com'], paths: ['dir'] }))).toEqual(['Touches dir/b']);
+		expect(messages(await dataSource.getCommits(repo, [], 50, false, null, { authors: ['other@example.com'], paths: ['dir'] }))).toEqual([]);
+		expect(messages(await dataSource.getCommits(repo, [], 50, false, null, { authors: [], paths: ['../outside'] }))).toEqual([]);
 	});
 });

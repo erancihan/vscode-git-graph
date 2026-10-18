@@ -574,7 +574,7 @@ svg.openFolderIcon, svg.closedFolderIcon, svg.fileIcon{
 	left:0;
 	right:0;
 	top:0;
-	padding:4px 130px 4px 0;
+	padding:4px 250px 4px 0;
 	border-bottom:1px solid rgba(128,128,128,0.5);
 	line-height:32px;
 	text-align:center;
@@ -603,11 +603,25 @@ svg.openFolderIcon, svg.closedFolderIcon, svg.fileIcon{
 	margin-top:-12px;
 }
 #refreshBtn{
-	right:42px;
+	right:72px;
+}
+#fetchBtn{
+	right:158px;
+}
+#settingsBtn, #filterBtn{
+	width:24px;
 }
 #settingsBtn{
-	width:24px;
 	right:8px;
+}
+#filterBtn{
+	right:38px;
+}
+#filterBtn svg{
+	width:14px;
+	height:14px;
+	vertical-align:middle;
+	fill:currentColor;
 }
 #settingsBtn svg{
 	width:14px;
@@ -1091,12 +1105,12 @@ body.stickyHeader #controls{
 }
 body.stickyHeader #commitTable th{
 	position:sticky;
-	top:var(--git-graph-controls-height, 41px);
+	top:var(--git-graph-header-offset, 41px);
 	z-index:3;
 	background-color:var(--vscode-editor-background);
 }
 body.stickyHeader #scrollShadow.active{
-	top:calc(var(--git-graph-controls-height, 41px) + 31px);
+	top:calc(var(--git-graph-header-offset, 41px) + 31px);
 }
 
 #dialog textarea{
@@ -1128,4 +1142,140 @@ body.stickyHeader #scrollShadow.active{
 	fill:currentColor;
 	vertical-align:middle;
 	margin-right:4px;
+}
+
+/* Filter bar */
+#filterBar{
+	display:none;
+}
+#filterBar.active{
+	display:block;
+	padding:4px 8px;
+	border-bottom:1px solid rgba(128,128,128,0.3);
+	line-height:22px;
+	font-size:12px;
+	white-space:nowrap;
+	overflow-x:auto;
+	background-color:var(--vscode-editor-background);
+}
+body.stickyHeader #filterBar.active{
+	position:sticky;
+	top:var(--git-graph-controls-height, 41px);
+	z-index:4;
+}
+.filterBarLabel{
+	font-weight:700;
+	margin-right:6px;
+}
+.filterChip{
+	display:inline-block;
+	margin-right:6px;
+	padding:0 4px 0 6px;
+	border:1px solid var(--vscode-contrastBorder, rgba(128,128,128,0.5));
+	border-radius:11px;
+	background-color:rgba(128,128,128,0.15);
+	max-width:320px;
+	overflow:hidden;
+	text-overflow:ellipsis;
+	vertical-align:top;
+}
+.filterChipKind{
+	opacity:0.7;
+	margin-right:4px;
+}
+.filterChipRemove{
+	display:inline-block;
+	width:14px;
+	height:14px;
+	margin-left:4px;
+	vertical-align:middle;
+	cursor:pointer;
+}
+.filterChipRemove svg{
+	width:14px;
+	height:14px;
+	fill:currentColor;
+	opacity:0.7;
+}
+.filterChipRemove:hover svg{
+	opacity:1;
+}
+#filterClear{
+	display:inline-block;
+	height:20px;
+	line-height:20px;
+	padding:0 10px;
+	border-radius:10px;
+	font-size:12px;
+	vertical-align:top;
+}
+
+/* Bisect */
+#bisectBar{
+	display:none;
+}
+#bisectBar.active{
+	display:block;
+	padding:4px 8px;
+	border-bottom:1px solid rgba(128,128,128,0.3);
+	line-height:22px;
+	font-size:12px;
+	white-space:nowrap;
+	overflow:hidden;
+	text-overflow:ellipsis;
+	background-color:var(--vscode-editor-background);
+}
+body.stickyHeader #bisectBar.active{
+	position:sticky;
+	top:var(--git-graph-controls-height, 41px);
+	z-index:4;
+}
+.bisectBarLabel{
+	font-weight:700;
+	margin-right:8px;
+	color:var(--vscode-editorWarning-foreground, #e2c08d);
+}
+#bisectStop{
+	display:inline-block;
+	height:20px;
+	line-height:20px;
+	padding:0 10px;
+	border-radius:10px;
+	font-size:12px;
+	vertical-align:top;
+	margin-left:10px;
+}
+.bisectBadge{
+	display:inline-block;
+	width:16px;
+	height:16px;
+	line-height:16px;
+	margin-right:4px;
+	margin-top:4px;
+	border-radius:3px;
+	text-align:center;
+	font-size:10px;
+	font-weight:700;
+	vertical-align:top;
+	color:var(--vscode-editor-background);
+	background-color:rgb(128,128,128);
+}
+.bisectBadge.good{
+	background-color:var(--vscode-gitDecoration-addedResourceForeground, #4caf50);
+}
+.bisectBadge.bad{
+	background-color:var(--vscode-gitDecoration-deletedResourceForeground, #f44336);
+}
+
+/* Drag and drop */
+body.dragging #commitTable tr.commit td{
+	cursor:grabbing;
+}
+#commitTable tr.commit.dropTarget td{
+	background-color:var(--vscode-list-dropBackground, rgba(128,128,128,0.35));
+	outline:1px dashed var(--vscode-focusBorder);
+	outline-offset:-1px;
+}
+.gitRef[draggable=true]{
+	cursor:grab;
 }

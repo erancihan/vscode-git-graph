@@ -1,8 +1,10 @@
 import * as cp from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
 import { getConfig } from './config';
 import { findGitExecutable } from './gitExecutable';
 import { Logger } from './logger';
-import { CherryPickOptions, GitArchiveType, GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChange, GitFileChangeType, GitPushBranchMode, GitRebaseType, GitRefData, GitRemoteDetails, GitRepoSettings, GitRepoState, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitUnsavedChanges, GitUserDetails, MergeOptions } from './types';
+import { CherryPickOptions, GitArchiveType, GitBisectAction, GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChange, GitFileChangeType, GraphFilters, GitPushBranchMode, GitRebaseType, GitRefData, GitRemoteDetails, GitRepoSettings, GitRepoState, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitUnsavedChanges, GitUserDetails, MergeOptions } from './types';
 import { getPathFromStr } from './utils';
 
 const eolRegex = /\r\n|\r|\n/g;
@@ -111,10 +113,10 @@ export class DataSource {
 	 * Load commits. `branches` lists branch names, "HEAD", or "--glob=<pattern>" entries; an empty list
 	 * shows all branches (and tags and remotes according to the settings).
 	 */
-	public async getCommits(repo: string, branches: string[], maxCommits: number, showRemoteBranches: boolean, repoState: GitRepoState | null = null) {
+	public async getCommits(repo: string, branches: string[], maxCommits: number, showRemoteBranches: boolean, repoState: GitRepoState | null = null, filters: GraphFilters = { authors: [], paths: [] }) {
 		const options = resolveLoadOptions(repoState);
 		const [commits, refData, stashes] = await Promise.all([
-			this.getGitLog(repo, branches, maxCommits + 1, showRemoteBranches, options),
+			this.getGitLog(repo, branches, maxCommits + 1, showRemoteBranches, options, filters),
 			this.getRefs(repo, showRemoteBranches, options),
 			options.showStashes ? this.getStashes(repo) : Promise.resolve(<GitStashEntry[]>[])
 		]);
@@ -151,7 +153,7 @@ export class DataSource {
 		for (let i = 0; i < commits.length; i++) {
 			commitLookup[commits[i].hash] = i;
 			const stash = commits[i].stash || null;
-			commitNodes.push({ hash: commits[i].hash, parentHashes: commits[i].parentHashes, author: commits[i].author, email: commits[i].email, date: commits[i].date, message: commits[i].message, refs: stash !== null ? [{ hash: commits[i].hash, name: stash.selector, type: 'stash' }] : [], stash: stash, signature: commits[i].signature || null });
+			commitNodes.push({ hash: commits[i].hash, parentHashes: commits[i].parentHashes, author: commits[i].author, email: commits[i].email, date: commits[i].date, message: commits[i].message, refs: stash !== null ? [{ hash: commits[i].hash, name: stash.selector, type: 'stash' }] : [], stash: stash, signature: commits[i].signature || null, bisect: refData.bisect[commits[i].hash] || null });
 		}
 		for (let i = 0; i < refData.refs.length; i++) {
 			if (typeof commitLookup[refData.refs[i].hash] === 'number') {
@@ -159,7 +161,7 @@ export class DataSource {
 			}
 		}
 
-		return { commits: commitNodes, head: refData.head, moreCommitsAvailable: moreCommitsAvailable };
+		return { commits: commitNodes, head: refData.head, moreCommitsAvailable: moreCommitsAvailable, bisecting: Object.keys(refData.bisect).length > 0 || await this.isBisecting(repo) };
 	}
 
 	public commitDetails(repo: string, commitHash: string): Promise<GitCommitDetails | null> {
@@ -431,6 +433,33 @@ export class DataSource {
 		return this.runGitCommand(commitArgs, repo);
 	}
 
+	/* Bisect */
+
+	/** True while `git bisect start` is in effect (BISECT_START exists in the git directory). No git process is spawned. */
+	public isBisecting(repo: string): Promise<boolean> {
+		const gitDir = resolveGitDir(repo);
+		return Promise.resolve(gitDir !== null && fs.existsSync(path.join(gitDir, 'BISECT_START')));
+	}
+
+	/**
+	 * Mark a commit good, bad or skip (starting the bisection on the first mark), or reset.
+	 * Resolves with the status and git's progress line.
+	 */
+	public async bisect(repo: string, action: GitBisectAction, commitHash: string | null): Promise<{ status: GitCommandStatus, message: string | null }> {
+		if (action === 'reset') {
+			return { status: await this.runGitCommand(['bisect', 'reset'], repo), message: null };
+		}
+		if (commitHash === null || !isCommitHash(commitHash)) return { status: await rejectArguments(), message: null };
+		if (!await this.isBisecting(repo)) {
+			const started = await this.runGitCommand(['bisect', 'start'], repo);
+			if (started !== null) return { status: started, message: null };
+		}
+		return this.spawnGit(['bisect', action, commitHash], repo, (stdout) => {
+			const progress = stdout.split(eolRegex).find((line) => /^Bisecting:/.test(line) || /is the first bad commit/.test(line));
+			return { status: <GitCommandStatus>null, message: progress !== undefined ? progress : null };
+		}).catch((error: string) => ({ status: <GitCommandStatus>error, message: null }));
+	}
+
 	/** Full message (%B) of a commit, or null when it cannot be read. */
 	public getCommitMessage(repo: string, commitHash: string): Promise<string | null> {
 		if (!isCommitHash(commitHash)) return Promise.resolve(null);
@@ -664,11 +693,10 @@ export class DataSource {
 
 	private getRefs(repo: string, showRemoteBranches: boolean, options: LoadOptions = resolveLoadOptions(null)) {
 		const showTags = options.showTags, showRemoteHeads = getConfig().showRemoteHeads(), hideRemotes = options.hideRemotes;
-		const args = ['show-ref'];
-		if (!showRemoteBranches) args.push('--heads', '--tags');
-		args.push('-d', '--head');
+		// Every ref is listed (refs/bisect/* is needed too); remotes are dropped below when they are hidden
+		const args = ['show-ref', '-d', '--head'];
 		return this.spawnGit(args, repo, (stdout) => {
-			const refData: GitRefData = { head: null, refs: [] };
+			const refData: GitRefData = { head: null, refs: [], bisect: {} };
 			const lines = stdout.split(eolRegex);
 			for (let i = 0; i < lines.length - 1; i++) {
 				const line = lines[i].split(' ');
@@ -691,22 +719,37 @@ export class DataSource {
 						refData.refs.push({ hash: hash, name: ref.substring(10), type: 'tag' });
 					}
 				} else if (ref.startsWith('refs/remotes/')) {
+					if (!showRemoteBranches) continue;
 					if (!showRemoteHeads && ref.endsWith('/HEAD')) continue;
 					const name = ref.substring(13);
 					if (hideRemotes.some((remote) => name.startsWith(remote + '/'))) continue;
 					refData.refs.push({ hash: hash, name: name, type: 'remote' });
 				} else if (ref === 'HEAD') {
 					refData.head = hash;
+				} else if (ref.startsWith('refs/bisect/')) {
+					// refs/bisect/bad, refs/bisect/good-<hash>, refs/bisect/skip-<hash>
+					const name = ref.substring(12);
+					if (name === 'bad') refData.bisect[hash] = 'bad';
+					else if (name.startsWith('good-')) refData.bisect[hash] = 'good';
+					else if (name.startsWith('skip-')) refData.bisect[hash] = 'skip';
 				}
 			}
 			return refData;
-		}).catch((): GitRefData => ({ head: null, refs: [] }));
+		}).catch((): GitRefData => ({ head: null, refs: [], bisect: {} }));
 	}
 
-	private getGitLog(repo: string, branches: string[], num: number, showRemoteBranches: boolean, options: LoadOptions = resolveLoadOptions(null)) {
+	private getGitLog(repo: string, branches: string[], num: number, showRemoteBranches: boolean, options: LoadOptions = resolveLoadOptions(null), filters: GraphFilters = { authors: [], paths: [] }) {
 		const config = getConfig(), formats = this.getFormats();
 		const args = ['log', '--max-count=' + num, '--format=' + formats.log, '--' + config.commitOrdering() + '-order'];
 		if (options.onlyFollowFirstParent) args.push('--first-parent');
+		const authors = filters.authors.filter((author) => author.trim() !== '' && !/[\r\n\0]/.test(author));
+		if (authors.length > 0) {
+			// Several --author patterns are combined with OR by git; --fixed-strings keeps them literal
+			args.push('--fixed-strings', '--regexp-ignore-case');
+			for (const author of authors) args.push('--author=' + author.trim());
+		}
+		const paths = filters.paths.filter((p) => p !== '');
+		if (!paths.every(isSafeRelativePath)) return Promise.resolve(<GitCommit[]>[]);
 		if (branches.length > 0) {
 			for (const branch of branches) {
 				if (isGlobSelector(branch)) {
@@ -729,6 +772,7 @@ export class DataSource {
 			if (options.includeCommitsMentionedByReflogs) args.push('--reflog');
 		}
 		args.push('--');
+		for (const p of paths) args.push(p);
 
 		return this.spawnGit(args, repo, (stdout) => {
 			const lines = stdout.split(eolRegex);
@@ -815,6 +859,25 @@ export class DataSource {
  * A reference name supplied by the user or read from the repository must never be mistaken for a
  * git option. Git itself rejects names that start with "-", so refusing them loses nothing.
  */
+/**
+ * The git directory of a repository: `.git` when it is a directory, or the target of a `.git` file
+ * (worktrees and submodules). Returns null when neither exists.
+ */
+export function resolveGitDir(repo: string): string | null {
+	const dotGit = path.join(repo, '.git');
+	try {
+		const stat = fs.statSync(dotGit);
+		if (stat.isDirectory()) return dotGit;
+		if (stat.isFile()) {
+			const match = /^gitdir:\s*(.+?)\s*$/m.exec(fs.readFileSync(dotGit, 'utf8'));
+			if (match !== null) return path.isAbsolute(match[1]) ? match[1] : path.join(repo, match[1]);
+		}
+	} catch (e) {
+		// no .git entry
+	}
+	return null;
+}
+
 /** Options for loading a repository: the settings, overridden by the repository state where it is set. */
 interface LoadOptions {
 	hideRemotes: string[];
