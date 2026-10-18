@@ -1,6 +1,8 @@
 # Change Log
 
-## Unreleased
+## 2.5.0 - 2026-10-18
+
+Parity polish from the upstream settings and commands audit: the remaining dialog defaults, file encoding and editor group, presentation settings, code review commands, and menus that survive a refresh.
 
 * Context menus and dialogs stay open while the graph refreshes in the background (for example when a fetch or a file change reloads the commits), as long as the row or label they were opened from still exists; the highlight moves to the re-rendered element.
 * Commands "Git Graph: End a Specific Code Review in Workspace..." and "Git Graph: Resume a Specific Code Review in Workspace..." pick a review from a list (repository, commits, files left, last activity); resuming opens the graph on that repository and expands the reviewed commit or comparison. The view can now be opened on a given commit (`loadViewTo`).
