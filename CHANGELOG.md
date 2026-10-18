@@ -6,7 +6,8 @@
 * All git commands are now started with `spawn` and an argument array instead of a shell command line. Branch names, tag names and messages that contain quotes or spaces work, and the extension no longer depends on a shell.
 * Git output is collected as bytes and decoded after the process closes, so multi-byte characters split across chunks stay intact.
 * Every git command runs with `color.ui=false` and `log.showSignature=false`, so a user configuration with coloured output or signature display no longer breaks parsing.
-* The `git.path` setting of the built-in Git extension can be an array of candidate paths. The first candidate that exists is used.
+* The `git.path` setting of the built-in Git extension can be an array of candidate paths. The first candidate that runs is used. When nothing is configured, or no configured path works, git is searched on PATH and then in the usual install locations (Git for Windows, Homebrew, Xcode). The chosen executable and its version are written to the Output Channel.
+* New setting `git-graph.retainContextWhenHidden` (default true): keep the view alive while its tab is hidden so switching back is instant.
 * A git executable that cannot be started is reported in the Output Channel instead of failing silently.
 * Reference names that start with `-` and commit hashes that are not hexadecimal are refused before they reach git, so a hostile repository cannot turn a branch name into a git option.
 * Settings use grouped names, for example `git-graph.date.format` and `git-graph.repository.commits.initialLoad`. The flat names from version 1.x are marked deprecated in the Settings editor but are still read when the grouped name is not set. Boolean and number settings accept string values from hand-edited `settings.json` files.

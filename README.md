@@ -60,6 +60,7 @@ This extension contributes the following settings:
 * `git-graph.repository.showUncommittedChanges`: Show uncommitted changes. Set to false to decrease load time on large repositories.
 * `git-graph.repository.showUntrackedFiles`: Count untracked files in the "Uncommitted Changes" row. Default: true.
 * `git-graph.repository.useMailmap`: Apply the repository's `.mailmap` to author and committer identities. Default: false.
+* `git-graph.retainContextWhenHidden`: Keep the view alive while its tab is hidden so it restores instantly. Default: true.
 * `git-graph.showStatusBarItem`: Show a Status Bar item that opens Git Graph when clicked.
 * `git-graph.tabIconColourTheme`: Specifies the colour theme of the icon displayed on the Git Graph tab.
 
@@ -67,7 +68,7 @@ The flat setting names from version 1.x (for example `git-graph.dateFormat`) are
 
 This extension reads the following setting:
 
-* `git.path`: Specifies the path of a portable Git installation.
+* `git.path`: Path of the git executable, or an array of candidate paths. When it is not set, or none of the paths work, the extension looks for git on PATH and in the usual install locations (Git for Windows, Homebrew, Xcode).
 
 ## Extension Commands
 

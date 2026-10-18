@@ -159,6 +159,10 @@ class Config {
 		return this.getNonNegativeInteger('maxDepthOfRepoSearch', null, 0);
 	}
 
+	public retainContextWhenHidden() {
+		return this.getBoolean('retainContextWhenHidden', null, true);
+	}
+
 	public showStatusBarItem() {
 		return this.getBoolean('showStatusBarItem', null, true);
 	}

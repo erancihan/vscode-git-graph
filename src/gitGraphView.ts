@@ -37,6 +37,7 @@ export class GitGraphView {
 
 		const panel = vscode.window.createWebviewPanel('git-graph', 'Git Graph', column || vscode.ViewColumn.One, {
 			enableScripts: true,
+			retainContextWhenHidden: getConfig().retainContextWhenHidden(),
 			localResourceRoots: [
 				vscode.Uri.file(path.join(extensionPath, 'media'))
 			]
