@@ -292,7 +292,7 @@ export class GitGraphView {
 			<div id="dialog"></div>
 			<div id="scrollShadow"></div>
 			<script nonce="${nonce}">var viewState = ${JSON.stringify(viewState)};</script>
-			<script src="${this.getMediaUri('out.min.js')}"></script>
+			<script nonce="${nonce}" src="${this.getMediaUri('out.min.js')}"></script>
 			</body>`;
 		} else {
 			body = `<body class="unableToLoad" style="${colorVars}">
@@ -308,19 +308,19 @@ export class GitGraphView {
 		<html lang="en">
 			<head>
 				<meta charset="UTF-8">
-				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src vscode-resource: 'unsafe-inline'; script-src vscode-resource: 'nonce-${nonce}'; img-src data:;">
+				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${this.panel.webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src data:;">
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
 				<link rel="stylesheet" type="text/css" href="${this.getMediaUri('main.css')}">
 				<link rel="stylesheet" type="text/css" href="${this.getMediaUri('dropdown.css')}">
 				<title>Git Graph</title>
-				<style>${colorParams}"</style>
+				<style>${colorParams}</style>
 			</head>
 			${body}
 		</html>`;
 	}
 
 	private getMediaUri(file: string) {
-		return this.getUri('media', file).with({ scheme: 'vscode-resource' });
+		return this.panel.webview.asWebviewUri(this.getUri('media', file));
 	}
 
 	private getUri(...pathComps: string[]) {
