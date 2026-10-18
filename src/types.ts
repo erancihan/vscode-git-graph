@@ -69,6 +69,10 @@ export interface ContextMenuActionsVisibility {
 	uncommittedChanges: { reset: boolean, clean: boolean, stash: boolean };
 }
 
+export interface KeyboardShortcuts {
+	find: string; // single lower-case letter, pressed with Ctrl / Cmd
+}
+
 export interface DialogDefaults {
 	addTag: { type: 'annotated' | 'lightweight' };
 	applyStash: { reinstateIndex: boolean };
@@ -97,6 +101,7 @@ export interface GitGraphViewState {
 	graphColours: string[];
 	graphStyle: GraphStyle;
 	initialLoadCommits: number;
+	keyboardShortcuts: KeyboardShortcuts;
 	lastActiveRepo: string | null;
 	loadMoreCommits: number;
 	loadMoreCommitsAutomatically: boolean;

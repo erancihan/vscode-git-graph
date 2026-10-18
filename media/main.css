@@ -558,3 +558,77 @@ svg.openFolderIcon, svg.closedFolderIcon, svg.fileIcon{
 #commitGraph, #commitTable th, #commitTable td, .gitRef, #loadingHeader, .unselectable, .roundedBtn, #controls label{
 	user-select:none;
 }
+/* Find Widget */
+#findWidget{
+	display:none;
+	position:fixed;
+	top:46px;
+	right:20px;
+	z-index:150;
+	align-items:center;
+	padding:4px 6px;
+	line-height:24px;
+	font-size:13px;
+	border-radius:4px;
+	background-color:var(--vscode-editorWidget-background);
+	color:var(--vscode-editorWidget-foreground);
+	border:1px solid var(--vscode-widget-border, rgba(128,128,128,0.5));
+	box-shadow:0 2px 8px var(--vscode-widget-shadow, rgba(0,0,0,0.36));
+}
+#findWidget.active{
+	display:flex;
+}
+#findWidget input{
+	width:180px;
+	height:22px;
+	margin-right:4px;
+	padding:0 4px;
+	font-size:13px;
+	background-color:var(--vscode-input-background);
+	color:var(--vscode-input-foreground);
+	border:1px solid var(--vscode-input-border, transparent);
+}
+#findWidget input:focus{
+	outline:1px solid var(--vscode-focusBorder);
+}
+#findWidget input.invalid{
+	border-color:var(--vscode-inputValidation-errorBorder, #be1100);
+}
+#findWidget .findBtn{
+	display:inline-block;
+	width:22px;
+	height:22px;
+	line-height:22px;
+	margin-left:2px;
+	text-align:center;
+	border-radius:3px;
+	border:1px solid transparent;
+	font-size:12px;
+	cursor:pointer;
+	user-select:none;
+}
+#findWidget .findBtn:hover{
+	background-color:var(--vscode-toolbar-hoverBackground, rgba(128,128,128,0.2));
+}
+#findWidget .findBtn.active{
+	background-color:var(--vscode-inputOption-activeBackground, rgba(0,120,212,0.4));
+	border-color:var(--vscode-inputOption-activeBorder, transparent);
+}
+#findWidget .findBtn.disabled{
+	opacity:0.4;
+	cursor:default;
+}
+#findCount{
+	display:inline-block;
+	min-width:64px;
+	margin:0 4px;
+	text-align:center;
+	opacity:0.8;
+	white-space:nowrap;
+}
+#commitTable tr.commit.findMatch td{
+	background-color:var(--vscode-editor-findMatchHighlightBackground, rgba(234,92,0,0.33));
+}
+#commitTable tr.commit.findCurrent td{
+	background-color:var(--vscode-editor-findMatchBackground, rgba(168,165,38,0.6));
+}

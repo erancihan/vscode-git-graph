@@ -494,6 +494,12 @@
 					"default": "rounded",
 					"description": "Specifies the style of the graph."
 				},
+				"git-graph.keyboardShortcut.find": {
+					"type": "string",
+					"pattern": "^[a-z]$",
+					"default": "f",
+					"description": "Letter of the keyboard shortcut that opens the find widget. It is pressed together with Ctrl (Windows, Linux) or Cmd (macOS) while the Git Graph view has focus."
+				},
 				"git-graph.maxDepthOfRepoSearch": {
 					"type": "number",
 					"default": 0,

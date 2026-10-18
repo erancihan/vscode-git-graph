@@ -353,6 +353,7 @@ export class GitGraphView {
 			graphColours: config.graphColours(),
 			graphStyle: config.graphStyle(),
 			initialLoadCommits: config.initialLoadCommits(),
+			keyboardShortcuts: config.keyboardShortcuts(),
 			lastActiveRepo: this.extensionState.getLastActiveRepo(),
 			loadMoreCommits: config.loadMoreCommits(),
 			loadMoreCommitsAutomatically: config.loadMoreCommitsAutomatically(),
