@@ -78,6 +78,22 @@
 				"category": "Git Graph",
 				"command": "git-graph.removeGitRepository",
 				"title": "Remove Git Repository..."
+			},
+			{
+				"category": "Git Graph",
+				"command": "git-graph.fetch",
+				"title": "Fetch from Remote(s)"
+			},
+			{
+				"category": "Git Graph",
+				"command": "git-graph.version",
+				"title": "Get Version Information"
+			},
+			{
+				"category": "Git Graph",
+				"command": "git-graph.openFile",
+				"title": "Open File",
+				"icon": "$(go-to-file)"
 			}
 		],
 		"configuration": {
@@ -957,6 +973,19 @@
 			}
 		},
 		"menus": {
+			"commandPalette": [
+				{
+					"command": "git-graph.openFile",
+					"when": "resourceScheme == git-graph"
+				}
+			],
+			"editor/title": [
+				{
+					"command": "git-graph.openFile",
+					"group": "navigation",
+					"when": "resourceScheme == git-graph"
+				}
+			],
 			"scm/title": [
 				{
 					"command": "git-graph.view",

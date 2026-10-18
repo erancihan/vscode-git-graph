@@ -1,4 +1,3 @@
-import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as http from 'http';
 import * as https from 'https';
@@ -7,6 +6,7 @@ import { DataSource } from './dataSource';
 import { ExtensionState } from './extensionState';
 import { GitGraphView } from './gitGraphView';
 import { Logger } from './logger';
+import { AVATAR_PIXEL_SIZE, RemoteSource, gravatarHash, parseRemoteSource } from './avatarSource';
 import { AvatarCache } from './types';
 
 export class AvatarManager {
@@ -74,9 +74,14 @@ export class AvatarManager {
 		this.extensionState.removeAvatarFromCache(email);
 	}
 
+	/** Forget every cached avatar. Resolves with the number of entries that were removed. */
 	public clearCache() {
+		const count = Object.keys(this.avatars).length;
 		this.avatars = {};
+		this.remoteSourceCache = {};
 		this.extensionState.clearAvatarCache();
+		this.logger.log('Cleared the avatar cache (' + count + ' entries)');
+		return count;
 	}
 
 	private async fetchAvatarsInterval() {
@@ -103,25 +108,12 @@ export class AvatarManager {
 	}
 
 	private async getRemoteSource(avatarRequest: AvatarRequestItem) {
-		if (typeof this.remoteSourceCache[avatarRequest.repo] === 'string') {
+		if (typeof this.remoteSourceCache[avatarRequest.repo] === 'object') {
 			// If the repo exists in the cache of remote sources
 			return this.remoteSourceCache[avatarRequest.repo];
 		} else {
-			// Fetch the remote repo source
-			let remoteUrl = await this.dataSource.getRemoteUrl(avatarRequest.repo), remoteSource: RemoteSource;
-			if (remoteUrl !== null) {
-				// Depending on the domain of the remote repo source, determine the type of source it is
-				if (remoteUrl.startsWith('https://github.com/')) {
-					const remoteUrlComps = remoteUrl.split('/');
-					remoteSource = { type: 'github', owner: remoteUrlComps[3], repo: remoteUrlComps[4].replace(/\.git$/, '') };
-				} else if (remoteUrl.startsWith('https://gitlab.com/')) {
-					remoteSource = { type: 'gitlab' };
-				} else {
-					remoteSource = { type: 'gravatar' };
-				}
-			} else {
-				remoteSource = { type: 'gravatar' };
-			}
+			// Determine the source from the url of the "origin" remote (https, ssh or git form)
+			const remoteSource = parseRemoteSource(await this.dataSource.getRemoteUrl(avatarRequest.repo));
 			this.remoteSourceCache[avatarRequest.repo] = remoteSource; // Add the remote source to the cache for future use
 			return remoteSource;
 		}
@@ -152,7 +144,7 @@ export class AvatarManager {
 				if (res.statusCode === 200) { // Sucess
 					const commit: any = JSON.parse(respBody);
 					if (commit.author && commit.author.avatar_url) { // Avatar url found
-						const img = await this.downloadAvatarImage(avatarRequest.email, commit.author.avatar_url + '&size=54');
+						const img = await this.downloadAvatarImage(avatarRequest.email, commit.author.avatar_url + (commit.author.avatar_url.indexOf('?') > -1 ? '&' : '?') + 'size=' + AVATAR_PIXEL_SIZE);
 						if (img !== null) this.saveAvatar(avatarRequest.email, img, false);
 						return;
 					}
@@ -190,10 +182,11 @@ export class AvatarManager {
 			this.fetchAvatarsInterval();
 			return;
 		}
+		// The avatar endpoint is public: no token is needed, and none is shipped with the extension
 		https.get({
-			hostname: 'gitlab.com', path: '/api/v4/users?search=' + avatarRequest.email,
-			headers: { 'User-Agent': 'vscode-git-graph', 'Private-Token': 'w87U_3gAxWWaPtFgCcus' }, // Token only has read access
-			agent: false, timeout: 15000,
+			hostname: 'gitlab.com', path: '/api/v4/avatar?email=' + encodeURIComponent(avatarRequest.email.trim().toLowerCase()) + '&size=' + AVATAR_PIXEL_SIZE,
+			headers: { 'User-Agent': 'vscode-git-graph' },
+			agent: false, timeout: 15000
 		}, (res: http.IncomingMessage) => {
 			let respBody = '';
 			res.on('data', (chunk: Buffer) => { respBody += chunk; });
@@ -203,10 +196,16 @@ export class AvatarManager {
 					this.gitLabTimeout = parseInt(<string>res.headers['ratelimit-reset']) * 1000;
 				}
 
-				if (res.statusCode === 200) { // Sucess
-					const users: any = JSON.parse(respBody);
-					if (users.length > 0 && users[0].avatar_url) { // Avatar url found
-						const img = await this.downloadAvatarImage(avatarRequest.email, users[0].avatar_url);
+				if (res.statusCode === 200) { // Success
+					let avatarUrl: string | null = null;
+					try {
+						const body: unknown = JSON.parse(respBody);
+						if (body && typeof body === 'object' && typeof (<{ avatar_url?: unknown }>body).avatar_url === 'string') avatarUrl = <string>(<{ avatar_url: string }>body).avatar_url;
+					} catch (e) {
+						this.logger.logError('GitLab API returned a response that is not JSON');
+					}
+					if (avatarUrl !== null && /^https:\/\//.test(avatarUrl)) { // Avatar url found (GitLab answers with a Gravatar url when the user is unknown)
+						const img = await this.downloadAvatarImage(avatarRequest.email, avatarUrl);
 						if (img !== null) this.saveAvatar(avatarRequest.email, img, false);
 						return;
 					}
@@ -233,17 +232,17 @@ export class AvatarManager {
 	}
 
 	private async fetchFromGravatar(avatarRequest: AvatarRequestItem) {
-		const hash: string = crypto.createHash('md5').update(avatarRequest.email).digest('hex');
-		let img = await this.downloadAvatarImage(avatarRequest.email, 'https://secure.gravatar.com/avatar/' + hash + '?s=54&d=404'), identicon = false;
+		const hash = gravatarHash(avatarRequest.email);
+		let img = await this.downloadAvatarImage(avatarRequest.email, 'https://secure.gravatar.com/avatar/' + hash + '?s=' + AVATAR_PIXEL_SIZE + '&d=404'), identicon = false;
 		if (img === null) {
-			img = await this.downloadAvatarImage(avatarRequest.email, 'https://secure.gravatar.com/avatar/' + hash + '?s=54&d=identicon');
+			img = await this.downloadAvatarImage(avatarRequest.email, 'https://secure.gravatar.com/avatar/' + hash + '?s=' + AVATAR_PIXEL_SIZE + '&d=identicon');
 			identicon = true;
 		}
 		if (img !== null) this.saveAvatar(avatarRequest.email, img, identicon);
 	}
 
 	private async downloadAvatarImage(email: string, imageUrl: string): Promise<string | null> {
-		const hash: string = crypto.createHash('md5').update(email).digest('hex'), imgUrl = url.parse(imageUrl);
+		const hash = gravatarHash(email), imgUrl = url.parse(imageUrl);
 		return new Promise((resolve) => {
 			https.get({
 				hostname: imgUrl.hostname, path: imgUrl.path,
@@ -253,11 +252,12 @@ export class AvatarManager {
 				const imageBufferArray: Buffer[] = [];
 				res.on('data', (chunk: Buffer) => { imageBufferArray.push(chunk); });
 				res.on('end', () => {
-					if (res.statusCode === 200) { // If success response, save the image to the avatar folder
-						const format = res.headers['content-type']!.split('/')[1];
-						fs.writeFile(this.avatarStorageFolder + '/' + hash + '.' + format, Buffer.concat(imageBufferArray), err => {
+					const contentType = res.headers['content-type'] || '';
+					const format = /^image\/(png|jpeg|gif|webp)/.exec(contentType);
+					if (res.statusCode === 200 && format !== null) { // If success response with an image, save it to the avatar folder
+						fs.writeFile(this.avatarStorageFolder + '/' + hash + '.' + format[1], Buffer.concat(imageBufferArray), err => {
 							if (err) this.logger.logError('Unable to save avatar image: ' + err.message);
-							resolve(err ? null : hash + '.' + format);
+							resolve(err ? null : hash + '.' + format[1]);
 						});
 					} else {
 						if (res.statusCode !== 404) this.logger.logError('Avatar download from ' + imgUrl.hostname + ' responded with HTTP ' + res.statusCode);
@@ -369,15 +369,3 @@ interface AvatarRequestItem {
 	checkAfter: number;
 	attempts: number;
 }
-interface GitHubRemoteSource {
-	type: 'github';
-	owner: string;
-	repo: string;
-}
-interface GitLabRemoteSource {
-	type: 'gitlab';
-}
-interface GravatarRemoteSource {
-	type: 'gravatar';
-}
-type RemoteSource = GitHubRemoteSource | GitLabRemoteSource | GravatarRemoteSource;
