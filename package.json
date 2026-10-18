@@ -323,6 +323,33 @@
 					"default": "Author Date",
 					"description": "Specifies the date type to be displayed throughout Git Graph."
 				},
+				"git-graph.defaultColumnVisibility": {
+					"type": "object",
+					"default": {
+						"Date": true,
+						"Author": true,
+						"Commit": true
+					},
+					"properties": {
+						"Date": {
+							"type": "boolean",
+							"default": true,
+							"description": "Show the Date column"
+						},
+						"Author": {
+							"type": "boolean",
+							"default": true,
+							"description": "Show the Author column"
+						},
+						"Commit": {
+							"type": "boolean",
+							"default": true,
+							"description": "Show the Commit column"
+						}
+					},
+					"additionalProperties": false,
+					"description": "Default visibility of the Date, Author and Commit columns. Right-click a column header to change the visibility for one repository."
+				},
 				"git-graph.dialog.addTag.type": {
 					"type": "string",
 					"enum": [
@@ -500,6 +527,24 @@
 					"default": "f",
 					"description": "Letter of the keyboard shortcut that opens the find widget. It is pressed together with Ctrl (Windows, Linux) or Cmd (macOS) while the Git Graph view has focus."
 				},
+				"git-graph.keyboardShortcut.refresh": {
+					"type": "string",
+					"pattern": "^[a-z]$",
+					"default": "r",
+					"description": "Letter of the Ctrl/Cmd shortcut that refreshes the view."
+				},
+				"git-graph.keyboardShortcut.scrollToHead": {
+					"type": "string",
+					"pattern": "^[a-z]$",
+					"default": "h",
+					"description": "Letter of the Ctrl/Cmd shortcut that scrolls to the checked-out commit."
+				},
+				"git-graph.keyboardShortcut.scrollToStash": {
+					"type": "string",
+					"pattern": "^[a-z]$",
+					"default": "s",
+					"description": "Letter of the Ctrl/Cmd shortcut that scrolls to the next stash (Shift to go to the previous one)."
+				},
 				"git-graph.maxDepthOfRepoSearch": {
 					"type": "number",
 					"default": 0,
@@ -524,6 +569,16 @@
 					"type": "boolean",
 					"default": false,
 					"description": "Load more commits automatically when the view is scrolled to the bottom, instead of waiting for the \"Load More Commits\" button."
+				},
+				"git-graph.repository.commits.mute.commitsThatAreNotAncestorsOfHead": {
+					"type": "boolean",
+					"default": false,
+					"description": "Show commits that are not ancestors of the checked-out commit with a muted text colour."
+				},
+				"git-graph.repository.commits.mute.mergeCommits": {
+					"type": "boolean",
+					"default": false,
+					"description": "Show merge commits with a muted text colour."
 				},
 				"git-graph.repository.commits.order": {
 					"type": "string",
@@ -550,10 +605,25 @@
 					"default": false,
 					"description": "Before fetching from the remote(s) with the Fetch button, remove any local tags that no longer exist on the remote(s). Requires git 2.17 or later and \"git-graph.repository.fetchAndPrune\"."
 				},
+				"git-graph.repository.includeCommitsMentionedByReflogs": {
+					"type": "boolean",
+					"default": false,
+					"description": "When \"Show All\" is selected, also include commits that are only mentioned by reflogs (git log --reflog)."
+				},
+				"git-graph.repository.onLoad.scrollToHead": {
+					"type": "boolean",
+					"default": false,
+					"description": "Scroll to the checked-out commit when a repository is loaded."
+				},
 				"git-graph.repository.onLoad.showCheckedOutBranch": {
 					"type": "boolean",
 					"default": false,
 					"description": "Show the current branch by default when Git Graph is opened. Default: false (show all branches)"
+				},
+				"git-graph.repository.onlyFollowFirstParent": {
+					"type": "boolean",
+					"default": false,
+					"description": "Only follow the first parent of commits when loading them (git log --first-parent). Hides the commits that were merged in."
 				},
 				"git-graph.repository.showCommitsOnlyReferencedByTags": {
 					"type": "boolean",

@@ -496,6 +496,7 @@ export class DataSource {
 	private getGitLog(repo: string, branch: string, num: number, showRemoteBranches: boolean) {
 		const config = getConfig();
 		const args = ['log', '--max-count=' + num, '--format=' + this.getFormats().log, '--' + config.commitOrdering() + '-order'];
+		if (config.onlyFollowFirstParent()) args.push('--first-parent');
 		if (branch !== '') {
 			if (!isSafeRefName(branch)) return Promise.resolve(<GitCommit[]>[]);
 			args.push(branch);
@@ -504,6 +505,7 @@ export class DataSource {
 			args.push('HEAD', '--branches');
 			if (config.showCommitsOnlyReferencedByTags()) args.push('--tags');
 			if (showRemoteBranches) args.push('--remotes');
+			if (config.includeCommitsMentionedByReflogs()) args.push('--reflog');
 		}
 		args.push('--');
 

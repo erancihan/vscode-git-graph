@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { CommitOrdering, ContextMenuActionsVisibility, DateFormat, DateType, DialogDefaults, GitResetMode, GraphStyle, KeyboardShortcuts, SquashMessageFormat, TabIconColourTheme } from './types';
+import { ColumnVisibility, CommitOrdering, ContextMenuActionsVisibility, DateFormat, DateType, DialogDefaults, GitResetMode, GraphStyle, KeyboardShortcuts, SquashMessageFormat, TabIconColourTheme } from './types';
 
 const DEFAULT_GRAPH_COLOURS = ['#0085d9', '#d9008f', '#00d90a', '#d98500', '#a300d9', '#ff0000', '#00d9cc', '#e138e8', '#85d900', '#dc5b23', '#6f24d6', '#ffcc00'];
 const GRAPH_COLOUR_REGEX = /^\s*(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|rgb[a]?\s*\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\))\s*$/;
@@ -128,13 +128,29 @@ class Config {
 	/** The letters of the rebindable shortcuts. An invalid value falls back to the default letter. */
 	public keyboardShortcuts(): KeyboardShortcuts {
 		return {
-			find: this.getShortcutLetter('keyboardShortcut.find', 'f')
+			find: this.getShortcutLetter('keyboardShortcut.find', 'f'),
+			refresh: this.getShortcutLetter('keyboardShortcut.refresh', 'r'),
+			scrollToHead: this.getShortcutLetter('keyboardShortcut.scrollToHead', 'h'),
+			scrollToStash: this.getShortcutLetter('keyboardShortcut.scrollToStash', 's')
 		};
 	}
 
 	private getShortcutLetter(section: string, defaultLetter: string) {
 		const value = this.get<unknown>(section, null, defaultLetter);
 		return typeof value === 'string' && /^[a-z]$/i.test(value.trim()) ? value.trim().toLowerCase() : defaultLetter;
+	}
+
+	/* Columns */
+
+	/** Default visibility of the Date, Author and Commit columns. Missing or invalid entries mean visible. */
+	public defaultColumnVisibility(): ColumnVisibility {
+		const value = this.get<unknown>('defaultColumnVisibility', null, {});
+		const setting = typeof value === 'object' && value !== null ? <{ [column: string]: unknown }>value : {};
+		return {
+			date: coerceBoolean(setting['Date'], true),
+			author: coerceBoolean(setting['Author'], true),
+			commit: coerceBoolean(setting['Commit'], true)
+		};
 	}
 
 	/* Graph */
@@ -175,6 +191,26 @@ class Config {
 
 	public loadMoreCommits() {
 		return this.getPositiveInteger('repository.commits.loadMore', 'loadMoreCommits', 100);
+	}
+
+	public includeCommitsMentionedByReflogs() {
+		return this.getBoolean('repository.includeCommitsMentionedByReflogs', 'includeCommitsMentionedByReflogs', false);
+	}
+
+	public muteCommitsThatAreNotAncestorsOfHead() {
+		return this.getBoolean('repository.commits.mute.commitsThatAreNotAncestorsOfHead', 'muteCommitsThatAreNotAncestorsOfHead', false);
+	}
+
+	public muteMergeCommits() {
+		return this.getBoolean('repository.commits.mute.mergeCommits', 'muteMergeCommits', false);
+	}
+
+	public onlyFollowFirstParent() {
+		return this.getBoolean('repository.onlyFollowFirstParent', 'onlyFollowFirstParent', false);
+	}
+
+	public scrollToHeadOnLoad() {
+		return this.getBoolean('repository.onLoad.scrollToHead', 'openRepoToHead', false);
 	}
 
 	public loadMoreCommitsAutomatically() {

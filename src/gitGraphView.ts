@@ -346,6 +346,7 @@ export class GitGraphView {
 			autoCenterCommitDetailsView: config.autoCenterCommitDetailsView(),
 			contextMenuActionsVisibility: config.contextMenuActionsVisibility(),
 			dateFormat: config.dateFormat(),
+			defaultColumnVisibility: config.defaultColumnVisibility(),
 			dialogDefaults: config.dialogDefaults(),
 			fetchAndPrune: config.fetchAndPrune(),
 			fetchAndPruneTags: config.fetchAndPruneTags(),
@@ -357,7 +358,10 @@ export class GitGraphView {
 			lastActiveRepo: this.extensionState.getLastActiveRepo(),
 			loadMoreCommits: config.loadMoreCommits(),
 			loadMoreCommitsAutomatically: config.loadMoreCommitsAutomatically(),
+			muteCommitsThatAreNotAncestorsOfHead: config.muteCommitsThatAreNotAncestorsOfHead(),
+			muteMergeCommits: config.muteMergeCommits(),
 			repos: this.repoManager.getRepos(),
+			scrollToHeadOnLoad: config.scrollToHeadOnLoad(),
 			showCurrentBranchByDefault: config.showCurrentBranchByDefault(),
 			showRemoteBranches: config.showRemoteBranches()
 		};

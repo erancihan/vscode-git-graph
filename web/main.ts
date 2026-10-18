@@ -17,6 +17,8 @@ class GitGraphView {
 	private showRemoteBranches: boolean = true;
 	private expandedCommit: ExpandedCommit | null = null;
 	private maxCommits: number;
+	private scrollToHeadPending: boolean;
+	private lastStashScrolledTo: number = -1;
 
 	private tableElem: HTMLElement;
 	private footerElem: HTMLElement;
@@ -33,6 +35,7 @@ class GitGraphView {
 		this.config = config;
 		this.maxCommits = config.initialLoadCommits;
 		this.showRemoteBranches = config.showRemoteBranches;
+		this.scrollToHeadPending = config.scrollToHeadOnLoad && prevState === null;
 		this.graph = new Graph('commitGraph', this.config);
 		this.tableElem = document.getElementById('commitTable')!;
 		this.registerTableListeners();
@@ -45,15 +48,27 @@ class GitGraphView {
 			}
 		});
 		document.addEventListener('keydown', (e) => {
-			if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === this.config.keyboardShortcuts.find) {
+			if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+			const key = e.key.toLowerCase(), shortcuts = this.config.keyboardShortcuts;
+			if (key === shortcuts.find) {
 				e.preventDefault();
 				this.findWidget.show();
+			} else if (key === shortcuts.refresh) {
+				e.preventDefault();
+				this.refresh(true);
+			} else if (key === shortcuts.scrollToHead) {
+				e.preventDefault();
+				this.scrollToHead();
+			} else if (key === shortcuts.scrollToStash) {
+				e.preventDefault();
+				this.scrollToStash(e.shiftKey ? -1 : 1);
 			}
 		});
 		this.footerElem = document.getElementById('footer')!;
 		this.repoDropdown = new Dropdown('repoSelect', true, 'Repos', value => {
 			this.currentRepo = value;
 			this.maxCommits = this.config.initialLoadCommits;
+			this.scrollToHeadPending = this.config.scrollToHeadOnLoad;
 			this.expandedCommit = null;
 			this.currentBranch = null;
 			this.saveState();
@@ -203,6 +218,10 @@ class GitGraphView {
 			this.saveState();
 		}
 		this.render();
+		if (this.scrollToHeadPending) {
+			this.scrollToHeadPending = false;
+			this.scrollToHead();
+		}
 
 		this.triggerLoadCommitsCallback(true);
 		this.fetchAvatars(avatarsNeeded);
@@ -309,7 +328,8 @@ class GitGraphView {
 		this.graph.render(this.expandedCommit);
 	}
 	private renderTable() {
-		let html = '<tr id="tableColHeaders"><th id="tableHeaderGraphCol" class="tableColHeader">Graph</th><th class="tableColHeader">Description</th><th class="tableColHeader">Date</th><th class="tableColHeader">Author</th><th class="tableColHeader">Commit</th></tr>', i, currentHash = this.commits.length > 0 && this.commits[0].hash === '*' ? '*' : this.commitHead;
+		let html = '<tr id="tableColHeaders"><th id="tableHeaderGraphCol" class="tableColHeader">Graph</th><th class="tableColHeader">Description</th><th class="tableColHeader colDate">Date</th><th class="tableColHeader colAuthor">Author</th><th class="tableColHeader colCommit">Commit</th></tr>', i, currentHash = this.commits.length > 0 && this.commits[0].hash === '*' ? '*' : this.commitHead;
+		const ancestorsOfHead = this.config.muteCommitsThatAreNotAncestorsOfHead ? this.getAncestorsOfHead() : null;
 		for (i = 0; i < this.commits.length; i++) {
 			let refs = '', message = escapeHtml(this.commits[i].message), date = getCommitDate(this.commits[i].date), j, refName, refActive, refHtml;
 			for (j = 0; j < this.commits[i].refs.length; j++) {
@@ -318,7 +338,11 @@ class GitGraphView {
 				refHtml = '<span class="gitRef ' + this.commits[i].refs[j].type + (refActive ? ' active' : '') + '" data-name="' + refName + '">' + (this.commits[i].refs[j].type === 'tag' ? svgIcons.tag : this.commits[i].refs[j].type === 'stash' ? svgIcons.stash : svgIcons.branch) + refName + '</span>';
 				refs = refActive ? refHtml + refs : refs + refHtml;
 			}
-			html += '<tr ' + (this.commits[i].hash !== '*' ? 'class="commit" data-hash="' + this.commits[i].hash + '"' : 'class="unsavedChanges"') + ' data-id="' + i + '" data-color="' + this.graph.getVertexColour(i) + '"><td></td><td>' + (this.commits[i].hash === this.commitHead ? '<span class="commitHeadDot"></span>' : '') + refs + (this.commits[i].hash === currentHash ? '<b>' + message + '</b>' : message) + '</td><td title="' + date.title + '">' + date.value + '</td><td title="' + escapeHtml(this.commits[i].author + ' <' + this.commits[i].email + '>') + '">' + (this.config.fetchAvatars ? '<span class="avatar" data-email="' + escapeHtml(this.commits[i].email) + '">' + (typeof this.avatars[this.commits[i].email] === 'string' ? '<img class="avatarImg" src="' + this.avatars[this.commits[i].email] + '">' : '') + '</span>' : '') + escapeHtml(this.commits[i].author) + '</td><td title="' + escapeHtml(this.commits[i].hash) + '">' + abbrevCommit(this.commits[i].hash) + '</td></tr>';
+			const muted = this.commits[i].hash !== '*' && (
+				(this.config.muteMergeCommits && this.commits[i].parentHashes.length > 1 && this.commits[i].stash === null) ||
+				(ancestorsOfHead !== null && !ancestorsOfHead[this.commits[i].hash])
+			);
+			html += '<tr ' + (this.commits[i].hash !== '*' ? 'class="commit' + (muted ? ' mute' : '') + '" data-hash="' + this.commits[i].hash + '"' : 'class="unsavedChanges"') + ' data-id="' + i + '" data-color="' + this.graph.getVertexColour(i) + '"><td></td><td>' + (this.commits[i].hash === this.commitHead ? '<span class="commitHeadDot"></span>' : '') + refs + (this.commits[i].hash === currentHash ? '<b>' + message + '</b>' : message) + '</td><td class="colDate" title="' + date.title + '">' + date.value + '</td><td class="colAuthor" title="' + escapeHtml(this.commits[i].author + ' <' + this.commits[i].email + '>') + '">' + (this.config.fetchAvatars ? '<span class="avatar" data-email="' + escapeHtml(this.commits[i].email) + '">' + (typeof this.avatars[this.commits[i].email] === 'string' ? '<img class="avatarImg" src="' + this.avatars[this.commits[i].email] + '">' : '') + '</span>' : '') + escapeHtml(this.commits[i].author) + '</td><td class="colCommit" title="' + escapeHtml(this.commits[i].hash) + '">' + abbrevCommit(this.commits[i].hash) + '</td></tr>';
 		}
 		this.tableElem.innerHTML = '<table>' + html + '</table>';
 		this.footerElem.innerHTML = this.moreCommitsAvailable ? '<div id="loadMoreCommitsBtn" class="roundedBtn">Load More Commits</div>' : '';
@@ -717,7 +741,7 @@ class GitGraphView {
 	}
 	private renderUncommitedChanges() {
 		const date = getCommitDate(this.commits[0].date);
-		document.getElementsByClassName('unsavedChanges')[0].innerHTML = '<td></td><td><b>' + escapeHtml(this.commits[0].message) + '</b></td><td title="' + date.title + '">' + date.value + '</td><td title="* <>">*</td><td title="*">*</td>';
+		document.getElementsByClassName('unsavedChanges')[0].innerHTML = '<td></td><td><b>' + escapeHtml(this.commits[0].message) + '</b></td><td class="colDate" title="' + date.title + '">' + date.value + '</td><td class="colAuthor" title="* <>">*</td><td class="colCommit" title="*">*</td>';
 	}
 	private renderShowLoading() {
 		hideDialogAndContextMenu();
@@ -810,62 +834,88 @@ class GitGraphView {
 	}
 	private makeTableResizable() {
 		const colHeadersElem = document.getElementById('tableColHeaders')!, cols = <HTMLCollectionOf<HTMLElement>>document.getElementsByClassName('tableColHeader');
-		let columnWidths = this.gitRepos[this.currentRepo].columnWidths, mouseX = -1, col = -1, that = this;
+		const visibility = this.getColumnVisibility(), columnClasses = ' ' + getColumnVisibilityClasses(visibility);
+		// Columns: 0 graph, 1 description (flexible), 2 date, 3 author, 4 commit. columnWidths holds the widths of columns 0, 2, 3 and 4.
+		const visibleCols = [0, 1, 2, 3, 4].filter((c) => c < 2 || (c === 2 ? visibility.date : c === 3 ? visibility.author : visibility.commit));
+		const widthIndex = (c: number) => c === 0 ? 0 : c - 1;
+		let columnWidths = this.gitRepos[this.currentRepo].columnWidths, mouseX = -1, leftCol = -1, rightCol = -1, that = this;
 
-		for (let i = 0; i < cols.length; i++) {
-			cols[i].innerHTML += (i > 0 ? '<span class="resizeCol left" data-col="' + (i - 1) + '"></span>' : '') + (i < cols.length - 1 ? '<span class="resizeCol right" data-col="' + i + '"></span>' : '');
+		// Resize handles sit on the boundaries between consecutive visible columns
+		for (let i = 1; i < visibleCols.length; i++) {
+			const left = visibleCols[i - 1], right = visibleCols[i];
+			cols[left].innerHTML += '<span class="resizeCol right" data-left="' + left + '" data-right="' + right + '"></span>';
+			cols[right].innerHTML += '<span class="resizeCol left" data-left="' + left + '" data-right="' + right + '"></span>';
 		}
 		if (columnWidths !== null) {
 			makeTableFixedLayout();
 		} else {
-			this.tableElem.className = 'autoLayout';
+			this.tableElem.className = 'autoLayout' + columnClasses;
 			this.graph.limitMaxWidth(-1);
 			cols[0].style.padding = '0 ' + Math.round((Math.max(this.graph.getWidth() + 16, 64) - (cols[0].offsetWidth - 24)) / 2) + 'px';
 		}
 
 		addListenerToClass('resizeCol', 'mousedown', (e) => {
-			col = parseInt((<HTMLElement>e.target).dataset.col!);
+			leftCol = parseInt((<HTMLElement>e.target).dataset.left!);
+			rightCol = parseInt((<HTMLElement>e.target).dataset.right!);
 			mouseX = (<MouseEvent>e).clientX;
 			if (columnWidths === null) {
-				columnWidths = [cols[0].clientWidth - 24, cols[2].clientWidth - 24, cols[3].clientWidth - 24, cols[4].clientWidth - 24];
+				columnWidths = [0, 2, 3, 4].map((c) => visibleCols.indexOf(c) > -1 ? cols[c].clientWidth - 24 : 100);
 				makeTableFixedLayout();
 			}
 			colHeadersElem.classList.add('resizing');
 		});
 		colHeadersElem.addEventListener('mousemove', (e) => {
-			if (col > -1 && columnWidths !== null) {
+			if (leftCol > -1 && columnWidths !== null) {
 				const mouseEvent = <MouseEvent>e;
 				let mouseDeltaX = mouseEvent.clientX - mouseX;
-				switch (col) {
-					case 0:
-						if (columnWidths[0] + mouseDeltaX < 40) mouseDeltaX = -columnWidths[0] + 40;
-						if (cols[1].clientWidth - mouseDeltaX < 64) mouseDeltaX = cols[1].clientWidth - 64;
-						columnWidths[0] += mouseDeltaX;
-						cols[0].style.width = columnWidths[0] + 'px';
-						this.graph.limitMaxWidth(columnWidths[0] + 16);
-						break;
-					case 1:
-						if (cols[1].clientWidth + mouseDeltaX < 64) mouseDeltaX = -cols[1].clientWidth + 64;
-						if (columnWidths[1] - mouseDeltaX < 40) mouseDeltaX = columnWidths[1] - 40;
-						columnWidths[1] -= mouseDeltaX;
-						cols[2].style.width = columnWidths[1] + 'px';
-						break;
-					default:
-						if (columnWidths[col - 1] + mouseDeltaX < 40) mouseDeltaX = -columnWidths[col - 1] + 40;
-						if (columnWidths[col] - mouseDeltaX < 40) mouseDeltaX = columnWidths[col] - 40;
-						columnWidths[col - 1] += mouseDeltaX;
-						columnWidths[col] -= mouseDeltaX;
-						cols[col].style.width = columnWidths[col - 1] + 'px';
-						cols[col + 1].style.width = columnWidths[col] + 'px';
+				if (leftCol === 0) {
+					// Graph column against the flexible description column
+					if (columnWidths[0] + mouseDeltaX < 40) mouseDeltaX = -columnWidths[0] + 40;
+					if (cols[1].clientWidth - mouseDeltaX < 64) mouseDeltaX = cols[1].clientWidth - 64;
+					columnWidths[0] += mouseDeltaX;
+					cols[0].style.width = columnWidths[0] + 'px';
+					this.graph.limitMaxWidth(columnWidths[0] + 16);
+				} else if (leftCol === 1) {
+					// Flexible description column against the first visible fixed column to its right
+					const r = widthIndex(rightCol);
+					if (cols[1].clientWidth + mouseDeltaX < 64) mouseDeltaX = -cols[1].clientWidth + 64;
+					if (columnWidths[r] - mouseDeltaX < 40) mouseDeltaX = columnWidths[r] - 40;
+					columnWidths[r] -= mouseDeltaX;
+					cols[rightCol].style.width = columnWidths[r] + 'px';
+				} else {
+					// Two fixed columns: move width from one to the other
+					const l = widthIndex(leftCol), r = widthIndex(rightCol);
+					if (columnWidths[l] + mouseDeltaX < 40) mouseDeltaX = -columnWidths[l] + 40;
+					if (columnWidths[r] - mouseDeltaX < 40) mouseDeltaX = columnWidths[r] - 40;
+					columnWidths[l] += mouseDeltaX;
+					columnWidths[r] -= mouseDeltaX;
+					cols[leftCol].style.width = columnWidths[l] + 'px';
+					cols[rightCol].style.width = columnWidths[r] + 'px';
 				}
 				mouseX = mouseEvent.clientX;
 			}
 		});
 		colHeadersElem.addEventListener('mouseup', stopResizing);
 		colHeadersElem.addEventListener('mouseleave', stopResizing);
+		colHeadersElem.addEventListener('contextmenu', (e) => {
+			e.stopPropagation();
+			const current = this.getColumnVisibility();
+			const toggle = (column: keyof GG.ColumnVisibility) => {
+				const next = { ...current, [column]: !current[column] };
+				this.gitRepos[this.currentRepo].columnVisibility = next;
+				sendMessage({ command: 'saveRepoState', repo: this.currentRepo, state: this.gitRepos[this.currentRepo] });
+				this.render();
+			};
+			showContextMenu(e, [
+				{ title: (current.date ? '\u2713 ' : '\u2003 ') + 'Date', onClick: () => toggle('date') },
+				{ title: (current.author ? '\u2713 ' : '\u2003 ') + 'Author', onClick: () => toggle('author') },
+				{ title: (current.commit ? '\u2713 ' : '\u2003 ') + 'Commit', onClick: () => toggle('commit') }
+			], colHeadersElem);
+		});
 		function stopResizing() {
-			if (col > -1 && columnWidths !== null) {
-				col = -1;
+			if (leftCol > -1 && columnWidths !== null) {
+				leftCol = -1;
+				rightCol = -1;
 				mouseX = -1;
 				colHeadersElem.classList.remove('resizing');
 				that.gitRepos[that.currentRepo].columnWidths = columnWidths;
@@ -879,10 +929,57 @@ class GitGraphView {
 				cols[2].style.width = columnWidths[1] + 'px';
 				cols[3].style.width = columnWidths[2] + 'px';
 				cols[4].style.width = columnWidths[3] + 'px';
-				that.tableElem.className = 'fixedLayout';
+				that.tableElem.className = 'fixedLayout' + columnClasses;
 				that.graph.limitMaxWidth(columnWidths[0] + 16);
 			}
 		}
+	}
+
+	/** Column visibility of the current repository: its own override, or the default from the settings. */
+	private getColumnVisibility(): GG.ColumnVisibility {
+		const override = this.gitRepos[this.currentRepo].columnVisibility;
+		return override ? override : this.config.defaultColumnVisibility;
+	}
+
+	/** Hashes of the commits that are ancestors of the checked-out commit (including itself), among the loaded commits. */
+	private getAncestorsOfHead() {
+		const ancestors: { [hash: string]: true } = {};
+		if (this.commitHead === null || typeof this.commitLookup[this.commitHead] !== 'number') return ancestors;
+		const queue = [this.commitHead];
+		ancestors[this.commitHead] = true;
+		while (queue.length > 0) {
+			const commit = this.commits[this.commitLookup[queue.pop()!]];
+			for (let i = 0; i < commit.parentHashes.length; i++) {
+				const parent = commit.parentHashes[i];
+				if (!ancestors[parent] && typeof this.commitLookup[parent] === 'number') {
+					ancestors[parent] = true;
+					queue.push(parent);
+				}
+			}
+		}
+		return ancestors;
+	}
+
+	/* Scrolling */
+	private scrollToHead() {
+		if (this.commitHead === null || typeof this.commitLookup[this.commitHead] !== 'number') return;
+		this.scrollToRow(this.commitLookup[this.commitHead]);
+	}
+	/** Scroll to the next (delta 1) or previous (delta -1) stash, cycling through them. */
+	private scrollToStash(delta: number) {
+		const stashRows: number[] = [];
+		for (let i = 0; i < this.commits.length; i++) {
+			if (this.commits[i].stash !== null) stashRows.push(i);
+		}
+		if (stashRows.length === 0) return;
+		let position = stashRows.indexOf(this.lastStashScrolledTo);
+		position = position === -1 ? (delta > 0 ? 0 : stashRows.length - 1) : (position + delta + stashRows.length) % stashRows.length;
+		this.lastStashScrolledTo = stashRows[position];
+		this.scrollToRow(this.lastStashScrolledTo);
+	}
+	private scrollToRow(id: number) {
+		const row = <HTMLElement | null>this.tableElem.querySelector('tr[data-id="' + id + '"]');
+		if (row !== null) row.scrollIntoView({ block: 'center' });
 	}
 
 	/* Observers */
@@ -1025,6 +1122,7 @@ let dialog = document.getElementById('dialog')!, dialogBacking = document.getEle
 const gitGraph = new GitGraphView(viewState.repos, viewState.lastActiveRepo, {
 	autoCenterCommitDetailsView: viewState.autoCenterCommitDetailsView,
 	contextMenuActionsVisibility: viewState.contextMenuActionsVisibility,
+	defaultColumnVisibility: viewState.defaultColumnVisibility,
 	dialogDefaults: viewState.dialogDefaults,
 	fetchAndPrune: viewState.fetchAndPrune,
 	fetchAndPruneTags: viewState.fetchAndPruneTags,
@@ -1036,6 +1134,9 @@ const gitGraph = new GitGraphView(viewState.repos, viewState.lastActiveRepo, {
 	keyboardShortcuts: viewState.keyboardShortcuts,
 	loadMoreCommits: viewState.loadMoreCommits,
 	loadMoreCommitsAutomatically: viewState.loadMoreCommitsAutomatically,
+	muteCommitsThatAreNotAncestorsOfHead: viewState.muteCommitsThatAreNotAncestorsOfHead,
+	muteMergeCommits: viewState.muteMergeCommits,
+	scrollToHeadOnLoad: viewState.scrollToHeadOnLoad,
 	showCurrentBranchByDefault: viewState.showCurrentBranchByDefault,
 	showRemoteBranches: viewState.showRemoteBranches
 }, vscode.getState());
@@ -1436,4 +1537,13 @@ document.addEventListener('contextmenu', hideContextMenuListener);
 document.addEventListener('mouseleave', hideContextMenuListener);
 function hideContextMenuListener() {
 	if (contextMenu.classList.contains('active')) hideContextMenu();
+}
+
+/* Columns */
+function getColumnVisibilityClasses(visibility: GG.ColumnVisibility) {
+	const classes: string[] = [];
+	if (!visibility.date) classes.push('hideDate');
+	if (!visibility.author) classes.push('hideAuthor');
+	if (!visibility.commit) classes.push('hideCommit');
+	return classes.join(' ');
 }

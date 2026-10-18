@@ -53,6 +53,13 @@ export interface GitRefData {
 export type GitRepoSet = { [repo: string]: GitRepoState };
 export interface GitRepoState {
 	columnWidths: number[] | null;
+	columnVisibility: ColumnVisibility | null; // null => use the default from the settings
+}
+
+export interface ColumnVisibility {
+	date: boolean;
+	author: boolean;
+	commit: boolean;
 }
 
 export interface GitUnsavedChanges {
@@ -70,7 +77,11 @@ export interface ContextMenuActionsVisibility {
 }
 
 export interface KeyboardShortcuts {
-	find: string; // single lower-case letter, pressed with Ctrl / Cmd
+	// Single lower-case letters, pressed with Ctrl / Cmd
+	find: string;
+	refresh: string;
+	scrollToHead: string;
+	scrollToStash: string;
 }
 
 export interface DialogDefaults {
@@ -94,6 +105,7 @@ export interface GitGraphViewState {
 	autoCenterCommitDetailsView: boolean;
 	contextMenuActionsVisibility: ContextMenuActionsVisibility;
 	dateFormat: DateFormat;
+	defaultColumnVisibility: ColumnVisibility;
 	dialogDefaults: DialogDefaults;
 	fetchAndPrune: boolean;
 	fetchAndPruneTags: boolean;
@@ -105,7 +117,10 @@ export interface GitGraphViewState {
 	lastActiveRepo: string | null;
 	loadMoreCommits: number;
 	loadMoreCommitsAutomatically: boolean;
+	muteCommitsThatAreNotAncestorsOfHead: boolean;
+	muteMergeCommits: boolean;
 	repos: GitRepoSet;
+	scrollToHeadOnLoad: boolean;
 	showCurrentBranchByDefault: boolean;
 	showRemoteBranches: boolean;
 }

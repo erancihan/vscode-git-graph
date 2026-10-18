@@ -490,6 +490,19 @@ describe('DataSource commit loading options', () => {
 		}
 	});
 
+	it('passes the first parent and reflog options to git log', async () => {
+		configurationValues['git-graph'] = { 'repository.onlyFollowFirstParent': true, 'repository.includeCommitsMentionedByReflogs': true };
+		await dataSource.getCommits(repo, '', 10, false);
+		const lines = outputChannelLines['Git Graph'];
+		const logLine = lines.slice(-4).find(l => l.includes(' log '))!;
+		expect(logLine).toContain('--first-parent');
+		expect(logLine).toContain('--reflog');
+		await dataSource.getCommits(repo, 'master', 10, false);
+		const branchLogLine = outputChannelLines['Git Graph'].slice(-4).find(l => l.includes(' log '))!;
+		expect(branchLogLine).toContain('--first-parent');
+		expect(branchLogLine).not.toContain('--reflog');
+	});
+
 	it('passes the configured ordering to git log', async () => {
 		configurationValues['git-graph'] = { 'repository.commits.order': 'topo' };
 		await dataSource.getCommits(repo, '', 10, false);

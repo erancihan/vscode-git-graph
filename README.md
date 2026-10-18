@@ -32,6 +32,8 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
         * Copy commit hashes, tag names, branch names, and stash names to the clipboard
     * Fetch from all remotes with the Fetch button
     * Find commits with Ctrl/Cmd+F: match case and regular expression modes, step through the matches
+    * Show or hide the Date, Author and Commit columns (right-click a column header), mute merge commits or commits outside the ancestry of HEAD
+    * Keyboard shortcuts: Ctrl/Cmd+R refresh, Ctrl/Cmd+H scroll to HEAD, Ctrl/Cmd+S next stash
 * Configurable settings (graph style, branch colours, and more)
 * "Git Graph: View Git Graph" command in the Command Palette
 * "Git Graph" button in the Status Bar
@@ -44,6 +46,7 @@ This extension contributes the following settings:
 * `git-graph.contextMenuActionsVisibility`: Hide individual context menu actions, for example `{"commit": {"reset": false}}`. Menus: `branch`, `commit`, `remoteBranch`, `tag`.
 * `git-graph.date.format`: Specifies the date format used in the date column of the graph.
 * `git-graph.date.type`: Specifies whether the author date or the commit date is displayed.
+* `git-graph.defaultColumnVisibility`: Default visibility of the Date, Author and Commit columns, for example `{"Date": true, "Author": false, "Commit": true}`. Right-click a column header to change it per repository.
 * `git-graph.dialog.addTag.type`: Default tag type in the "Add Tag" dialog: `Annotated` or `Lightweight`.
 * `git-graph.dialog.applyStash.reinstateIndex`: Default state of "Reinstate Index" in the "Apply Stash" dialog. Default: false.
 * `git-graph.dialog.cherryPick.noCommit`: Default state of "No Commit" in the "Cherry Pick" dialog. Default: false.
@@ -66,6 +69,9 @@ This extension contributes the following settings:
 * `git-graph.graph.colours`: Specifies the colours used on the graph.
 * `git-graph.graph.style`: Specifies the style of the graph.
 * `git-graph.keyboardShortcut.find`: Letter of the Ctrl/Cmd shortcut that opens the find widget. Default: `f`.
+* `git-graph.keyboardShortcut.refresh`: Letter of the Ctrl/Cmd shortcut that refreshes the view. Default: `r`.
+* `git-graph.keyboardShortcut.scrollToHead`: Letter of the Ctrl/Cmd shortcut that scrolls to the checked-out commit. Default: `h`.
+* `git-graph.keyboardShortcut.scrollToStash`: Letter of the Ctrl/Cmd shortcut that scrolls to the next stash (Shift for the previous). Default: `s`.
 * `git-graph.maxDepthOfRepoSearch`: Specifies the maximum depth of subfolders to search when discovering repositories in the workspace. Default: 0.
 * `git-graph.repository.fetchAndPrune`: Prune remote-tracking references when the Fetch button is pressed. Default: false.
 * `git-graph.repository.fetchAndPruneTags`: Also prune local tags when the Fetch button is pressed (git 2.17 or later). Default: false.
@@ -73,10 +79,15 @@ This extension contributes the following settings:
 * `git-graph.repository.commits.initialLoad`: Specifies the number of commits to load initially.
 * `git-graph.repository.commits.loadMore`: Specifies the number of commits to load when the "Load More Commits" button is pressed.
 * `git-graph.repository.commits.loadMoreAutomatically`: Load more commits automatically when the view is scrolled to the bottom. Default: false.
+* `git-graph.repository.commits.mute.commitsThatAreNotAncestorsOfHead`: Mute commits that are not ancestors of the checked-out commit. Default: false.
+* `git-graph.repository.commits.mute.mergeCommits`: Mute merge commits. Default: false.
 * `git-graph.repository.commits.order`: Order of commits on the graph: `date`, `author-date` or `topo`. Default: `date`.
+* `git-graph.repository.includeCommitsMentionedByReflogs`: Include commits only mentioned by reflogs when "Show All" is selected. Default: false.
+* `git-graph.repository.onLoad.scrollToHead`: Scroll to the checked-out commit when a repository is loaded. Default: false.
 * `git-graph.repository.onLoad.showCheckedOutBranch`: Show only the checked-out branch when Git Graph is opened. Default: false.
 * `git-graph.repository.sign.commits`: Sign the commits Git Graph creates with the signing key of your git configuration. Default: false.
 * `git-graph.repository.sign.tags`: Sign the annotated tags Git Graph creates. Default: false.
+* `git-graph.repository.onlyFollowFirstParent`: Load commits with `--first-parent`. Default: false.
 * `git-graph.repository.showCommitsOnlyReferencedByTags`: Show commits that are only reachable from tags when "Show All" is selected. Default: true.
 * `git-graph.repository.showRemoteBranches`: Default state of the "Show Remote Branches" checkbox. Default: true.
 * `git-graph.repository.showRemoteHeads`: Show remote HEAD references such as `origin/HEAD`. Default: true.

@@ -94,6 +94,12 @@ body.unableToLoad h2, body.unableToLoad p{
 #commitTable.autoLayout td:nth-child(4), #commitTable.autoLayout th:nth-child(4){
 	max-width:124px;
 }
+#commitTable.hideDate .colDate, #commitTable.hideAuthor .colAuthor, #commitTable.hideCommit .colCommit{
+	display:none;
+}
+#commitTable tr.commit.mute td:not(:first-child){
+	opacity:0.5;
+}
 #tableColHeaders.resizing th{
 	cursor:col-resize;
 }

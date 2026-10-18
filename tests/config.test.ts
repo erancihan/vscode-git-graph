@@ -152,6 +152,24 @@ describe('Config.contextMenuActionsVisibility', () => {
 	});
 });
 
+describe('Config.defaultColumnVisibility', () => {
+	it('shows every column by default and reads the setting leniently', () => {
+		expect(getConfig().defaultColumnVisibility()).toEqual({ date: true, author: true, commit: true });
+		setConfig({ 'defaultColumnVisibility': { Date: false, Commit: 'false', Other: false } });
+		expect(getConfig().defaultColumnVisibility()).toEqual({ date: false, author: true, commit: false });
+		setConfig({ 'defaultColumnVisibility': 'none' });
+		expect(getConfig().defaultColumnVisibility()).toEqual({ date: true, author: true, commit: true });
+	});
+});
+
+describe('Config.keyboardShortcuts', () => {
+	it('returns the default letters and validates overrides', () => {
+		expect(getConfig().keyboardShortcuts()).toEqual({ find: 'f', refresh: 'r', scrollToHead: 'h', scrollToStash: 's' });
+		setConfig({ 'keyboardShortcut.find': 'G', 'keyboardShortcut.refresh': 'F5', 'keyboardShortcut.scrollToHead': ' j ' });
+		expect(getConfig().keyboardShortcuts()).toEqual({ find: 'g', refresh: 'r', scrollToHead: 'j', scrollToStash: 's' });
+	});
+});
+
 describe('coerceBoolean', () => {
 	it('accepts booleans and boolean strings', () => {
 		expect(coerceBoolean(true, false)).toBe(true);
