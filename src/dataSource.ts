@@ -4,7 +4,7 @@ import * as path from 'path';
 import { getConfig } from './config';
 import { findGitExecutable } from './gitExecutable';
 import { Logger } from './logger';
-import { CherryPickOptions, GitArchiveType, GitBisectAction, GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChange, GitFileChangeType, GraphFilters, GitPushBranchMode, GitRebaseType, GitRefData, GitRemoteDetails, GitRepoSettings, GitRepoState, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitUnsavedChanges, GitUserDetails, GitWorktree, MergeOptions } from './types';
+import { CherryPickOptions, GitArchiveType, GitBisectAction, GitOperationAction, GitOperationInProgress, GitOperationType, GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChange, GitFileChangeType, GraphFilters, GitPushBranchMode, GitRebaseType, GitRefData, GitRemoteDetails, GitRepoSettings, GitRepoState, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitUnsavedChanges, GitUserDetails, GitWorktree, MergeOptions } from './types';
 import { getPathFromStr } from './utils';
 
 const eolRegex = /\r\n|\r|\n/g;
@@ -161,7 +161,7 @@ export class DataSource {
 			}
 		}
 
-		return { commits: commitNodes, head: refData.head, moreCommitsAvailable: moreCommitsAvailable, bisecting: Object.keys(refData.bisect).length > 0 || await this.isBisecting(repo) };
+		return { commits: commitNodes, head: refData.head, moreCommitsAvailable: moreCommitsAvailable, bisecting: Object.keys(refData.bisect).length > 0 || await this.isBisecting(repo), operation: await this.getOperationInProgress(repo) };
 	}
 
 	public commitDetails(repo: string, commitHash: string): Promise<GitCommitDetails | null> {
@@ -458,6 +458,31 @@ export class DataSource {
 		}
 		if (config.signCommits()) commitArgs.push('-S');
 		return this.runGitCommand(commitArgs, repo);
+	}
+
+	/* Operations in progress (conflicts) */
+
+	/** The merge, rebase, cherry pick or revert that git stopped, with the files that still have conflicts. */
+	public async getOperationInProgress(repo: string): Promise<GitOperationInProgress | null> {
+		const gitDir = resolveGitDir(repo);
+		if (gitDir === null) return null;
+		const exists = (name: string) => fs.existsSync(path.join(gitDir, name));
+		let type: GitOperationType | null = null;
+		if (exists('rebase-merge') || exists('rebase-apply')) type = 'rebase';
+		else if (exists('MERGE_HEAD')) type = 'merge';
+		else if (exists('CHERRY_PICK_HEAD')) type = 'cherry-pick';
+		else if (exists('REVERT_HEAD')) type = 'revert';
+		if (type === null) return null;
+		const conflictedFiles = await this.spawnGit(['status', '--porcelain', '--untracked-files=no'], repo, (stdout) => parseConflictedFiles(stdout), false).catch((): string[] => []);
+		return { type: type, conflictedFiles: conflictedFiles };
+	}
+
+	/** Continue, skip or abort the stopped operation. No editor is opened for the commit message. */
+	public operationAction(repo: string, type: GitOperationType, action: GitOperationAction) {
+		const types: GitOperationType[] = ['merge', 'rebase', 'cherry-pick', 'revert'], actions: GitOperationAction[] = ['continue', 'skip', 'abort'];
+		if (types.indexOf(type) === -1 || actions.indexOf(action) === -1) return rejectArguments();
+		if (action === 'skip' && type === 'merge') return rejectArguments();
+		return this.runGitCommand(['-c', 'core.editor=true', type, '--' + action], repo);
 	}
 
 	/* Bisect */
@@ -903,6 +928,21 @@ export function resolveGitDir(repo: string): string | null {
 		// no .git entry
 	}
 	return null;
+}
+
+/** Paths with unresolved conflicts from `git status --porcelain` (both-modified, both-added, both-deleted, added/deleted by one side). */
+export function parseConflictedFiles(stdout: string): string[] {
+	const files: string[] = [];
+	for (const line of stdout.split(eolRegex)) {
+		if (line.length < 4) continue;
+		const code = line.substring(0, 2);
+		if (code === 'UU' || code === 'AA' || code === 'DD' || code === 'AU' || code === 'UA' || code === 'DU' || code === 'UD') {
+			let file = line.substring(3);
+			if (file.startsWith('"') && file.endsWith('"')) file = file.substring(1, file.length - 1).replace(/\\(.)/g, '$1');
+			files.push(file);
+		}
+	}
+	return files;
 }
 
 /** Parses `git worktree list --porcelain`: blank-line separated records of "key value" lines. */

@@ -378,22 +378,32 @@ export class GitGraphView {
 						status: await this.addWorktree(msg.repo, msg.ref, msg.newBranch)
 					});
 					break;
-				case 'removeWorktree':
+				case 'removeWorktree': {
+					const worktree = await this.resolveWorktree(msg.repo, msg.path);
 					this.sendMessage({
 						command: 'removeWorktree',
-						status: await this.dataSource.removeWorktree(msg.repo, msg.path, msg.force)
+						status: worktree !== null ? await this.dataSource.removeWorktree(msg.repo, worktree, msg.force) : 'The folder is not a worktree of this repository.'
 					});
 					break;
+				}
 				case 'pruneWorktrees':
 					this.sendMessage({
 						command: 'pruneWorktrees',
 						status: await this.dataSource.pruneWorktrees(msg.repo)
 					});
 					break;
-				case 'openWorktree':
+				case 'openWorktree': {
+					const worktree = await this.resolveWorktree(msg.repo, msg.path);
 					this.sendMessage({
 						command: 'openWorktree',
-						status: await this.openWorktree(msg.path, msg.newWindow)
+						status: worktree !== null ? await this.openWorktree(worktree, msg.newWindow) : 'The folder is not a worktree of this repository.'
+					});
+					break;
+				}
+				case 'operationAction':
+					this.sendMessage({
+						command: 'operationAction',
+						status: await this.dataSource.operationAction(msg.repo, msg.type, msg.action)
 					});
 					break;
 				case 'openExternalUrl':
@@ -569,6 +579,16 @@ export class GitGraphView {
 		return status;
 	}
 
+	/**
+	 * A path from the webview is used only when it is exactly one of the non-main worktrees that git lists
+	 * for a known repository; anything else is refused.
+	 */
+	private async resolveWorktree(repo: string, worktreePath: string): Promise<string | null> {
+		if (!this.isKnownRepo(repo) || typeof worktreePath !== 'string') return null;
+		const match = (await this.dataSource.getWorktrees(repo)).find((worktree) => !worktree.isMain && worktree.path === worktreePath);
+		return match ? match.path : null;
+	}
+
 	/** Register a worktree as a repository of this workspace, or open it in a new editor window. */
 	private async openWorktree(worktreePath: string, newWindow: boolean): Promise<GitCommandStatus> {
 		if (newWindow) {
@@ -647,6 +667,7 @@ export class GitGraphView {
 			</div>
 			<div id="filterBar"></div>
 			<div id="bisectBar"></div>
+			<div id="operationBar"></div>
 			<div id="content">
 				<div id="commitGraph"></div>
 				<div id="commitTable"></div>

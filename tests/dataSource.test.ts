@@ -2,7 +2,7 @@ import * as cp from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { DataSource, isSafeRelativePath, parseSignature, parseWorktreeList } from '../src/dataSource';
+import { DataSource, isSafeRelativePath, parseConflictedFiles, parseSignature, parseWorktreeList } from '../src/dataSource';
 import { defaultRepoState } from '../src/repoManager';
 import { Logger } from '../src/logger';
 import { configurationValues, outputChannelLines } from './mocks/vscode';
@@ -833,6 +833,64 @@ describe('DataSource worktrees', () => {
 		fs.rmSync(repo + '-wt2', { recursive: true, force: true });
 		expect(await dataSource.pruneWorktrees(repo)).toBeNull();
 		expect((await dataSource.getWorktrees(repo)).map((w) => w.branch)).toEqual(['master']);
+	});
+});
+
+describe('DataSource operations in progress', () => {
+	let repo: string;
+	let dataSource: DataSource;
+
+	beforeAll(() => {
+		repo = fs.mkdtempSync(path.join(os.tmpdir(), 'git-graph-conflict-'));
+		git(repo, ['init', '-q', '-b', 'master']);
+		git(repo, ['config', 'user.name', 'Test Committer']);
+		git(repo, ['config', 'user.email', 'committer@example.com']);
+		git(repo, ['config', 'commit.gpgsign', 'false']);
+		commit(repo, 'a.txt', 'base\n', 'Base');
+		git(repo, ['checkout', '-q', '-b', 'other']);
+		commit(repo, 'a.txt', 'theirs\n', 'Theirs');
+		git(repo, ['checkout', '-q', 'master']);
+		commit(repo, 'a.txt', 'ours\n', 'Ours');
+		dataSource = new DataSource(new Logger());
+	});
+
+	afterAll(() => {
+		fs.rmSync(repo, { recursive: true, force: true });
+	});
+
+	it('parses conflicted files from the porcelain status', () => {
+		expect(parseConflictedFiles('UU a.txt\n M b.txt\nAA "sp ace.txt"\n?? new.txt\nDU gone.txt\n')).toEqual(['a.txt', 'sp ace.txt', 'gone.txt']);
+	});
+
+	it('detects a conflicted merge, reports the files, and aborts it', async () => {
+		expect(await dataSource.getOperationInProgress(repo)).toBeNull();
+		expect(await dataSource.mergeBranch(repo, 'other', { createNewCommit: true, squash: false, noCommit: false })).toMatch(/conflict/i);
+		const op = await dataSource.getOperationInProgress(repo);
+		expect(op).toEqual({ type: 'merge', conflictedFiles: ['a.txt'] });
+		expect((await dataSource.getCommits(repo, [], 50, false)).operation).toEqual(op);
+		expect(await dataSource.operationAction(repo, 'merge', 'skip')).toMatch(/not a valid/i);
+		expect(await dataSource.operationAction(repo, 'merge', 'abort')).toBeNull();
+		expect(await dataSource.getOperationInProgress(repo)).toBeNull();
+		expect(fs.readFileSync(path.join(repo, 'a.txt'), 'utf8')).toBe('ours\n');
+	});
+
+	it('continues a merge after the conflict is resolved', async () => {
+		expect(await dataSource.mergeBranch(repo, 'other', { createNewCommit: true, squash: false, noCommit: false })).toMatch(/conflict/i);
+		fs.writeFileSync(path.join(repo, 'a.txt'), 'resolved\n');
+		git(repo, ['add', 'a.txt']);
+		expect((await dataSource.getOperationInProgress(repo))!.conflictedFiles).toEqual([]);
+		expect(await dataSource.operationAction(repo, 'merge', 'continue')).toBeNull();
+		expect(await dataSource.getOperationInProgress(repo)).toBeNull();
+		expect(git(repo, ['log', '-1', '--format=%P']).split(' ')).toHaveLength(2);
+	});
+
+	it('detects a stopped cherry pick and skips it', async () => {
+		git(repo, ['checkout', '-q', '-b', 'pick-target', 'master~1']);
+		expect(await dataSource.cherrypickCommit(repo, git(repo, ['rev-parse', 'other']), { parentIndex: 0, recordOrigin: false, noCommit: false })).toMatch(/conflict/i);
+		expect((await dataSource.getOperationInProgress(repo))!.type).toBe('cherry-pick');
+		expect(await dataSource.operationAction(repo, 'cherry-pick', 'skip')).toBeNull();
+		expect(await dataSource.getOperationInProgress(repo)).toBeNull();
+		git(repo, ['checkout', '-q', 'master']);
 	});
 });
 

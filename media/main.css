@@ -1286,3 +1286,54 @@ body.dragging #commitTable tr.commit td{
 .gitRef[draggable=true]{
 	cursor:grab;
 }
+
+/* Operation in progress (merge, rebase, cherry pick, revert) */
+#operationBar{
+	display:none;
+}
+#operationBar.active{
+	display:flex;
+	align-items:center;
+	gap:8px;
+	padding:4px 8px;
+	border-bottom:1px solid var(--vscode-editorWarning-foreground, #e2c08d);
+	background-color:var(--vscode-inputValidation-warningBackground, rgba(226,192,141,0.15));
+	line-height:22px;
+	font-size:12px;
+}
+body.stickyHeader #operationBar.active{
+	position:sticky;
+	top:var(--git-graph-controls-height, 41px);
+	z-index:4;
+}
+.operationBarLabel{
+	font-weight:700;
+	white-space:nowrap;
+}
+.operationBarMessage{
+	flex:1 1 auto;
+	min-width:0;
+	overflow:hidden;
+	text-overflow:ellipsis;
+	white-space:nowrap;
+}
+.operationFile{
+	cursor:pointer;
+	text-decoration:underline;
+}
+.operationBarActions{
+	white-space:nowrap;
+}
+.operationBarActions .roundedBtn{
+	display:inline-block;
+	height:20px;
+	line-height:20px;
+	padding:0 10px;
+	border-radius:10px;
+	font-size:12px;
+	margin-left:6px;
+}
+.operationBarActions .roundedBtn.disabled{
+	opacity:0.5;
+	cursor:default;
+}

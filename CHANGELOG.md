@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+* Security: "Add to Git Graph", "Open" and "Remove" for worktrees only act on folders that git lists as worktrees of a known repository; other paths from the view are refused.
+* Conflict help: while a merge, rebase, cherry pick or revert is stopped, a bar below the controls names the operation, lists the files with conflicts (click to open), and offers Continue (enabled once no conflicts remain; no editor is opened for the message), Skip (rebase and cherry pick) and Abort, each after confirmation.
+
 * Worktrees: the Repository Settings widget lists the worktrees of the repository (folder, branch or detached commit, locked and prunable flags) with "Add Worktree...", "Add to Git Graph" (registers the worktree as a repository), "Open" (new window), "Remove" (with a Force option) and "Prune". "Create Worktree from this Branch..." and "... from this Commit..." in the context menus ask for an optional new branch and then for the folder. New keys `branch.createWorktree` and `commit.createWorktree` in `git-graph.contextMenuActionsVisibility`.
 
 ## 2.4.0 - 2026-10-18
