@@ -9,6 +9,7 @@
 * "Archive..." on branches, tags and commits saves the tree as a zip or tar file (`git archive`), with new `archive` keys in `git-graph.contextMenuActionsVisibility`.
 * "Push Branch" can push to several remotes in one go: when the repository has more than one remote, the dialog offers a checkbox per remote. The upstream is set for the first selected remote.
 * "Open Diff in External Tool" in the file context menu runs `git difftool --no-prompt` for the file, so the tool from `diff.tool` or `diff.guitool` opens it.
+* Security: default values of text inputs in dialogs (for example the branch name in "Rename Branch") are escaped before they are inserted into the dialog. A branch name containing a double quote could previously break out of the input attribute.
 * Security: the command typed into the terminal accepts only letters, digits and `_ . / @ + -` in the rebase target. Other reference names are refused with a message instead of being passed to the shell.
 
 ## 2.2.0 - 2026-10-18

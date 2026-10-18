@@ -1903,7 +1903,8 @@ function showFormDialog(message: string, inputs: DialogInput[], actionName: stri
 		} else if (input.type === 'checkbox') {
 			html += '<span class="dialogFormCheckbox"><label><input id="dialogInput' + i + '" type="checkbox"' + (input.value ? ' checked' : '') + '/>' + (multiElementForm ? '' : input.name) + '</label></span>';
 		} else {
-			html += '<input id="dialogInput' + i + '" type="text" value="' + input.default + '"' + (input.type === 'text' && input.placeholder !== null ? ' placeholder="' + input.placeholder + '"' : '') + '/>';
+			// Defaults can come from the repository (for example a branch name in the rename dialog), so they are escaped
+			html += '<input id="dialogInput' + i + '" type="text" value="' + escapeHtml(input.default) + '"' + (input.type === 'text' && input.placeholder !== null ? ' placeholder="' + escapeHtml(input.placeholder) + '"' : '') + '/>';
 			if (input.type === 'text-ref') textRefInput = i;
 		}
 		html += '</td></tr>';
