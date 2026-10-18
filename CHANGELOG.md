@@ -4,6 +4,11 @@
 
 * `git-graph.fileEncoding` decodes files read from git history (diffs, "View File at this Revision") with the given encoding, per folder when needed; `git-graph.openNewTabEditorGroup` chooses the editor group (active, beside, or a numbered group) where diffs and files open.
 * Dialog defaults from upstream: the Add Tag dialog can push the new tag to a remote (`git-graph.dialog.addTag.pushToRemote`), fetching one remote from the Repository Settings widget asks about pruning branches and tags (`git-graph.dialog.fetchRemote.prune`, `pruneTags`), a squash pull is committed with a default message or git's SQUASH_MSG (`git-graph.dialog.pullBranch.squashMessageFormat`), and `git-graph.repository.onLoad.showSpecificBranches` selects branches on load for every repository without its own setting.
+
+## 2.4.3 - 2026-10-18
+
+Completes the Repository Settings widget (issue #18) and hardens the shared settings file after the security reviews.
+
 * Repository Settings: the user details follow `include` and `includeIf` directives of the git configuration (`git config --includes`); no global `.gitconfig` is required.
 * Security: the repository settings file is read and written only when `.vscode` and `.vscode/git-graph.json` are not symbolic links and stay inside the repository, the file is written atomically, the confirmation prompt lists the incoming values (including the issue pattern and URL), and issue patterns, wherever they come from, must be at most 200 characters, compile, and contain no quantified group inside a quantified group.
 * Repository Settings: "Export to File" writes the shareable settings (overrides, hidden remotes, issue linking, branches shown on load) to `.vscode/git-graph.json` in the repository, and "Import from File" applies that file. When a repository with such a file opens and its content was not applied, exported or declined before, Git Graph offers once to apply it. The file is validated field by field; unknown fields are ignored and the display name is never shared.

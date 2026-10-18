@@ -17,7 +17,7 @@ Work is tracked in GitHub milestones. Each theme has a tracking issue labeled `t
 3. No account, no telemetry, no network calls except the ones the user enables (avatars, issue links).
 4. Each milestone ships as a Marketplace and Open VSX release. Small releases are preferred over large ones.
 
-## Where we stand (2.4.2)
+## Where we stand (2.4.3)
 
 Shipped in 2.0.x: the Git Graph 1.4.6 feature set, a current toolchain (TypeScript 5, ESLint, Node 20, VS Code 1.74 or later), CI, release pipeline, two bug fixes.
 
@@ -35,7 +35,7 @@ Shipped in 2.4.1: worktrees (list, add, open, remove, prune) and conflict help (
 
 Shipped in 2.4.2: interactive rebase editor (#30) with the "Fixup into Parent" shortcut; localisation with a Turkish sample (#32); CI status dot for GitHub and GitLab (#39); conflict prediction in the merge, rebase and cherry pick dialogs (#35); one uncommitted-changes row per worktree (#33); translation of the commit details view.
 
-Milestone 2.4 is complete with 2.4.2. Next: the Repository Settings leftovers (export and import of repository settings, initial branches per repository) and the remaining presentation items in `docs/UPSTREAM_GAP.md`.
+Milestone 2.4 is complete with 2.4.2. Release 2.4.3 completes the Repository Settings widget (branches shown on load, export and import of `.vscode/git-graph.json`, git config includes). Next: the remaining parity settings and presentation items in `docs/UPSTREAM_GAP.md` (editor group for diffs, file encoding, markdown in messages, dialog defaults, code review commands, menus that survive a refresh).
 
 Still missing versus Git Graph 1.30: export and import of repository settings, `git config` includes, initial branches per repository, pull request configuration stored per repository, and the smaller presentation items listed in `docs/UPSTREAM_GAP.md`. Missing versus the field: see the ranked table in `docs/COMPETITORS.md`, section 3 (milestone 2.4).
 
