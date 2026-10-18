@@ -1,5 +1,9 @@
 # Change Log
 
+## Unreleased
+
+* Repository Settings widget (gear button in the controls bar): a custom name for the repository dropdown; per-repository overrides for showing tags, stashes, reflog commits and first-parent loading; the remotes with Fetch, Prune, Edit, Delete and "Add Remote" actions and a "Hidden" switch that keeps a remote's branches off the graph; the repository's user name and email, saved locally or globally; a shortcut to the extension settings. Repository state written by earlier versions is upgraded on load.
+
 ## 2.2.1 - 2026-10-18
 
 Milestone "2.2 Core actions", second release: the items that were still open after 2.2.0. Everything below was re-implemented from feature descriptions; no code was taken from upstream versions after 1.4.6 or from other extensions.
