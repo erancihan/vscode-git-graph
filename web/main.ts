@@ -487,7 +487,8 @@ class GitGraphView {
 			if (isRepo) {
 				this.requestLoadCommits(hard, (commitChanges: boolean) => {
 					if (!hard && (branchChanges || commitChanges)) {
-						hideDialogAndContextMenu();
+						// The table was rebuilt: keep an open menu or dialog when its source row or label still exists
+						reattachDialogAndContextMenu();
 					}
 				});
 			} else {
@@ -2218,6 +2219,7 @@ class GitGraphView {
 }
 
 let contextMenu = document.getElementById('contextMenu')!, contextMenuSource: HTMLElement | null = null;
+let contextMenuSourceSelector: string | null = null, dialogMenuSourceSelector: string | null = null;
 let dialog = document.getElementById('dialog')!, dialogBacking = document.getElementById('dialogBacking')!, dialogMenuSource: HTMLElement | null = null;
 const gitGraph = new GitGraphView(viewState.repos, viewState.lastActiveRepo, {
 	autoCenterCommitDetailsView: viewState.autoCenterCommitDetailsView,
@@ -2652,6 +2654,7 @@ function showContextMenu(e: MouseEvent, allItems: ContextMenuElement[], sourceEl
 
 	contextMenuSource = sourceElem;
 	contextMenuSource.classList.add('contextMenuActive');
+	contextMenuSourceSelector = selectorForSourceElem(sourceElem);
 }
 /**
  * Drop items whose `visible` flag is false, then drop dividers that would be at the start, at the
@@ -2776,6 +2779,7 @@ function showDialog(html: string, actionName: string | null, dismissName: string
 
 	dialogMenuSource = sourceElem;
 	if (dialogMenuSource !== null) dialogMenuSource.classList.add('dialogActive');
+	dialogMenuSourceSelector = sourceElem !== null ? selectorForSourceElem(sourceElem) : null;
 }
 function hideDialog() {
 	dialogBacking.className = '';
@@ -2793,6 +2797,51 @@ function isDialogOrContextMenuOpen() {
 function isTextInput(target: EventTarget | null) {
 	return target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable);
 }
+/**
+ * A selector that finds the same row or label again after the table is re-rendered: commit rows by
+ * hash, the uncommitted changes row, worktree rows by path, and reference labels by row and name.
+ * Null for elements that cannot be found again (the menu or dialog is then closed on refresh).
+ */
+function selectorForSourceElem(elem: HTMLElement): string | null {
+	const escapeCss = (value: string) => typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(value) : value.replace(/["\\]/g, '\\$&');
+	if (elem.classList.contains('gitRef') && typeof elem.dataset.name === 'string') {
+		const row = <HTMLElement | null>elem.closest('tr');
+		if (row === null || typeof row.dataset.hash !== 'string') return null;
+		const kind = ['head', 'remote', 'tag', 'stash'].find((cls) => elem.classList.contains(cls));
+		return 'tr[data-hash="' + escapeCss(row.dataset.hash) + '"] .gitRef' + (kind !== undefined ? '.' + kind : '') + '[data-name="' + escapeCss(elem.dataset.name) + '"]';
+	}
+	if (elem.classList.contains('commit') && typeof elem.dataset.hash === 'string') return 'tr.commit[data-hash="' + escapeCss(elem.dataset.hash) + '"]';
+	if (elem.classList.contains('unsavedChanges')) return 'tr.unsavedChanges';
+	if (elem.classList.contains('worktreeChanges') && typeof elem.dataset.worktree === 'string') return 'tr.worktreeChanges[data-worktree="' + escapeCss(elem.dataset.worktree) + '"]';
+	return null;
+}
+
+/** After a refresh, point an open context menu or dialog at the re-rendered source element, or close it when the element is gone. */
+function reattachDialogAndContextMenu() {
+	const refind = (current: HTMLElement | null, selector: string | null): HTMLElement | null => {
+		if (current !== null && document.body.contains(current)) return current;
+		return selector !== null ? <HTMLElement | null>document.querySelector(selector) : null;
+	};
+	if (contextMenu.classList.contains('active')) {
+		const elem = refind(contextMenuSource, contextMenuSourceSelector);
+		if (elem === null) {
+			hideContextMenu();
+		} else {
+			contextMenuSource = elem;
+			contextMenuSource.classList.add('contextMenuActive');
+		}
+	}
+	if (dialog.classList.contains('active') && dialogMenuSource !== null) {
+		const elem = refind(dialogMenuSource, dialogMenuSourceSelector);
+		if (elem === null) {
+			hideDialog();
+		} else {
+			dialogMenuSource = elem;
+			dialogMenuSource.classList.add('dialogActive');
+		}
+	}
+}
+
 function hideDialogAndContextMenu() {
 	if (dialog.classList.contains('active')) hideDialog();
 	if (contextMenu.classList.contains('active')) hideContextMenu();

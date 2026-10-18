@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Context menus and dialogs stay open while the graph refreshes in the background (for example when a fetch or a file change reloads the commits), as long as the row or label they were opened from still exists; the highlight moves to the re-rendered element.
 * Commands "Git Graph: End a Specific Code Review in Workspace..." and "Git Graph: Resume a Specific Code Review in Workspace..." pick a review from a list (repository, commits, files left, last activity); resuming opens the graph on that repository and expands the reviewed commit or comparison. The view can now be opened on a given commit (`loadViewTo`).
 * Presentation: `git-graph.graph.uncommittedChanges` keeps the open circle on the checked-out commit when preferred, and `git-graph.markdown` (default true) renders inline Markdown in commit messages: **bold**, *italic*, `code` and ~~strikethrough~~, outside links.
 * `git-graph.fileEncoding` decodes files read from git history (diffs, "View File at this Revision") with the given encoding, per folder when needed; `git-graph.openNewTabEditorGroup` chooses the editor group (active, beside, or a numbered group) where diffs and files open.
