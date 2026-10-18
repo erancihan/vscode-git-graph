@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { DateFormat, DateType, GraphStyle, TabIconColourTheme } from './types';
+import { CommitOrdering, DateFormat, DateType, GraphStyle, TabIconColourTheme } from './types';
 
 const DEFAULT_GRAPH_COLOURS = ['#0085d9', '#d9008f', '#00d90a', '#d98500', '#a300d9', '#ff0000', '#00d9cc', '#e138e8', '#85d900', '#dc5b23', '#6f24d6', '#ffcc00'];
 const GRAPH_COLOUR_REGEX = /^\s*(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|rgb[a]?\s*\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\))\s*$/;
@@ -52,6 +52,10 @@ class Config {
 
 	/* Repository */
 
+	public commitOrdering(): CommitOrdering {
+		return this.getEnum<CommitOrdering>('repository.commits.order', 'commitOrdering', ['date', 'author-date', 'topo'], 'date');
+	}
+
 	public fetchAvatars() {
 		return this.getBoolean('repository.commits.fetchAvatars', 'fetchAvatars', false);
 	}
@@ -64,8 +68,28 @@ class Config {
 		return this.getPositiveInteger('repository.commits.loadMore', 'loadMoreCommits', 100);
 	}
 
+	public loadMoreCommitsAutomatically() {
+		return this.getBoolean('repository.commits.loadMoreAutomatically', 'loadMoreCommitsAutomatically', false);
+	}
+
+	public showCommitsOnlyReferencedByTags() {
+		return this.getBoolean('repository.showCommitsOnlyReferencedByTags', 'showCommitsOnlyReferencedByTags', true);
+	}
+
 	public showCurrentBranchByDefault() {
 		return this.getBoolean('repository.onLoad.showCheckedOutBranch', 'showCurrentBranchByDefault', false);
+	}
+
+	public showRemoteBranches() {
+		return this.getBoolean('repository.showRemoteBranches', null, true);
+	}
+
+	public showRemoteHeads() {
+		return this.getBoolean('repository.showRemoteHeads', null, true);
+	}
+
+	public showTags() {
+		return this.getBoolean('repository.showTags', 'showTags', true);
 	}
 
 	public showUncommittedChanges() {

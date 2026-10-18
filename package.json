@@ -159,10 +159,50 @@
 					"default": 100,
 					"description": "Specifies the number of commits to load when the \"Load More Commits\" button is pressed (only shown when more commits are available)."
 				},
+				"git-graph.repository.commits.loadMoreAutomatically": {
+					"type": "boolean",
+					"default": false,
+					"description": "Load more commits automatically when the view is scrolled to the bottom, instead of waiting for the \"Load More Commits\" button."
+				},
+				"git-graph.repository.commits.order": {
+					"type": "string",
+					"enum": [
+						"date",
+						"author-date",
+						"topo"
+					],
+					"enumDescriptions": [
+						"Commits are shown in commit timestamp order, with parents always after their children",
+						"Commits are shown in author timestamp order, with parents always after their children",
+						"Commits are shown in topological order: no parent is shown before all of its children, and commits on the same line of history stay together"
+					],
+					"default": "date",
+					"description": "Specifies the order of commits on the graph. See the --date-order, --author-date-order and --topo-order options of \"git log\"."
+				},
 				"git-graph.repository.onLoad.showCheckedOutBranch": {
 					"type": "boolean",
 					"default": false,
 					"description": "Show the current branch by default when Git Graph is opened. Default: false (show all branches)"
+				},
+				"git-graph.repository.showCommitsOnlyReferencedByTags": {
+					"type": "boolean",
+					"default": true,
+					"description": "Show commits that are only referenced by tags when \"Show All\" is selected."
+				},
+				"git-graph.repository.showRemoteBranches": {
+					"type": "boolean",
+					"default": true,
+					"description": "Default state of the \"Show Remote Branches\" checkbox when a repository is opened."
+				},
+				"git-graph.repository.showRemoteHeads": {
+					"type": "boolean",
+					"default": true,
+					"description": "Show remote HEAD symbolic references, for example \"origin/HEAD\", on the graph."
+				},
+				"git-graph.repository.showTags": {
+					"type": "boolean",
+					"default": true,
+					"description": "Show tags on the graph."
 				},
 				"git-graph.repository.showUncommittedChanges": {
 					"type": "boolean",

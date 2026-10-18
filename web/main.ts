@@ -30,6 +30,7 @@ class GitGraphView {
 		this.gitRepos = repos;
 		this.config = config;
 		this.maxCommits = config.initialLoadCommits;
+		this.showRemoteBranches = config.showRemoteBranches;
 		this.graph = new Graph('commitGraph', this.config);
 		this.tableElem = document.getElementById('commitTable')!;
 		this.footerElem = document.getElementById('footer')!;
@@ -296,13 +297,8 @@ class GitGraphView {
 		this.makeTableResizable();
 
 		if (this.moreCommitsAvailable) {
-			document.getElementById('loadMoreCommitsBtn')!.addEventListener('click', () => {
-				(<HTMLElement>document.getElementById('loadMoreCommitsBtn')!.parentNode!).innerHTML = '<h2 id="loadingHeader">' + svgIcons.loading + 'Loading ...</h2>';
-				this.maxCommits += this.config.loadMoreCommits;
-				this.hideCommitDetails();
-				this.saveState();
-				this.requestLoadCommits(true, () => { });
-			});
+			document.getElementById('loadMoreCommitsBtn')!.addEventListener('click', () => this.loadMoreCommits());
+			if (this.config.loadMoreCommitsAutomatically) this.loadMoreCommitsIfScrolledToBottom();
 		}
 
 		if (this.expandedCommit !== null) {
@@ -646,7 +642,26 @@ class GitGraphView {
 				active = window.scrollY > 0;
 				this.scrollShadowElem.className = active ? 'active' : '';
 			}
+			if (this.config.loadMoreCommitsAutomatically) this.loadMoreCommitsIfScrolledToBottom();
 		});
+	}
+
+	/* Load More Commits */
+	private loadMoreCommits() {
+		const btn = document.getElementById('loadMoreCommitsBtn');
+		if (btn === null) return; // Already loading
+		(<HTMLElement>btn.parentNode!).innerHTML = '<h2 id="loadingHeader">' + svgIcons.loading + 'Loading ...</h2>';
+		this.maxCommits += this.config.loadMoreCommits;
+		this.hideCommitDetails();
+		this.saveState();
+		this.requestLoadCommits(true, () => { });
+	}
+	private loadMoreCommitsIfScrolledToBottom() {
+		if (!this.moreCommitsAvailable || this.loadCommitsCallback !== null) return;
+		// Within one row of the end of the document, or the document is shorter than the window
+		if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - this.config.grid.y) {
+			this.loadMoreCommits();
+		}
 	}
 
 	/* Commit Details */
@@ -741,7 +756,9 @@ const gitGraph = new GitGraphView(viewState.repos, viewState.lastActiveRepo, {
 	grid: { x: 16, y: 24, offsetX: 8, offsetY: 12, expandY: 250 },
 	initialLoadCommits: viewState.initialLoadCommits,
 	loadMoreCommits: viewState.loadMoreCommits,
-	showCurrentBranchByDefault: viewState.showCurrentBranchByDefault
+	loadMoreCommitsAutomatically: viewState.loadMoreCommitsAutomatically,
+	showCurrentBranchByDefault: viewState.showCurrentBranchByDefault,
+	showRemoteBranches: viewState.showRemoteBranches
 }, vscode.getState());
 
 

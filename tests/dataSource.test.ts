@@ -4,7 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { DataSource, findGitExecutable } from '../src/dataSource';
 import { Logger } from '../src/logger';
-import { outputChannelLines } from './mocks/vscode';
+import { configurationValues, outputChannelLines } from './mocks/vscode';
 
 /** Run git synchronously in the test repository. Used only to build fixtures. */
 function git(repo: string, args: string[]) {
@@ -131,6 +131,69 @@ describe('DataSource', () => {
 		await new Promise(r => setTimeout(r, 50));
 		delete configurationValues['git'];
 		expect(await broken.isGitRepository(repo)).toBe(true); // falls back to git on PATH when the path does not exist
+	});
+});
+
+describe('DataSource commit loading options', () => {
+	let repo: string;
+	let dataSource: DataSource;
+	let base: string, tagOnly: string, detached: string;
+
+	beforeAll(() => {
+		repo = fs.mkdtempSync(path.join(os.tmpdir(), 'git-graph-test-'));
+		git(repo, ['init', '-q', '-b', 'master']);
+		git(repo, ['config', 'user.name', 'Test Committer']);
+		git(repo, ['config', 'user.email', 'committer@example.com']);
+		base = commit(repo, 'a.txt', 'one\n', 'Base commit');
+		git(repo, ['checkout', '-q', '--detach', base]);
+		tagOnly = commit(repo, 'b.txt', 'two\n', 'Only reachable from a tag');
+		git(repo, ['tag', '-a', '-m', 'An annotated tag', 'annotated-tag']);
+		git(repo, ['checkout', '-q', '--detach', base]);
+		detached = commit(repo, 'c.txt', 'three\n', 'Detached HEAD commit');
+		dataSource = new DataSource(new Logger());
+	});
+
+	afterEach(() => {
+		delete configurationValues['git-graph'];
+	});
+
+	afterAll(() => {
+		fs.rmSync(repo, { recursive: true, force: true });
+	});
+
+	it('includes the detached HEAD commit when showing all branches', async () => {
+		const result = await dataSource.getCommits(repo, '', 10, false);
+		expect(result.head).toBe(detached);
+		expect(result.commits.map(c => c.hash)).toEqual(expect.arrayContaining([detached, tagOnly, base]));
+	});
+
+	it('attaches annotated tags to the tagged commit exactly once', async () => {
+		const result = await dataSource.getCommits(repo, '', 10, false);
+		const tagged = result.commits.find(c => c.hash === tagOnly)!;
+		expect(tagged.refs).toEqual([{ hash: tagOnly, name: 'annotated-tag', type: 'tag' }]);
+	});
+
+	it('hides commits only reachable from tags when the setting is off', async () => {
+		configurationValues['git-graph'] = { 'repository.showCommitsOnlyReferencedByTags': false };
+		const result = await dataSource.getCommits(repo, '', 10, false);
+		expect(result.commits.map(c => c.hash)).not.toContain(tagOnly);
+		expect(result.commits.map(c => c.hash)).toContain(detached);
+	});
+
+	it('hides tags when the setting is off', async () => {
+		configurationValues['git-graph'] = { 'repository.showTags': false };
+		const result = await dataSource.getCommits(repo, '', 10, false);
+		expect(result.commits.every(c => c.refs.every(r => r.type !== 'tag'))).toBe(true);
+	});
+
+	it('passes the configured ordering to git log', async () => {
+		configurationValues['git-graph'] = { 'repository.commits.order': 'topo' };
+		await dataSource.getCommits(repo, '', 10, false);
+		const lines = outputChannelLines['Git Graph'];
+		expect(lines.some(l => l.includes(' log ') && l.includes('--topo-order'))).toBe(true);
+		configurationValues['git-graph'] = { 'commitOrdering': 'author-date' };
+		await dataSource.getCommits(repo, '', 10, false);
+		expect(lines.slice(-4).some(l => l.includes('--author-date-order'))).toBe(true);
 	});
 });
 

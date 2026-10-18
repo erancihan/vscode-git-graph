@@ -60,8 +60,10 @@ export interface GitGraphViewState {
 	initialLoadCommits: number;
 	lastActiveRepo: string | null;
 	loadMoreCommits: number;
+	loadMoreCommitsAutomatically: boolean;
 	repos: GitRepoSet;
 	showCurrentBranchByDefault: boolean;
+	showRemoteBranches: boolean;
 }
 
 export interface GitFileChange {
@@ -85,6 +87,7 @@ export type GraphStyle = 'rounded' | 'angular';
 export type TabIconColourTheme = 'colour' | 'grey';
 export type GitCommandStatus = string | null;
 export type GitResetMode = 'soft' | 'mixed' | 'hard';
+export type CommitOrdering = 'date' | 'author-date' | 'topo';
 export type GitFileChangeType = 'A' | 'M' | 'D' | 'R';
 
 
