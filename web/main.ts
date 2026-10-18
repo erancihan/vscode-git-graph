@@ -564,6 +564,11 @@ class GitGraphView {
 						}, sourceElem);
 					}
 				},
+				{
+					title: 'Archive' + ELLIPSIS,
+					visible: visibility.archive,
+					onClick: () => sendMessage({ command: 'archive', repo: this.currentRepo!, ref: hash })
+				},
 				null,
 				{
 					title: 'Copy Commit Hash to Clipboard',
@@ -721,17 +726,23 @@ class GitGraphView {
 							title: 'Push Branch' + ELLIPSIS,
 							visible: this.config.contextMenuActionsVisibility.branch.push,
 							onClick: () => {
-								const inputs: DialogInput[] = [
+								const remotes = this.gitRemotes, multiple = remotes.length > 1;
+								const defaultRemote = remotes.indexOf('origin') > -1 ? 'origin' : remotes[0];
+								// With several remotes, one checkbox per remote; the branch is pushed to every checked remote
+								const inputs: DialogInput[] = multiple ? remotes.map((remote): DialogInput => ({ type: 'checkbox', name: 'Push to ' + escapeHtml(remote), value: remote === defaultRemote })) : [];
+								inputs.push(
 									{ type: 'checkbox', name: 'Set Upstream', value: true },
 									{ type: 'select', name: 'Mode: ', default: 'normal', options: [{ name: 'Normal', value: 'normal' }, { name: 'Force With Lease', value: 'force-with-lease' }, { name: 'Force', value: 'force' }] }
-								];
-								if (this.gitRemotes.length > 1) {
-									inputs.unshift({ type: 'select', name: 'Remote: ', default: this.gitRemotes.indexOf('origin') > -1 ? 'origin' : this.gitRemotes[0], options: this.gitRemotes.map((remote) => ({ name: remote, value: remote })) });
-								}
-								showFormDialog('Are you sure you want to push the branch <b><i>' + escapeHtml(refName) + '</i></b>' + (this.gitRemotes.length === 1 ? ' to the remote <b><i>' + escapeHtml(this.gitRemotes[0]) + '</i></b>' : '') + '?', inputs, 'Yes, push', (values) => {
-									const remote = this.gitRemotes.length > 1 ? values.shift()! : this.gitRemotes[0];
+								);
+								showFormDialog('Are you sure you want to push the branch <b><i>' + escapeHtml(refName) + '</i></b>' + (!multiple ? ' to the remote <b><i>' + escapeHtml(remotes[0]) + '</i></b>' : '') + '?', inputs, 'Yes, push', (values) => {
+									const selected = multiple ? remotes.filter((_, index) => values[index] === 'checked') : [remotes[0]];
+									const options = values.slice(multiple ? remotes.length : 0);
+									if (selected.length === 0) {
+										showErrorDialog('Unable to Push Branch', 'Select at least one remote.', null);
+										return;
+									}
 									showActionRunningDialog('Pushing Branch');
-									sendMessage({ command: 'pushBranch', repo: this.currentRepo!, branchName: refName, remote: remote, setUpstream: values[0] === 'checked', mode: <GG.GitPushBranchMode>values[1] });
+									sendMessage({ command: 'pushBranch', repo: this.currentRepo!, branchName: refName, remotes: selected, setUpstream: options[0] === 'checked', mode: <GG.GitPushBranchMode>options[1] });
 								}, null);
 							}
 						});
@@ -781,6 +792,13 @@ class GitGraphView {
 					}
 				}
 				copyType = 'Branch Name';
+			}
+			if (isTag || isHead) {
+				menu.push({
+					title: 'Archive' + ELLIPSIS,
+					visible: isTag ? this.config.contextMenuActionsVisibility.tag.archive : this.config.contextMenuActionsVisibility.branch.archive,
+					onClick: () => sendMessage({ command: 'archive', repo: this.currentRepo!, ref: refName })
+				});
 			}
 			menu.push(null, {
 				title: 'Copy ' + copyType + ' to Clipboard',
@@ -1436,6 +1454,13 @@ class GitGraphView {
 					onClick: () => sendMessage({ command: 'viewDiff', repo: this.currentRepo!, fromHash: range.fromHash, toHash: range.toHash, oldFilePath: oldFilePath, newFilePath: newFilePath, type: type })
 				},
 				{
+					title: 'Open Diff in External Tool',
+					onClick: () => {
+						showActionRunningDialog('Opening External Diff Tool');
+						sendMessage({ command: 'openExternalDiff', repo: this.currentRepo!, fromHash: range.fromHash, toHash: range.toHash, filePath: type === 'D' ? oldFilePath : newFilePath });
+					}
+				},
+				{
 					title: 'View File at this Revision',
 					visible: existsAtCommit && isCommit,
 					onClick: () => sendMessage({ command: 'viewFileAtRevision', repo: this.currentRepo!, commitHash: hash, filePath: newFilePath })
@@ -1633,6 +1658,16 @@ window.addEventListener('message', event => {
 			break;
 		case 'openFile':
 			if (msg.success === false) showErrorDialog('Unable to open file', null, null);
+			break;
+		case 'archive':
+			if (msg.status !== null) showErrorDialog('Unable to Create Archive', msg.status, null);
+			break;
+		case 'openExternalDiff':
+			if (msg.status === null) {
+				hideDialog();
+			} else {
+				showErrorDialog('Unable to Open the External Diff Tool', msg.status, null);
+			}
 			break;
 		case 'viewDiff':
 			if (msg.success === false) showErrorDialog('Unable to view diff of file', null, null);

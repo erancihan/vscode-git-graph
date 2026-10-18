@@ -468,6 +468,38 @@ describe('DataSource remote actions', () => {
 		git(repo, ['checkout', '-q', 'master']);
 	});
 
+	it('pushes a branch to several remotes and reports the failing one', async () => {
+		const second = fs.mkdtempSync(path.join(os.tmpdir(), 'git-graph-remote2-'));
+		git(second, ['init', '-q', '--bare']);
+		git(repo, ['remote', 'add', 'second', second]);
+		try {
+			expect(await dataSource.pushBranchToRemotes(repo, 'topic', ['origin', 'second'], true, 'normal')).toBeNull();
+			expect(git(second, ['rev-parse', 'topic'])).toBe(git(repo, ['rev-parse', 'topic']));
+			expect(git(repo, ['rev-parse', '--abbrev-ref', 'topic@{upstream}'])).toBe('origin/topic');
+			expect(await dataSource.pushBranchToRemotes(repo, 'topic', [], false, 'normal')).toMatch(/No remote/);
+			expect(await dataSource.pushBranchToRemotes(repo, 'topic', ['origin', 'missing'], false, 'normal')).toMatch(/Pushing to "missing" failed/);
+		} finally {
+			git(repo, ['remote', 'remove', 'second']);
+			fs.rmSync(second, { recursive: true, force: true });
+		}
+	});
+
+	it('writes zip and tar archives of a reference', async () => {
+		const zipPath = path.join(repo, 'out.zip'), tarPath = path.join(repo, 'out.tar');
+		expect(await dataSource.archive(repo, 'master', zipPath, 'zip')).toBeNull();
+		expect(await dataSource.archive(repo, git(repo, ['rev-parse', 'HEAD']), tarPath, 'tar')).toBeNull();
+		expect(fs.statSync(zipPath).size).toBeGreaterThan(0);
+		expect(fs.statSync(tarPath).size).toBeGreaterThan(0);
+		expect(await dataSource.archive(repo, '--output=/tmp/x', zipPath, 'zip')).toMatch(/not a valid/i);
+		fs.unlinkSync(zipPath);
+		fs.unlinkSync(tarPath);
+	});
+
+	it('refuses external diff requests with unsafe arguments', async () => {
+		expect(await dataSource.openExternalDiff(repo, 'not-a-hash', '*', 'a.txt')).toMatch(/not a valid/i);
+		expect(await dataSource.openExternalDiff(repo, git(repo, ['rev-parse', 'HEAD']), '*', '../outside.txt')).toMatch(/not a valid/i);
+	});
+
 	it('deletes a remote branch', async () => {
 		expect(await dataSource.deleteRemoteBranch(repo, 'topic', 'origin')).toBeNull();
 		expect(git(remote, ['branch', '--list', 'topic'])).toBe('');

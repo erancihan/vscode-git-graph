@@ -163,6 +163,11 @@
 									"type": "boolean",
 									"default": true,
 									"description": "Push Branch"
+								},
+								"archive": {
+									"type": "boolean",
+									"default": true,
+									"description": "Archive"
 								}
 							},
 							"additionalProperties": false
@@ -210,6 +215,11 @@
 									"type": "boolean",
 									"default": true,
 									"description": "Copy Commit Hash to Clipboard"
+								},
+								"archive": {
+									"type": "boolean",
+									"default": true,
+									"description": "Archive"
 								},
 								"rebase": {
 									"type": "boolean",
@@ -269,6 +279,11 @@
 									"type": "boolean",
 									"default": true,
 									"description": "Push Tag"
+								},
+								"archive": {
+									"type": "boolean",
+									"default": true,
+									"description": "Archive"
 								},
 								"copyName": {
 									"type": "boolean",

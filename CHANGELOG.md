@@ -6,6 +6,9 @@
 * Reference labels: a local branch and its remote branches on the same commit are shown as one label (`git-graph.referenceLabels.combineLocalAndRemoteBranchLabels`); right-click the remote name for the remote branch actions. `git-graph.referenceLabels.alignment` moves tag labels to the right end of the Description column and, optionally, branch labels next to the graph so the commit messages stay aligned. Labels show their full name and type as a tooltip.
 * Commit details view: `git-graph.commitDetailsView.location` docks the view to the bottom of the Git Graph view instead of opening it inline. In both places the height can be changed by dragging the edge of the view, and the height is kept while the view is open. Parent hashes in the details are links that open the parent commit. With the details open, the Up and Down arrow keys step to the previous or next commit and Escape closes the view.
 * `git-graph.repository.commits.showSignatureStatus` verifies the GPG signature of each commit and shows the result as an icon in the Commit column (good, untrusted, expired, revoked, bad, unverifiable) and as a "Signature" line in the Commit Details View with the signer and key.
+* "Archive..." on branches, tags and commits saves the tree as a zip or tar file (`git archive`), with new `archive` keys in `git-graph.contextMenuActionsVisibility`.
+* "Push Branch" can push to several remotes in one go: when the repository has more than one remote, the dialog offers a checkbox per remote. The upstream is set for the first selected remote.
+* "Open Diff in External Tool" in the file context menu runs `git difftool --no-prompt` for the file, so the tool from `diff.tool` or `diff.guitool` opens it.
 * Security: the command typed into the terminal accepts only letters, digits and `_ . / @ + -` in the rebase target. Other reference names are refused with a message instead of being passed to the shell.
 
 ## 2.2.0 - 2026-10-18

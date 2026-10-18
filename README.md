@@ -27,7 +27,8 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
         * Compare two commits: Ctrl/Cmd+click a second commit (or the uncommitted changes) while the details are open
         * Inline or docked to the bottom, with a draggable height; click a parent hash to jump to that commit; Up and Down arrows step through commits, Escape closes
     * Perform Git actions by right clicking on a commit, branch, tag, stash, or the uncommitted changes:
-        * Create, checkout, rename, delete, merge, rebase on, and push branches
+        * Create, checkout, rename, delete, merge, rebase on, and push branches (to one or several remotes)
+        * Archive a branch, tag or commit as a zip or tar file
         * Delete remote branches, fetch a remote branch into a local branch, pull a remote branch into the current branch
         * Add, delete, and push tags
         * Checkout, cherry pick, merge, rebase on (also interactively, in the integrated terminal), revert, and drop commits

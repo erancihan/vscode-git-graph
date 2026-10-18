@@ -2,7 +2,7 @@ import * as cp from 'child_process';
 import { getConfig } from './config';
 import { findGitExecutable } from './gitExecutable';
 import { Logger } from './logger';
-import { CherryPickOptions, GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChange, GitFileChangeType, GitPushBranchMode, GitRebaseType, GitRefData, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitUnsavedChanges, MergeOptions } from './types';
+import { CherryPickOptions, GitArchiveType, GitCommandStatus, GitCommit, GitCommitDetails, GitCommitNode, GitFileChange, GitFileChangeType, GitPushBranchMode, GitRebaseType, GitRefData, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitUnsavedChanges, MergeOptions } from './types';
 import { getPathFromStr } from './utils';
 
 const eolRegex = /\r\n|\r|\n/g;
@@ -452,6 +452,38 @@ export class DataSource {
 		if (mode === 'force') args.push('--force');
 		if (mode === 'force-with-lease') args.push('--force-with-lease');
 		args.push(remote, branchName);
+		return this.runGitCommand(args, repo);
+	}
+
+	/**
+	 * Push a branch to several remotes, one after the other. Stops at the first failure and
+	 * reports which remote failed. The upstream is set for the first remote only, as git tracks one.
+	 */
+	public async pushBranchToRemotes(repo: string, branchName: string, remotes: string[], setUpstream: boolean, mode: GitPushBranchMode): Promise<GitCommandStatus> {
+		if (remotes.length === 0) return 'No remote was selected.';
+		for (let i = 0; i < remotes.length; i++) {
+			const status = await this.pushBranch(repo, branchName, remotes[i], setUpstream && i === 0, mode);
+			if (status !== null) return remotes.length > 1 ? 'Pushing to "' + remotes[i] + '" failed: ' + status : status;
+		}
+		return null;
+	}
+
+	/** Write an archive (zip or tar) of the tree at `ref` to `outputFilePath`. */
+	public archive(repo: string, ref: string, outputFilePath: string, type: GitArchiveType) {
+		if (!isSafeRefName(ref) && !isCommitHash(ref)) return rejectArguments();
+		return this.runGitCommand(['archive', '--format=' + type, '--output=' + outputFilePath, ref, '--'], repo);
+	}
+
+	/**
+	 * Open the diff of one file in the external tool configured by `diff.tool` (or `diff.guitool`).
+	 * `toHash` "*" compares with the working tree. Resolves when the tool exits.
+	 */
+	public openExternalDiff(repo: string, fromHash: string, toHash: string, filePath: string) {
+		const from = fromHash.endsWith('^') ? fromHash.slice(0, -1) : fromHash;
+		if (!isCommitHash(from) || (toHash !== '*' && !isCommitHash(toHash)) || !isSafeRelativePath(filePath)) return rejectArguments();
+		const args = ['difftool', '--no-prompt', fromHash];
+		if (toHash !== '*') args.push(toHash);
+		args.push('--', filePath);
 		return this.runGitCommand(args, repo);
 	}
 
