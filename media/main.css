@@ -183,6 +183,32 @@ body.resizingDetails{
 	cursor:ns-resize;
 	user-select:none;
 }
+.signatureStatus{
+	display:inline-block;
+	width:14px;
+	height:16px;
+	margin-right:4px;
+	vertical-align:top;
+	margin-top:4px;
+}
+.signatureStatus > svg{
+	width:14px;
+	height:14px;
+	display:block;
+	fill:rgb(128,128,128);
+}
+.signatureStatus.G > svg{
+	fill:var(--vscode-gitDecoration-addedResourceForeground, #4caf50);
+}
+.signatureStatus.U > svg, .signatureStatus.X > svg, .signatureStatus.Y > svg{
+	fill:var(--vscode-gitDecoration-modifiedResourceForeground, #e2c08d);
+}
+.signatureStatus.B > svg, .signatureStatus.R > svg{
+	fill:var(--vscode-gitDecoration-deletedResourceForeground, #f44336);
+}
+#commitDetailsSummary .signatureStatus{
+	margin-top:1px;
+}
 .commitDetailsParent{
 	cursor:pointer;
 	text-decoration:underline dotted;

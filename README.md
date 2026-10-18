@@ -27,7 +27,8 @@ If you have the original `mhutchie.git-graph` extension installed, uninstall or 
         * Compare two commits: Ctrl/Cmd+click a second commit (or the uncommitted changes) while the details are open
         * Inline or docked to the bottom, with a draggable height; click a parent hash to jump to that commit; Up and Down arrows step through commits, Escape closes
     * Perform Git actions by right clicking on a commit, branch, tag, stash, or the uncommitted changes:
-        * Create, checkout, rename, delete, merge, rebase on, and push branches
+        * Create, checkout, rename, delete, merge, rebase on, and push branches (to one or several remotes)
+        * Archive a branch, tag or commit as a zip or tar file
         * Delete remote branches, fetch a remote branch into a local branch, pull a remote branch into the current branch
         * Add, delete, and push tags
         * Checkout, cherry pick, merge, rebase on (also interactively, in the integrated terminal), revert, and drop commits
@@ -95,6 +96,7 @@ This extension contributes the following settings:
 * `git-graph.repository.commits.mute.mergeCommits`: Mute merge commits. Default: false.
 * `git-graph.referenceLabels.alignment`: Layout of reference labels: `Normal`, `Branches (on the left) & Tags (on the right)` or `Branches (aligned to the graph) & Tags (on the right)`. Default: `Normal`.
 * `git-graph.referenceLabels.combineLocalAndRemoteBranchLabels`: Show a local branch and its remote branches as one label when they point to the same commit. Default: true.
+* `git-graph.repository.commits.showSignatureStatus`: Verify GPG signatures and show their status next to each commit hash and in the details. Default: false.
 * `git-graph.repository.commits.order`: Order of commits on the graph: `date`, `author-date` or `topo`. Default: `date`.
 * `git-graph.repository.includeCommitsMentionedByReflogs`: Include commits only mentioned by reflogs when "Show All" is selected. Default: false.
 * `git-graph.repository.onLoad.scrollToHead`: Scroll to the checked-out commit when a repository is loaded. Default: false.

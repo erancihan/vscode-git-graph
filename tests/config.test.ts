@@ -129,10 +129,10 @@ describe('Config.contextMenuActionsVisibility', () => {
 	it('shows every action by default', () => {
 		const visibility = getConfig().contextMenuActionsVisibility();
 		expect(Object.values(visibility.commit).every(v => v === true)).toBe(true);
-		expect(Object.keys(visibility.commit).sort()).toEqual(['addTag', 'checkout', 'cherrypick', 'copyHash', 'createBranch', 'drop', 'merge', 'rebase', 'reset', 'revert']);
+		expect(Object.keys(visibility.commit).sort()).toEqual(['addTag', 'archive', 'checkout', 'cherrypick', 'copyHash', 'createBranch', 'drop', 'merge', 'rebase', 'reset', 'revert']);
 		expect(visibility.uncommittedChanges).toEqual({ reset: true, clean: true, stash: true });
 		expect(Object.keys(visibility.stash).sort()).toEqual(['apply', 'copyHash', 'copyName', 'createBranch', 'drop', 'pop']);
-		expect(visibility.tag).toEqual({ delete: true, push: true, copyName: true });
+		expect(visibility.tag).toEqual({ delete: true, push: true, archive: true, copyName: true });
 	});
 
 	it('hides only the actions that are set to false', () => {
@@ -141,7 +141,7 @@ describe('Config.contextMenuActionsVisibility', () => {
 		expect(visibility.commit.reset).toBe(false);
 		expect(visibility.commit.checkout).toBe(false);
 		expect(visibility.commit.addTag).toBe(true);
-		expect(visibility.tag).toEqual({ delete: true, push: false, copyName: true });
+		expect(visibility.tag).toEqual({ delete: true, push: false, archive: true, copyName: true });
 		expect(visibility.branch.delete).toBe(true);
 	});
 

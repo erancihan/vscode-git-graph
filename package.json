@@ -163,6 +163,11 @@
 									"type": "boolean",
 									"default": true,
 									"description": "Push Branch"
+								},
+								"archive": {
+									"type": "boolean",
+									"default": true,
+									"description": "Archive"
 								}
 							},
 							"additionalProperties": false
@@ -210,6 +215,11 @@
 									"type": "boolean",
 									"default": true,
 									"description": "Copy Commit Hash to Clipboard"
+								},
+								"archive": {
+									"type": "boolean",
+									"default": true,
+									"description": "Archive"
 								},
 								"rebase": {
 									"type": "boolean",
@@ -269,6 +279,11 @@
 									"type": "boolean",
 									"default": true,
 									"description": "Push Tag"
+								},
+								"archive": {
+									"type": "boolean",
+									"default": true,
+									"description": "Archive"
 								},
 								"copyName": {
 									"type": "boolean",
@@ -677,6 +692,11 @@
 					"type": "boolean",
 					"default": true,
 					"description": "Combine a local branch label with the labels of its remote branches when they point to the same commit (for example \"main\" and \"origin/main\" become one label). Right-click the remote part of the label for the remote branch actions."
+				},
+				"git-graph.repository.commits.showSignatureStatus": {
+					"type": "boolean",
+					"default": false,
+					"description": "Show the GPG signature status of each commit in the Commit column and in the Commit Details View. Requires Git 2.4 or later and gpg; loading the graph takes longer because every signed commit is verified."
 				},
 				"git-graph.repository.commits.order": {
 					"type": "string",

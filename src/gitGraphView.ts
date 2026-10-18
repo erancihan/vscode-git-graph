@@ -9,7 +9,7 @@ import { Logger } from './logger';
 import { RepoFileWatcher } from './repoFileWatcher';
 import { RepoManager } from './repoManager';
 import { runGitCommandInTerminal } from './terminal';
-import { GitFileChangeType, GitGraphViewState, GitRebaseType, GitRepoSet, RequestMessage, ResponseMessage } from './types';
+import { GitArchiveType, GitCommandStatus, GitFileChangeType, GitGraphViewState, GitRebaseType, GitRepoSet, RequestMessage, ResponseMessage } from './types';
 import { abbrevCommit, copyToClipboard } from './utils';
 
 export class GitGraphView {
@@ -281,7 +281,19 @@ export class GitGraphView {
 				case 'pushBranch':
 					this.sendMessage({
 						command: 'pushBranch',
-						status: await this.dataSource.pushBranch(msg.repo, msg.branchName, msg.remote, msg.setUpstream, msg.mode)
+						status: await this.dataSource.pushBranchToRemotes(msg.repo, msg.branchName, msg.remotes, msg.setUpstream, msg.mode)
+					});
+					break;
+				case 'archive':
+					this.sendMessage({
+						command: 'archive',
+						status: await this.archive(msg.repo, msg.ref)
+					});
+					break;
+				case 'openExternalDiff':
+					this.sendMessage({
+						command: 'openExternalDiff',
+						status: await this.dataSource.openExternalDiff(msg.repo, msg.fromHash, msg.toHash, msg.filePath)
 					});
 					break;
 				case 'openFile':
@@ -382,6 +394,24 @@ export class GitGraphView {
 	private launchInteractiveRebase(repo: string, obj: string, type: GitRebaseType): string | null {
 		if (type === 'Commit' ? !isCommitHash(obj) : !isSafeRefName(obj)) return 'Invalid rebase target.';
 		return runGitCommandInTerminal(repo, this.dataSource.getGitPath(), ['rebase', '--interactive', obj], 'Git Graph: Interactive Rebase', this.logger);
+	}
+
+	/** Ask where to save an archive of `ref`, then write it. Cancelling the save dialog is not an error. */
+	private async archive(repo: string, ref: string): Promise<GitCommandStatus> {
+		const safeName = ref.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'archive';
+		const uri = await vscode.window.showSaveDialog({
+			defaultUri: vscode.Uri.file(path.join(repo, safeName + '.zip')),
+			saveLabel: 'Create Archive',
+			filters: { 'ZIP Archive': ['zip'], 'TAR Archive': ['tar'] }
+		});
+		if (!uri) return null;
+		const outputPath = uri.fsPath, type: GitArchiveType = outputPath.toLowerCase().endsWith('.tar') ? 'tar' : 'zip';
+		const status = await this.dataSource.archive(repo, ref, outputPath, type);
+		if (status === null) {
+			this.logger.log('Created archive of ' + ref + ' at ' + outputPath);
+			vscode.window.showInformationMessage('Git Graph: Archive of "' + ref + '" saved to ' + outputPath);
+		}
+		return status;
 	}
 
 	private getHtmlForWebview() {

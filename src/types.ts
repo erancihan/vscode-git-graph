@@ -9,6 +9,8 @@ export interface GitCommitNode {
 	message: string;
 	refs: GitRef[];
 	stash: GitStash | null;
+	/** Set when `git-graph.repository.commits.showSignatureStatus` is enabled and the commit is not the uncommitted changes row. */
+	signature: GitSignature | null;
 }
 
 /** A stash entry. The stash commit is shown as a row above `baseHash`, the commit it was created from. */
@@ -26,6 +28,19 @@ export interface GitCommit {
 	date: number;
 	message: string;
 	stash?: GitStash;
+	signature?: GitSignature;
+}
+
+/**
+ * Result of verifying the GPG signature of a commit, from the `%G?`, `%GS` and `%GK` placeholders:
+ * G good, B bad, U good but the key is untrusted, X good but the signature expired, Y good but the
+ * key expired, R good but the key was revoked, E the signature could not be checked, N unsigned.
+ */
+export type GitSignatureStatus = 'G' | 'B' | 'U' | 'X' | 'Y' | 'R' | 'E' | 'N';
+export interface GitSignature {
+	status: GitSignatureStatus;
+	signer: string;
+	key: string;
 }
 
 export interface GitCommitDetails {
@@ -37,6 +52,7 @@ export interface GitCommitDetails {
 	committer: string;
 	body: string;
 	fileChanges: GitFileChange[];
+	signature: GitSignature | null;
 }
 
 export interface GitRef {
@@ -68,11 +84,11 @@ export interface GitUnsavedChanges {
 }
 
 export interface ContextMenuActionsVisibility {
-	branch: { checkout: boolean, rename: boolean, delete: boolean, merge: boolean, rebase: boolean, push: boolean, copyName: boolean };
-	commit: { addTag: boolean, createBranch: boolean, checkout: boolean, cherrypick: boolean, revert: boolean, drop: boolean, merge: boolean, rebase: boolean, reset: boolean, copyHash: boolean };
+	branch: { checkout: boolean, rename: boolean, delete: boolean, merge: boolean, rebase: boolean, push: boolean, archive: boolean, copyName: boolean };
+	commit: { addTag: boolean, createBranch: boolean, checkout: boolean, cherrypick: boolean, revert: boolean, drop: boolean, merge: boolean, rebase: boolean, reset: boolean, archive: boolean, copyHash: boolean };
 	remoteBranch: { checkout: boolean, delete: boolean, fetch: boolean, pull: boolean, copyName: boolean };
 	stash: { apply: boolean, createBranch: boolean, pop: boolean, drop: boolean, copyName: boolean, copyHash: boolean };
-	tag: { delete: boolean, push: boolean, copyName: boolean };
+	tag: { delete: boolean, push: boolean, archive: boolean, copyName: boolean };
 	uncommittedChanges: { reset: boolean, clean: boolean, stash: boolean };
 }
 
@@ -441,7 +457,7 @@ export interface RequestPushBranch {
 	command: 'pushBranch';
 	repo: string;
 	branchName: string;
-	remote: string;
+	remotes: string[]; // the branch is pushed to each remote in turn
 	setUpstream: boolean;
 	mode: GitPushBranchMode;
 }
@@ -584,6 +600,29 @@ export interface ResponsePushStash {
 	status: GitCommandStatus;
 }
 
+export type GitArchiveType = 'zip' | 'tar';
+export interface RequestArchive {
+	command: 'archive';
+	repo: string;
+	ref: string; // branch or tag name, or commit hash
+}
+export interface ResponseArchive {
+	command: 'archive';
+	status: GitCommandStatus;
+}
+
+export interface RequestOpenExternalDiff {
+	command: 'openExternalDiff';
+	repo: string;
+	fromHash: string; // commit hash, or "<hash>^" for the parent of a commit
+	toHash: string; // commit hash, or "*" for the working tree
+	filePath: string;
+}
+export interface ResponseOpenExternalDiff {
+	command: 'openExternalDiff';
+	status: GitCommandStatus;
+}
+
 export interface RequestOpenFile {
 	command: 'openFile';
 	repo: string;
@@ -674,6 +713,8 @@ export type RequestMessage =
 	| RequestRevertCommit
 	| RequestSaveRepoState
 	| RequestViewDiff
+	| RequestArchive
+	| RequestOpenExternalDiff
 	| RequestViewDiffWithWorkingFile
 	| RequestViewFileAtRevision;
 
@@ -716,5 +757,7 @@ export type ResponseMessage =
 	| ResponseRevertCommit
 	| ResponseSelectRepo
 	| ResponseViewDiff
+	| ResponseArchive
+	| ResponseOpenExternalDiff
 	| ResponseViewDiffWithWorkingFile
 	| ResponseViewFileAtRevision;

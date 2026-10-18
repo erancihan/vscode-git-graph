@@ -62,11 +62,11 @@ class Config {
 			return <T>result;
 		};
 		return {
-			branch: read('branch', { checkout: true, rename: true, delete: true, merge: true, rebase: true, push: true, copyName: true }),
-			commit: read('commit', { addTag: true, createBranch: true, checkout: true, cherrypick: true, revert: true, drop: true, merge: true, rebase: true, reset: true, copyHash: true }),
+			branch: read('branch', { checkout: true, rename: true, delete: true, merge: true, rebase: true, push: true, archive: true, copyName: true }),
+			commit: read('commit', { addTag: true, createBranch: true, checkout: true, cherrypick: true, revert: true, drop: true, merge: true, rebase: true, reset: true, archive: true, copyHash: true }),
 			remoteBranch: read('remoteBranch', { checkout: true, delete: true, fetch: true, pull: true, copyName: true }),
 			stash: read('stash', { apply: true, createBranch: true, pop: true, drop: true, copyName: true, copyHash: true }),
-			tag: read('tag', { delete: true, push: true, copyName: true }),
+			tag: read('tag', { delete: true, push: true, archive: true, copyName: true }),
 			uncommittedChanges: read('uncommittedChanges', { reset: true, clean: true, stash: true })
 		};
 	}
@@ -269,6 +269,11 @@ class Config {
 
 	public showStashes() {
 		return this.getBoolean('repository.showStashes', null, true);
+	}
+
+	/** Verify commit signatures while loading (slower: git runs gpg for every signed commit). */
+	public showSignatureStatus() {
+		return this.getBoolean('repository.commits.showSignatureStatus', null, false);
 	}
 
 	public showTags() {

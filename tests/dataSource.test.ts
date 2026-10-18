@@ -2,7 +2,7 @@ import * as cp from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { DataSource, isSafeRelativePath } from '../src/dataSource';
+import { DataSource, isSafeRelativePath, parseSignature } from '../src/dataSource';
 import { Logger } from '../src/logger';
 import { configurationValues, outputChannelLines } from './mocks/vscode';
 
@@ -468,6 +468,38 @@ describe('DataSource remote actions', () => {
 		git(repo, ['checkout', '-q', 'master']);
 	});
 
+	it('pushes a branch to several remotes and reports the failing one', async () => {
+		const second = fs.mkdtempSync(path.join(os.tmpdir(), 'git-graph-remote2-'));
+		git(second, ['init', '-q', '--bare']);
+		git(repo, ['remote', 'add', 'second', second]);
+		try {
+			expect(await dataSource.pushBranchToRemotes(repo, 'topic', ['origin', 'second'], true, 'normal')).toBeNull();
+			expect(git(second, ['rev-parse', 'topic'])).toBe(git(repo, ['rev-parse', 'topic']));
+			expect(git(repo, ['rev-parse', '--abbrev-ref', 'topic@{upstream}'])).toBe('origin/topic');
+			expect(await dataSource.pushBranchToRemotes(repo, 'topic', [], false, 'normal')).toMatch(/No remote/);
+			expect(await dataSource.pushBranchToRemotes(repo, 'topic', ['origin', 'missing'], false, 'normal')).toMatch(/Pushing to "missing" failed/);
+		} finally {
+			git(repo, ['remote', 'remove', 'second']);
+			fs.rmSync(second, { recursive: true, force: true });
+		}
+	});
+
+	it('writes zip and tar archives of a reference', async () => {
+		const zipPath = path.join(repo, 'out.zip'), tarPath = path.join(repo, 'out.tar');
+		expect(await dataSource.archive(repo, 'master', zipPath, 'zip')).toBeNull();
+		expect(await dataSource.archive(repo, git(repo, ['rev-parse', 'HEAD']), tarPath, 'tar')).toBeNull();
+		expect(fs.statSync(zipPath).size).toBeGreaterThan(0);
+		expect(fs.statSync(tarPath).size).toBeGreaterThan(0);
+		expect(await dataSource.archive(repo, '--output=/tmp/x', zipPath, 'zip')).toMatch(/not a valid/i);
+		fs.unlinkSync(zipPath);
+		fs.unlinkSync(tarPath);
+	});
+
+	it('refuses external diff requests with unsafe arguments', async () => {
+		expect(await dataSource.openExternalDiff(repo, 'not-a-hash', '*', 'a.txt')).toMatch(/not a valid/i);
+		expect(await dataSource.openExternalDiff(repo, git(repo, ['rev-parse', 'HEAD']), '*', '../outside.txt')).toMatch(/not a valid/i);
+	});
+
 	it('deletes a remote branch', async () => {
 		expect(await dataSource.deleteRemoteBranch(repo, 'topic', 'origin')).toBeNull();
 		expect(git(remote, ['branch', '--list', 'topic'])).toBe('');
@@ -519,6 +551,20 @@ describe('DataSource commit loading options', () => {
 
 	afterAll(() => {
 		fs.rmSync(repo, { recursive: true, force: true });
+	});
+
+	it('reports unsigned commits as "N" when signature status is enabled, and omits it otherwise', async () => {
+		let result = await dataSource.getCommits(repo, [], 10, false);
+		expect(result.commits.every((commit) => commit.signature === null)).toBe(true);
+
+		configurationValues['git-graph'] = { 'repository.commits.showSignatureStatus': true };
+		result = await dataSource.getCommits(repo, [], 10, false);
+		const commit = result.commits.find((c) => c.hash === detached)!;
+		expect(commit.signature).toEqual({ status: 'N', signer: '', key: '' });
+		expect(commit.message).toBe('Detached HEAD commit');
+		const details = await dataSource.commitDetails(repo, detached);
+		expect(details!.signature).toEqual({ status: 'N', signer: '', key: '' });
+		expect(details!.committer).toBe('Test Committer');
 	});
 
 	it('includes the detached HEAD commit when showing all branches', async () => {
@@ -598,5 +644,12 @@ describe('DataSource commit loading options', () => {
 		configurationValues['git-graph'] = { 'commitOrdering': 'author-date' };
 		await dataSource.getCommits(repo, [], 10, false);
 		expect(lines.slice(-4).some(l => l.includes('--author-date-order'))).toBe(true);
+	});
+});
+
+describe('parseSignature', () => {
+	it('keeps known status codes and maps unknown ones to "E"', () => {
+		expect(parseSignature('G', 'Alice <alice@example.com>', 'ABCDEF')).toEqual({ status: 'G', signer: 'Alice <alice@example.com>', key: 'ABCDEF' });
+		expect(parseSignature('?', '', '')).toEqual({ status: 'E', signer: '', key: '' });
 	});
 });

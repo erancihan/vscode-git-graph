@@ -381,7 +381,7 @@ class GitGraphView {
 				(this.config.muteMergeCommits && this.commits[i].parentHashes.length > 1 && this.commits[i].stash === null) ||
 				(ancestorsOfHead !== null && !ancestorsOfHead[this.commits[i].hash])
 			);
-			html += '<tr ' + (this.commits[i].hash !== '*' ? 'class="commit' + (muted ? ' mute' : '') + '" data-hash="' + this.commits[i].hash + '"' : 'class="unsavedChanges"') + ' data-id="' + i + '" data-color="' + this.graph.getVertexColour(i) + '"">' + graphCell + '<td>' + (tagsOnRight && labels.tags !== '' ? '<div class="descriptionCell"><span class="descriptionMain">' : '') + (this.commits[i].hash === this.commitHead ? '<span class="commitHeadDot"></span>' : '') + refs + (this.commits[i].hash === currentHash ? '<b>' + message + '</b>' : message) + (tagsOnRight && labels.tags !== '' ? '</span><span class="gitRefsRight">' + labels.tags + '</span></div>' : '') + '</td><td class="colDate" title="' + date.title + '">' + date.value + '</td><td class="colAuthor" title="' + escapeHtml(this.commits[i].author + ' <' + this.commits[i].email + '>') + '">' + (this.config.fetchAvatars ? '<span class="avatar" data-email="' + escapeHtml(this.commits[i].email) + '">' + (typeof this.avatars[this.commits[i].email] === 'string' ? '<img class="avatarImg" src="' + this.avatars[this.commits[i].email] + '">' : '') + '</span>' : '') + escapeHtml(this.commits[i].author) + '</td><td class="colCommit" title="' + escapeHtml(this.commits[i].hash) + '">' + abbrevCommit(this.commits[i].hash) + '</td></tr>';
+			html += '<tr ' + (this.commits[i].hash !== '*' ? 'class="commit' + (muted ? ' mute' : '') + '" data-hash="' + this.commits[i].hash + '"' : 'class="unsavedChanges"') + ' data-id="' + i + '" data-color="' + this.graph.getVertexColour(i) + '"">' + graphCell + '<td>' + (tagsOnRight && labels.tags !== '' ? '<div class="descriptionCell"><span class="descriptionMain">' : '') + (this.commits[i].hash === this.commitHead ? '<span class="commitHeadDot"></span>' : '') + refs + (this.commits[i].hash === currentHash ? '<b>' + message + '</b>' : message) + (tagsOnRight && labels.tags !== '' ? '</span><span class="gitRefsRight">' + labels.tags + '</span></div>' : '') + '</td><td class="colDate" title="' + date.title + '">' + date.value + '</td><td class="colAuthor" title="' + escapeHtml(this.commits[i].author + ' <' + this.commits[i].email + '>') + '">' + (this.config.fetchAvatars ? '<span class="avatar" data-email="' + escapeHtml(this.commits[i].email) + '">' + (typeof this.avatars[this.commits[i].email] === 'string' ? '<img class="avatarImg" src="' + this.avatars[this.commits[i].email] + '">' : '') + '</span>' : '') + escapeHtml(this.commits[i].author) + '</td><td class="colCommit" title="' + escapeHtml(this.commits[i].hash) + '">' + signatureIconHtml(this.commits[i].signature) + abbrevCommit(this.commits[i].hash) + '</td></tr>';
 		}
 		this.tableElem.innerHTML = '<table>' + html + '</table>';
 		this.footerElem.innerHTML = this.moreCommitsAvailable ? '<div id="loadMoreCommitsBtn" class="roundedBtn">Load More Commits</div>' : '';
@@ -564,6 +564,11 @@ class GitGraphView {
 						}, sourceElem);
 					}
 				},
+				{
+					title: 'Archive' + ELLIPSIS,
+					visible: visibility.archive,
+					onClick: () => sendMessage({ command: 'archive', repo: this.currentRepo!, ref: hash })
+				},
 				null,
 				{
 					title: 'Copy Commit Hash to Clipboard',
@@ -721,17 +726,23 @@ class GitGraphView {
 							title: 'Push Branch' + ELLIPSIS,
 							visible: this.config.contextMenuActionsVisibility.branch.push,
 							onClick: () => {
-								const inputs: DialogInput[] = [
+								const remotes = this.gitRemotes, multiple = remotes.length > 1;
+								const defaultRemote = remotes.indexOf('origin') > -1 ? 'origin' : remotes[0];
+								// With several remotes, one checkbox per remote; the branch is pushed to every checked remote
+								const inputs: DialogInput[] = multiple ? remotes.map((remote): DialogInput => ({ type: 'checkbox', name: 'Push to ' + escapeHtml(remote), value: remote === defaultRemote })) : [];
+								inputs.push(
 									{ type: 'checkbox', name: 'Set Upstream', value: true },
 									{ type: 'select', name: 'Mode: ', default: 'normal', options: [{ name: 'Normal', value: 'normal' }, { name: 'Force With Lease', value: 'force-with-lease' }, { name: 'Force', value: 'force' }] }
-								];
-								if (this.gitRemotes.length > 1) {
-									inputs.unshift({ type: 'select', name: 'Remote: ', default: this.gitRemotes.indexOf('origin') > -1 ? 'origin' : this.gitRemotes[0], options: this.gitRemotes.map((remote) => ({ name: remote, value: remote })) });
-								}
-								showFormDialog('Are you sure you want to push the branch <b><i>' + escapeHtml(refName) + '</i></b>' + (this.gitRemotes.length === 1 ? ' to the remote <b><i>' + escapeHtml(this.gitRemotes[0]) + '</i></b>' : '') + '?', inputs, 'Yes, push', (values) => {
-									const remote = this.gitRemotes.length > 1 ? values.shift()! : this.gitRemotes[0];
+								);
+								showFormDialog('Are you sure you want to push the branch <b><i>' + escapeHtml(refName) + '</i></b>' + (!multiple ? ' to the remote <b><i>' + escapeHtml(remotes[0]) + '</i></b>' : '') + '?', inputs, 'Yes, push', (values) => {
+									const selected = multiple ? remotes.filter((_, index) => values[index] === 'checked') : [remotes[0]];
+									const options = values.slice(multiple ? remotes.length : 0);
+									if (selected.length === 0) {
+										showErrorDialog('Unable to Push Branch', 'Select at least one remote.', null);
+										return;
+									}
 									showActionRunningDialog('Pushing Branch');
-									sendMessage({ command: 'pushBranch', repo: this.currentRepo!, branchName: refName, remote: remote, setUpstream: values[0] === 'checked', mode: <GG.GitPushBranchMode>values[1] });
+									sendMessage({ command: 'pushBranch', repo: this.currentRepo!, branchName: refName, remotes: selected, setUpstream: options[0] === 'checked', mode: <GG.GitPushBranchMode>options[1] });
 								}, null);
 							}
 						});
@@ -781,6 +792,13 @@ class GitGraphView {
 					}
 				}
 				copyType = 'Branch Name';
+			}
+			if (isTag || isHead) {
+				menu.push({
+					title: 'Archive' + ELLIPSIS,
+					visible: isTag ? this.config.contextMenuActionsVisibility.tag.archive : this.config.contextMenuActionsVisibility.branch.archive,
+					onClick: () => sendMessage({ command: 'archive', repo: this.currentRepo!, ref: refName })
+				});
 			}
 			menu.push(null, {
 				title: 'Copy ' + copyType + ' to Clipboard',
@@ -1290,6 +1308,7 @@ class GitGraphView {
 		html += '<b>Author: </b>' + escapeHtml(commitDetails.author) + ' &lt;<a href="mailto:' + encodeURIComponent(commitDetails.email) + '">' + escapeHtml(commitDetails.email) + '</a>&gt;<br>';
 		html += '<b>Date: </b>' + (new Date(commitDetails.date * 1000)).toString() + '<br>';
 		html += '<b>Committer: </b>' + escapeHtml(commitDetails.committer);
+		if (commitDetails.signature) html += '<br><b>Signature: </b>' + signatureIconHtml(commitDetails.signature) + escapeHtml(describeSignature(commitDetails.signature));
 		const refs = typeof this.commitLookup[commitDetails.hash] === 'number' ? this.commits[this.commitLookup[commitDetails.hash]].refs : [];
 		const branches = refs.filter((ref) => ref.type === 'head' || ref.type === 'remote').map((ref) => escapeHtml(ref.name)), tags = refs.filter((ref) => ref.type === 'tag').map((ref) => escapeHtml(ref.name));
 		if (branches.length > 0) html += '<br><b>Branches: </b>' + branches.join(', ');
@@ -1433,6 +1452,13 @@ class GitGraphView {
 					title: 'View Diff',
 					visible: sourceElem.classList.contains('gitDiffPossible'),
 					onClick: () => sendMessage({ command: 'viewDiff', repo: this.currentRepo!, fromHash: range.fromHash, toHash: range.toHash, oldFilePath: oldFilePath, newFilePath: newFilePath, type: type })
+				},
+				{
+					title: 'Open Diff in External Tool',
+					onClick: () => {
+						showActionRunningDialog('Opening External Diff Tool');
+						sendMessage({ command: 'openExternalDiff', repo: this.currentRepo!, fromHash: range.fromHash, toHash: range.toHash, filePath: type === 'D' ? oldFilePath : newFilePath });
+					}
 				},
 				{
 					title: 'View File at this Revision',
@@ -1632,6 +1658,16 @@ window.addEventListener('message', event => {
 			break;
 		case 'openFile':
 			if (msg.success === false) showErrorDialog('Unable to open file', null, null);
+			break;
+		case 'archive':
+			if (msg.status !== null) showErrorDialog('Unable to Create Archive', msg.status, null);
+			break;
+		case 'openExternalDiff':
+			if (msg.status === null) {
+				hideDialog();
+			} else {
+				showErrorDialog('Unable to Open the External Diff Tool', msg.status, null);
+			}
 			break;
 		case 'viewDiff':
 			if (msg.success === false) showErrorDialog('Unable to view diff of file', null, null);
@@ -1867,7 +1903,8 @@ function showFormDialog(message: string, inputs: DialogInput[], actionName: stri
 		} else if (input.type === 'checkbox') {
 			html += '<span class="dialogFormCheckbox"><label><input id="dialogInput' + i + '" type="checkbox"' + (input.value ? ' checked' : '') + '/>' + (multiElementForm ? '' : input.name) + '</label></span>';
 		} else {
-			html += '<input id="dialogInput' + i + '" type="text" value="' + input.default + '"' + (input.type === 'text' && input.placeholder !== null ? ' placeholder="' + input.placeholder + '"' : '') + '/>';
+			// Defaults can come from the repository (for example a branch name in the rename dialog), so they are escaped
+			html += '<input id="dialogInput' + i + '" type="text" value="' + escapeHtml(input.default) + '"' + (input.type === 'text' && input.placeholder !== null ? ' placeholder="' + escapeHtml(input.placeholder) + '"' : '') + '/>';
 			if (input.type === 'text-ref') textRefInput = i;
 		}
 		html += '</td></tr>';
